@@ -1739,7 +1739,7 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, userId, options = {} } = await req.json();
+    const { prompt, userId, datasetId, options = {} } = await req.json();
 
     if (!prompt || !userId) {
       return new Response(
@@ -1751,6 +1751,7 @@ serve(async (req) => {
     console.log('🔥 BASED DATA ENGINE v3.0 - NUCLEAR CORE ACTIVATED');
     console.log(`Prompt: ${prompt.substring(0, 100)}...`);
     console.log(`User: ${userId}`);
+    console.log(`Dataset ID: ${datasetId || 'not provided'}`);
 
     // Initialize engine and generate
     const engine = new UltimateDataEngine();
@@ -1759,13 +1760,13 @@ serve(async (req) => {
     const result = await engine.generate(prompt, userId, {
       maxRows: options.dataSize === 'small' ? 25 : options.dataSize === 'large' ? 250 : 100,
       includeRealData: options.freshness !== 'cached',
-      enrichWithSentiment: options.includeInsights,
+      enrichWithSentiment: options.includeInsights ?? true,
       detectAnomalies: true,
       clusterResults: true
     });
 
     const processingTime = Date.now() - startTime;
-    console.log(`Generation complete in ${processingTime}ms`);
+    console.log(`Generation complete in ${processingTime}ms - ${result.data.length} records`);
 
     // Calculate credits (cheaper than AI!)
     const creditsUsed = result.data.length <= 25 ? 3 : result.data.length <= 100 ? 8 : 15;
@@ -1777,11 +1778,15 @@ serve(async (req) => {
     );
 
     // Deduct credits
-    const { data: deducted } = await supabase.rpc('deduct_credits', {
+    const { data: deducted, error: deductError } = await supabase.rpc('deduct_credits', {
       p_user_id: userId,
       p_amount: creditsUsed,
       p_description: `Dataset: ${result.title}`
     });
+
+    if (deductError) {
+      console.error('Credit deduction error:', deductError);
+    }
 
     if (!deducted) {
       return new Response(
@@ -1790,27 +1795,28 @@ serve(async (req) => {
       );
     }
 
-    // Update dataset record
-    const { error: updateError } = await supabase
-      .from('datasets')
-      .update({
-        title: result.title,
-        description: result.description,
-        data: result.data,
-        insights: result.insights,
-        schema_definition: result.schema,
-        sources: result.sources,
-        status: 'complete',
-        row_count: result.data.length,
-        credits_used: creditsUsed
-      })
-      .eq('user_id', userId)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false })
-      .limit(1);
+    // Update dataset record using specific datasetId if provided
+    if (datasetId) {
+      const { error: updateError } = await supabase
+        .from('datasets')
+        .update({
+          title: result.title,
+          description: result.description,
+          data: result.data,
+          insights: result.insights,
+          schema_definition: result.schema,
+          sources: result.sources,
+          status: 'complete',
+          row_count: result.data.length,
+          credits_used: creditsUsed
+        })
+        .eq('id', datasetId);
 
-    if (updateError) {
-      console.error('Database update error:', updateError);
+      if (updateError) {
+        console.error('Database update error:', updateError);
+      } else {
+        console.log(`Dataset ${datasetId} updated successfully`);
+      }
     }
 
     return new Response(
