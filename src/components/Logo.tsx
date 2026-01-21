@@ -1,10 +1,6 @@
-// Based Data Logo - Just confident blue text, nothing else
+// Based Data Logo - Three squares between BASED and DATA
 
-interface LogoProps {
-  className?: string;
-}
-
-export function Logo({ className = "" }: LogoProps) {
+export function Logo({ className = "" }: { className?: string }) {
   return (
     <span 
       className={className}
@@ -14,9 +10,18 @@ export function Logo({ className = "" }: LogoProps) {
         fontSize: '22px',
         letterSpacing: '-0.02em',
         color: '#3366FF',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '8px',
       }}
     >
-      BASED DATA
+      BASED
+      <span style={{ display: 'inline-flex', gap: '3px' }}>
+        <span style={{ width: '6px', height: '6px', background: '#3366FF', borderRadius: '1px' }} />
+        <span style={{ width: '6px', height: '6px', background: '#3366FF', borderRadius: '1px' }} />
+        <span style={{ width: '6px', height: '6px', background: '#3366FF', borderRadius: '1px' }} />
+      </span>
+      DATA
     </span>
   );
 }
