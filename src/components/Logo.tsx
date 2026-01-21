@@ -1,4 +1,6 @@
-// Based Data Logo - Stacked, right-aligned
+// Based Data Logo - Stacked, right-aligned with chevron
+
+import { ChevronRight } from 'lucide-react';
 
 export function Logo({ className = "" }: { className?: string }) {
   return (
@@ -17,7 +19,10 @@ export function Logo({ className = "" }: { className?: string }) {
       }}
     >
       <span>based</span>
-      <span>data</span>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
+        data
+        <ChevronRight size={16} strokeWidth={2.5} />
+      </span>
     </span>
   );
 }
