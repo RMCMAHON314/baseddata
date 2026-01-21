@@ -42,20 +42,16 @@ export async function generateDataset({ prompt, userId, options }: GenerateDatas
 
     if (error) throw error;
 
-    // Update dataset with ID from database
-    await supabase
-      .from("datasets")
-      .update({ status: "processing" })
-      .eq("id", dataset.id);
-
+    // Edge function handles the dataset update to 'complete' status
+    // Just return the result with proper typing
     return {
       id: dataset.id,
-      title: data.title,
-      description: data.description,
-      data: data.data,
+      title: data.title || prompt,
+      description: data.description || `Dataset generated from: ${prompt}`,
+      data: data.data || [],
       insights: data.insights as DatasetInsights,
       schema: data.schema as DatasetSchema,
-      creditsUsed: data.creditsUsed,
+      creditsUsed: data.creditsUsed || 8,
     };
   } catch (error) {
     // Mark dataset as failed on error
