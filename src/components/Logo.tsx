@@ -20,8 +20,8 @@ export function Logo({ className = "" }: { className?: string }) {
     >
       <span>based</span>
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
-        data
         <ChevronRight size={16} strokeWidth={2.5} />
+        data
       </span>
     </span>
   );
