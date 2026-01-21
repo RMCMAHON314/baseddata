@@ -1,29 +1,22 @@
-import { motion } from "framer-motion";
+// Based Data Logo - Just confident blue text, nothing else
 
 interface LogoProps {
-  size?: "sm" | "md" | "lg";
-  showText?: boolean;
+  className?: string;
 }
 
-const textSizeClasses = {
-  sm: "text-lg",
-  md: "text-xl",
-  lg: "text-2xl",
-};
-
-export function Logo({ size = "md", showText = true }: LogoProps) {
+export function Logo({ className = "" }: LogoProps) {
   return (
-    <motion.div 
-      className="flex items-center gap-2"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
+    <span 
+      className={className}
+      style={{
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif",
+        fontWeight: 700,
+        fontSize: '22px',
+        letterSpacing: '-0.02em',
+        color: '#3366FF',
+      }}
     >
-      {showText && (
-        <span className={`font-display font-bold ${textSizeClasses[size]} tracking-tight uppercase`}>
-          <span className="text-primary">BASED DATA</span>
-        </span>
-      )}
-    </motion.div>
+      BASED DATA
+    </span>
   );
 }

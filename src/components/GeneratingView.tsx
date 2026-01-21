@@ -40,7 +40,7 @@ export function GeneratingView({
     >
       {/* Header */}
       <header className="container mx-auto px-8 py-5 flex items-center justify-between border-b border-border">
-        <Logo size="md" />
+        <Logo />
         <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-accent">
           <div className="w-2 h-2 rounded-full bg-success" />
           <span className="text-accent-foreground text-sm font-semibold">
