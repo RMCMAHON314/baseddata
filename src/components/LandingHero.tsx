@@ -59,7 +59,7 @@ export function LandingHero({
     >
       {/* Header */}
       <header className="container mx-auto px-8 py-5 flex items-center justify-between border-b border-border">
-        <Logo size="md" />
+        <Logo />
         <div className="flex items-center gap-6">
           {isLoggedIn ? (
             <div className="flex items-center gap-4">
