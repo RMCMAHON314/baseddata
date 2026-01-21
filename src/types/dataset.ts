@@ -68,6 +68,20 @@ export interface GenerationStep {
   detail?: string;
 }
 
+// Generation options from advanced settings
+export interface GenerationOptions {
+  dataSize: 'small' | 'standard' | 'large';
+  freshness: 'cached' | 'fresh';
+  includeInsights: boolean;
+}
+
+// Live stats during generation
+export interface GenerationStats {
+  sourcesFound: number;
+  recordsProcessed: number;
+  timeElapsed: number;
+}
+
 // Credit costs per architecture doc section 7.2
 export interface CreditCosts {
   basic: number;      // < 100 rows: 5 credits

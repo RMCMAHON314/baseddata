@@ -5,21 +5,35 @@ import type { GenerationStep } from '@/types/dataset';
 
 // Generation pipeline steps (from architecture doc section 5.1)
 export const GENERATION_STEPS: GenerationStep[] = [
-  { id: 'understand', label: 'understanding request', status: 'pending' },
+  { id: 'understand', label: 'analyzing your request', status: 'pending' },
   { id: 'sources', label: 'mapping data sources', status: 'pending' },
-  { id: 'crawling', label: 'crawling sources', status: 'pending' },
-  { id: 'processing', label: 'structuring data', status: 'pending' },
+  { id: 'crawling', label: 'crawling the web', status: 'pending' },
+  { id: 'processing', label: 'processing & cleaning', status: 'pending' },
   { id: 'insights', label: 'generating insights', status: 'pending' },
 ];
 
 // Sample prompts for landing page (from architecture doc section 8.1)
 export const SAMPLE_PROMPTS = [
-  'saas companies in austin that raised series a',
-  'nba player statistics 2024 season',
-  'ai startups founded by women',
-  'electric vehicle sales by country',
-  'remote tech jobs paying over $150k',
+  { text: 'SaaS companies in Austin that raised Series A in 2024', category: 'Companies' },
+  { text: 'NBA player statistics and salaries 2024 season', category: 'Sports' },
+  { text: 'AI startups founded by women with $5M+ funding', category: 'Startups' },
+  { text: 'Electric vehicle sales by country and manufacturer', category: 'Market Data' },
+  { text: 'Remote software engineering jobs paying $150k+', category: 'Jobs' },
+  { text: 'Podcast rankings and listener demographics', category: 'Media' },
 ];
+
+// Dataset size options
+export const DATA_SIZE_OPTIONS = [
+  { id: 'small', label: 'Small', sub: '< 100 rows', cost: 5 },
+  { id: 'standard', label: 'Standard', sub: '< 1K rows', cost: 15 },
+  { id: 'large', label: 'Large', sub: '< 10K rows', cost: 50 },
+] as const;
+
+// Data freshness options
+export const FRESHNESS_OPTIONS = [
+  { id: 'cached', label: 'Cached', sub: 'Instant', extraCost: 0 },
+  { id: 'fresh', label: 'Fresh', sub: '+10 credits', extraCost: 10 },
+] as const;
 
 // Credit costs (from architecture doc section 7.2)
 export const CREDIT_COSTS = {
@@ -62,28 +76,28 @@ export const STEP_TIMINGS = {
 // Step details for progress display
 export const STEP_DETAILS: Record<string, string[]> = {
   understand: [
-    'analyzing query intent and parameters...',
-    'identifying entity type and filters...',
-    'determining optimal data structure...',
+    'understanding intent & schema...',
+    'analyzing query parameters...',
+    'identifying entity type...',
   ],
   sources: [
-    'found 4 reliable data sources',
-    'identified 6 potential data sources',
-    'matched 5 high-quality sources',
+    'found 47 relevant sources',
+    'identified 32 high-quality sources',
+    'matched 28 reliable sources',
   ],
   crawling: [
-    'collected 127 records from crunchbase, sec, news...',
-    'gathering data from 47 sources...',
-    'processing api responses and web data...',
+    'extracting structured data...',
+    'gathering from APIs and web...',
+    'processing live data feeds...',
   ],
   processing: [
-    'cross-referencing and validating data...',
-    'normalizing and deduplicating records...',
-    'enriching with calculated fields...',
+    'deduplicating 2,341 records...',
+    'normalizing and validating...',
+    'enriching with AI fields...',
   ],
   insights: [
-    'identifying patterns and outliers...',
-    'generating statistical analysis...',
-    'preparing actionable recommendations...',
+    'AI analysis complete',
+    'patterns identified',
+    'recommendations ready',
   ],
 };

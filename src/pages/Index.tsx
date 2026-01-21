@@ -5,13 +5,13 @@ import { useState, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 
-import { Header } from '@/components/Header';
 import { LandingHero } from '@/components/LandingHero';
 import { GeneratingView } from '@/components/GeneratingView';
 import { ResultsDashboard } from '@/components/ResultsDashboard';
 import { AuthModal } from '@/components/AuthModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDatasetGeneration } from '@/hooks/useDatasetGeneration';
+import type { GenerationOptions } from '@/types/dataset';
 import { toast } from 'sonner';
 
 type AppState = 'landing' | 'generating' | 'results';
@@ -29,18 +29,10 @@ const Index = () => {
     progress,
     currentStepIndex,
     result,
+    stats,
     startGeneration,
     reset: resetGeneration,
   } = useDatasetGeneration();
-
-  // Handle generation completion
-  const handleGenerationComplete = useCallback(() => {
-    if (generationState === 'complete' && result) {
-      setAppState('results');
-    } else if (generationState === 'error') {
-      setAppState('landing');
-    }
-  }, [generationState, result]);
 
   // Watch for generation state changes
   if (generationState === 'complete' && appState === 'generating' && result) {
@@ -49,7 +41,7 @@ const Index = () => {
     setAppState('landing');
   }
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (options: GenerationOptions) => {
     if (!prompt.trim()) return;
 
     // Check if user is logged in
@@ -59,14 +51,14 @@ const Index = () => {
       return;
     }
 
-    // Check credits
+    // Check credits (basic check, hook does detailed check)
     if (profile && profile.credits_balance < 5) {
       toast.error('insufficient credits - please purchase more');
       return;
     }
 
     setAppState('generating');
-    await startGeneration(prompt);
+    await startGeneration(prompt, options);
   };
 
   const handleBackToLanding = () => {
@@ -96,9 +88,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen relative bg-background">
-      {/* Header for authenticated states */}
-      {user && appState !== 'landing' && <Header />}
-
       {/* Auth Modal */}
       <AuthModal
         isOpen={authModalOpen}
@@ -129,6 +118,8 @@ const Index = () => {
             steps={steps}
             progress={progress}
             currentStepIndex={currentStepIndex}
+            stats={stats}
+            credits={profile?.credits_balance || 0}
           />
         )}
 

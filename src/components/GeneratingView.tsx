@@ -1,23 +1,26 @@
 // Based Data - Generation Progress View
-// Transparent AI - shows exactly what's happening
+// Transparent AI - shows exactly what's happening with live stats
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Loader2, Search, Database, Sparkles, FileText, Layers } from 'lucide-react';
-import type { GenerationStep } from '@/types/dataset';
+import { Check, Loader2, Brain, Map, Globe, Cog, Sparkles } from 'lucide-react';
+import { Logo } from '@/components/Logo';
+import type { GenerationStep, GenerationStats } from '@/types/dataset';
 
 interface GeneratingViewProps {
   prompt: string;
   steps: GenerationStep[];
   progress: number;
   currentStepIndex: number;
+  stats: GenerationStats;
+  credits: number;
 }
 
 const stepIcons: Record<string, any> = {
-  understand: Sparkles,
-  sources: Search,
-  crawling: Database,
-  processing: Layers,
-  insights: FileText,
+  understand: Brain,
+  sources: Map,
+  crawling: Globe,
+  processing: Cog,
+  insights: Sparkles,
 };
 
 export function GeneratingView({ 
@@ -25,126 +28,136 @@ export function GeneratingView({
   steps, 
   progress,
   currentStepIndex,
+  stats,
+  credits,
 }: GeneratingViewProps) {
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="min-h-screen flex flex-col items-center justify-center px-4"
+      className="min-h-screen flex flex-col bg-background"
     >
-      {/* Subtle background glow */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-electric/5 blur-[100px] rounded-full" />
-      </div>
+      {/* Header */}
+      <header className="container mx-auto px-6 py-5 flex items-center justify-between border-b border-border/50">
+        <Logo size="md" />
+        <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10">
+          <div className="w-2 h-2 rounded-full bg-emerald-500" />
+          <span className="text-primary text-sm font-semibold">
+            {credits} credits
+          </span>
+        </div>
+      </header>
 
-      <div className="relative z-10 w-full max-w-lg">
-        {/* Query display */}
+      <main className="flex-1 flex flex-col items-center justify-center px-4 max-w-2xl mx-auto w-full">
+        {/* Query Display */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-10"
+          className="text-center mb-12"
         >
-          <p className="text-muted-foreground text-sm mb-2 lowercase">
-            generating dataset for
-          </p>
-          <h2 className="text-xl sm:text-2xl font-display font-medium text-foreground">
-            "{prompt}"
-          </h2>
+          <p className="text-sm text-muted-foreground mb-2">Generating dataset for</p>
+          <h1 className="text-2xl font-semibold text-foreground">"{prompt}"</h1>
         </motion.div>
 
-        {/* Progress card */}
-        <div className="glass rounded-2xl p-6 border border-border/50 mb-6">
-          {/* Steps list */}
-          <div className="space-y-4 mb-8">
-            <AnimatePresence mode="wait">
-              {steps.map((step, index) => {
-                const Icon = stepIcons[step.id] || Sparkles;
-                const isActive = step.status === 'running';
-                const isComplete = step.status === 'complete';
+        {/* Live Stats */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="grid grid-cols-3 gap-4 mb-12 w-full"
+        >
+          {[
+            { label: 'Sources Found', value: stats.sourcesFound },
+            { label: 'Records Processed', value: stats.recordsProcessed.toLocaleString() },
+            { label: 'Time Elapsed', value: `${stats.timeElapsed.toFixed(1)}s` },
+          ].map((stat, i) => (
+            <div key={i} className="text-center p-4 rounded-xl bg-electric/10">
+              <div className="text-2xl font-bold text-electric">{stat.value}</div>
+              <div className="text-xs text-muted-foreground">{stat.label}</div>
+            </div>
+          ))}
+        </motion.div>
 
-                return (
-                  <motion.div
-                    key={step.id}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{
-                      opacity: step.status === 'pending' ? 0.4 : 1,
-                      x: 0,
-                    }}
-                    transition={{ duration: 0.3, delay: index * 0.05 }}
-                    className="flex items-center gap-4"
+        {/* Progress Steps */}
+        <div className="space-y-4 mb-12 w-full">
+          <AnimatePresence mode="wait">
+            {steps.map((step, index) => {
+              const Icon = stepIcons[step.id] || Sparkles;
+              const isActive = step.status === 'running';
+              const isComplete = step.status === 'complete';
+              const isPending = step.status === 'pending';
+
+              return (
+                <motion.div
+                  key={step.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{
+                    opacity: isPending ? 0.4 : 1,
+                    x: 0,
+                  }}
+                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                  className={`flex items-center gap-4 p-4 rounded-xl transition-all duration-500 ${
+                    isComplete ? 'bg-green-500/10' : isActive ? 'bg-secondary/50' : ''
+                  }`}
+                >
+                  {/* Status indicator */}
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-all text-lg ${
+                      isComplete
+                        ? 'bg-green-500'
+                        : isActive
+                        ? 'bg-electric'
+                        : 'bg-secondary'
+                    }`}
                   >
-                    {/* Status indicator */}
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
-                        isComplete
-                          ? 'bg-electric'
-                          : isActive
-                          ? 'bg-electric/20 border-2 border-electric'
-                          : 'bg-secondary/50 border border-border'
-                      }`}
-                    >
-                      {isComplete ? (
-                        <Check className="w-4 h-4 text-white" />
-                      ) : isActive ? (
-                        <Loader2 className="w-4 h-4 text-electric animate-spin" />
-                      ) : (
-                        <Icon className="w-4 h-4 text-muted-foreground" />
-                      )}
-                    </div>
+                    {isComplete ? (
+                      <Check className="w-5 h-5 text-white" />
+                    ) : isActive ? (
+                      <Loader2 className="w-5 h-5 text-white animate-spin" />
+                    ) : (
+                      <Icon className="w-5 h-5 text-muted-foreground" />
+                    )}
+                  </div>
 
-                    {/* Step content */}
-                    <div className="flex-1 min-w-0">
-                      <p
-                        className={`text-sm font-medium lowercase transition-colors duration-300 ${
-                          isActive
-                            ? 'text-foreground'
-                            : isComplete
-                            ? 'text-muted-foreground'
-                            : 'text-muted-foreground/50'
-                        }`}
-                      >
-                        {step.label}
-                        {isActive && '...'}
-                      </p>
-                      {step.detail && isActive && (
-                        <motion.p
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          className="text-xs text-muted-foreground mt-0.5 lowercase"
-                        >
-                          {step.detail}
-                        </motion.p>
-                      )}
+                  {/* Step content */}
+                  <div className="flex-1">
+                    <div className={`font-medium transition-colors ${
+                      isActive || isComplete ? 'text-foreground' : 'text-muted-foreground'
+                    }`}>
+                      {step.label}
+                      {isActive && <span className="animate-pulse">...</span>}
                     </div>
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
-          </div>
+                    {step.detail && (
+                      <div className="text-sm text-muted-foreground">{step.detail}</div>
+                    )}
+                  </div>
 
-          {/* Progress bar */}
-          <div className="relative h-1 bg-secondary rounded-full overflow-hidden">
+                  {/* Spinner for active step */}
+                  {isActive && (
+                    <div className="w-5 h-5 border-2 border-electric border-t-transparent rounded-full animate-spin" />
+                  )}
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="w-full">
+          <div className="h-2 bg-secondary rounded-full overflow-hidden">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.4, ease: 'easeOut' }}
-              className="absolute inset-y-0 left-0 bg-gradient-to-r from-electric to-purple rounded-full"
-            />
-            {/* Glow effect */}
-            <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.4, ease: 'easeOut' }}
-              className="absolute inset-y-0 left-0 bg-gradient-to-r from-electric to-purple rounded-full blur-sm opacity-50"
+              transition={{ duration: 0.5, ease: 'easeOut' }}
+              className="h-full bg-electric rounded-full"
             />
           </div>
-
-          <p className="text-center text-xs text-muted-foreground mt-4 lowercase">
+          <p className="text-center text-sm text-muted-foreground mt-3">
             {Math.round(progress)}% complete
           </p>
         </div>
-      </div>
+      </main>
     </motion.div>
   );
 }
