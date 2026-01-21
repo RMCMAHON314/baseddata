@@ -59,7 +59,7 @@ export async function generateDataset({ prompt, userId }: GenerateDatasetParams)
 
   try {
     // Call the AI-powered edge function
-    const { data, error } = await supabase.functions.invoke("generate-dataset", {
+    const { data, error } = await supabase.functions.invoke("generate-dataset-v2", {
       body: { prompt, datasetId: dataset.id },
     });
 
