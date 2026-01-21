@@ -1,113 +1,103 @@
-import { useState, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Header } from "@/components/Header";
-import { Logo } from "@/components/Logo";
-import { PromptInput } from "@/components/ui/prompt-input";
-import { ExamplePrompts } from "@/components/ExamplePrompts";
-import { Button } from "@/components/ui/button";
-import { GenerationProgress } from "@/components/GenerationProgress";
-import { ResultsDashboard } from "@/components/ResultsDashboard";
-import { AuthModal } from "@/components/AuthModal";
-import { useAuth } from "@/contexts/AuthContext";
-import { generateDataset } from "@/lib/datasets";
-import { Zap, ArrowRight, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+// Based Data - Main App Page
+// Clean orchestration using hooks and focused components
 
-type AppState = "landing" | "generating" | "results";
+import { useState, useCallback } from 'react';
+import { AnimatePresence } from 'framer-motion';
+import { Loader2 } from 'lucide-react';
 
-interface DatasetResult {
-  id: string;
-  title: string;
-  description: string;
-  data: any[];
-  insights: any;
-  creditsUsed: number;
-}
+import { Header } from '@/components/Header';
+import { LandingHero } from '@/components/LandingHero';
+import { GeneratingView } from '@/components/GeneratingView';
+import { ResultsDashboard } from '@/components/ResultsDashboard';
+import { AuthModal } from '@/components/AuthModal';
+import { useAuth } from '@/contexts/AuthContext';
+import { useDatasetGeneration } from '@/hooks/useDatasetGeneration';
+import { toast } from 'sonner';
+
+type AppState = 'landing' | 'generating' | 'results';
 
 const Index = () => {
-  const { user, profile, isLoading: authLoading, refreshProfile } = useAuth();
-  const [appState, setAppState] = useState<AppState>("landing");
-  const [prompt, setPrompt] = useState("");
-  const [submittedPrompt, setSubmittedPrompt] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [datasetResult, setDatasetResult] = useState<DatasetResult | null>(null);
+  const { user, profile, isLoading: authLoading } = useAuth();
+  const [appState, setAppState] = useState<AppState>('landing');
+  const [prompt, setPrompt] = useState('');
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<"signin" | "signup">("signup");
+  const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signup');
+
+  const {
+    state: generationState,
+    steps,
+    progress,
+    currentStepIndex,
+    result,
+    startGeneration,
+    reset: resetGeneration,
+  } = useDatasetGeneration();
+
+  // Handle generation completion
+  const handleGenerationComplete = useCallback(() => {
+    if (generationState === 'complete' && result) {
+      setAppState('results');
+    } else if (generationState === 'error') {
+      setAppState('landing');
+    }
+  }, [generationState, result]);
+
+  // Watch for generation state changes
+  if (generationState === 'complete' && appState === 'generating' && result) {
+    setAppState('results');
+  } else if (generationState === 'error' && appState === 'generating') {
+    setAppState('landing');
+  }
 
   const handleSubmit = async () => {
     if (!prompt.trim()) return;
 
     // Check if user is logged in
     if (!user) {
-      setAuthModalMode("signup");
+      setAuthModalMode('signup');
       setAuthModalOpen(true);
       return;
     }
 
     // Check credits
     if (profile && profile.credits_balance < 5) {
-      toast.error("insufficient credits - please purchase more");
+      toast.error('insufficient credits - please purchase more');
       return;
     }
 
-    setSubmittedPrompt(prompt);
-    setAppState("generating");
-    setIsGenerating(true);
+    setAppState('generating');
+    await startGeneration(prompt);
   };
 
-  const handleGenerationComplete = useCallback(async () => {
-    if (!user) return;
-
-    try {
-      const result = await generateDataset({
-        prompt: submittedPrompt,
-        userId: user.id,
-      });
-
-      setDatasetResult(result);
-      await refreshProfile(); // Update credits display
-      setAppState("results");
-    } catch (error: any) {
-      console.error("Generation failed:", error);
-      toast.error(error.message || "generation failed - please try again");
-      setAppState("landing");
-    } finally {
-      setIsGenerating(false);
-    }
-  }, [user, submittedPrompt, refreshProfile]);
-
   const handleBackToLanding = () => {
-    setAppState("landing");
-    setPrompt("");
-    setSubmittedPrompt("");
-    setDatasetResult(null);
+    setAppState('landing');
+    setPrompt('');
+    resetGeneration();
   };
 
   const openSignIn = () => {
-    setAuthModalMode("signin");
+    setAuthModalMode('signin');
     setAuthModalOpen(true);
   };
 
   const openSignUp = () => {
-    setAuthModalMode("signup");
+    setAuthModalMode('signup');
     setAuthModalOpen(true);
   };
 
-  // Show header for logged-in states
-  const showHeader = user && appState !== "landing";
-
+  // Loading state
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 text-electric animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen relative">
-      {/* Header */}
-      {showHeader && <Header />}
+    <div className="min-h-screen relative bg-background">
+      {/* Header for authenticated states */}
+      {user && appState !== 'landing' && <Header />}
 
       {/* Auth Modal */}
       <AuthModal
@@ -117,128 +107,41 @@ const Index = () => {
       />
 
       <AnimatePresence mode="wait">
-        {appState === "landing" && (
-          <motion.div
+        {appState === 'landing' && (
+          <LandingHero
             key="landing"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="min-h-screen flex flex-col"
-          >
-            {/* Top bar */}
-            <div className="container mx-auto px-4 py-6 flex items-center justify-between">
-              <Logo size="md" />
-              <div className="flex items-center gap-4">
-                {user ? (
-                  <div className="flex items-center gap-3">
-                    <span className="text-white/60 text-sm lowercase hidden sm:block">
-                      {profile?.credits_balance || 0} credits
-                    </span>
-                    <Button variant="ghost" onClick={() => {}}>
-                      {profile?.full_name || user.email?.split("@")[0]}
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    <Button variant="ghost" className="hidden sm:inline-flex lowercase" onClick={openSignIn}>
-                      sign in
-                    </Button>
-                    <Button variant="hero" size="sm" className="lowercase" onClick={openSignUp}>
-                      get started
-                    </Button>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Hero section */}
-            <main className="flex-1 flex flex-col items-center justify-center px-4 -mt-16">
-              {/* Tagline */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-                className="text-center mb-10"
-              >
-                <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6">
-                  <span className="text-white">all the data.</span>
-                  <br />
-                  <span className="text-gradient">on demand.</span>
-                </h1>
-                <p className="text-white/60 text-lg sm:text-xl max-w-xl mx-auto font-light">
-                  describe what you need. get structured, AI-enriched datasets in seconds.
-                </p>
-              </motion.div>
-
-              {/* Prompt input */}
-              <PromptInput
-                value={prompt}
-                onChange={setPrompt}
-                onSubmit={handleSubmit}
-                placeholder="what data do you need?"
-                isLoading={isGenerating}
-                className="mb-6 px-4 w-full"
-              />
-
-              {/* Example prompts */}
-              <ExamplePrompts onSelect={setPrompt} />
-
-              {/* CTA */}
-              {!user && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.5, delay: 0.8 }}
-                  className="mt-12 flex flex-col items-center gap-3"
-                >
-                  <Button variant="hero" size="lg" className="group lowercase" onClick={openSignUp}>
-                    <Zap className="w-5 h-5" />
-                    get 100 free credits
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </Button>
-                  <p className="text-xs text-white/40 lowercase">
-                    no credit card required • start generating instantly
-                  </p>
-                </motion.div>
-              )}
-            </main>
-
-            {/* Footer accent */}
-            <div className="h-px bg-gradient-to-r from-transparent via-electric/30 to-transparent" />
-          </motion.div>
+            prompt={prompt}
+            onPromptChange={setPrompt}
+            onSubmit={handleSubmit}
+            isGenerating={generationState === 'generating'}
+            isLoggedIn={!!user}
+            credits={profile?.credits_balance || 0}
+            userName={profile?.full_name || user?.email?.split('@')[0]}
+            onSignIn={openSignIn}
+            onSignUp={openSignUp}
+          />
         )}
 
-        {appState === "generating" && (
-          <motion.div
+        {appState === 'generating' && (
+          <GeneratingView
             key="generating"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="min-h-screen flex items-center justify-center px-4 pt-16"
-          >
-            <GenerationProgress
-              prompt={submittedPrompt}
-              onComplete={handleGenerationComplete}
-            />
-          </motion.div>
+            prompt={prompt}
+            steps={steps}
+            progress={progress}
+            currentStepIndex={currentStepIndex}
+          />
         )}
 
-        {appState === "results" && datasetResult && (
-          <motion.div
+        {appState === 'results' && result && (
+          <ResultsDashboard
             key="results"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <ResultsDashboard
-              title={datasetResult.title}
-              prompt={submittedPrompt}
-              creditsUsed={datasetResult.creditsUsed}
-              data={datasetResult.data}
-              insights={datasetResult.insights}
-              onBack={handleBackToLanding}
-            />
-          </motion.div>
+            title={result.title}
+            prompt={prompt}
+            creditsUsed={result.creditsUsed}
+            data={result.data}
+            insights={result.insights}
+            onBack={handleBackToLanding}
+          />
         )}
       </AnimatePresence>
     </div>
