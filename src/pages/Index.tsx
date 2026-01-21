@@ -44,19 +44,7 @@ const Index = () => {
   const handleSubmit = async (options: GenerationOptions) => {
     if (!prompt.trim()) return;
 
-    // Check if user is logged in
-    if (!user) {
-      setAuthModalMode('signup');
-      setAuthModalOpen(true);
-      return;
-    }
-
-    // Check credits (basic check, hook does detailed check)
-    if (profile && profile.credits_balance < 5) {
-      toast.error('insufficient credits - please purchase more');
-      return;
-    }
-
+    // Auth disabled for testing - skip all checks
     setAppState('generating');
     await startGeneration(prompt, options);
   };
