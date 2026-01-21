@@ -1777,22 +1777,28 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    // Deduct credits
-    const { data: deducted, error: deductError } = await supabase.rpc('deduct_credits', {
-      p_user_id: userId,
-      p_amount: creditsUsed,
-      p_description: `Dataset: ${result.title}`
-    });
+    // Skip credit deduction for test users (auth disabled for testing)
+    const isTestUser = userId.startsWith('test-user-');
+    if (!isTestUser) {
+      // Deduct credits
+      const { data: deducted, error: deductError } = await supabase.rpc('deduct_credits', {
+        p_user_id: userId,
+        p_amount: creditsUsed,
+        p_description: `Dataset: ${result.title}`
+      });
 
-    if (deductError) {
-      console.error('Credit deduction error:', deductError);
-    }
+      if (deductError) {
+        console.error('Credit deduction error:', deductError);
+      }
 
-    if (!deducted) {
-      return new Response(
-        JSON.stringify({ error: 'Insufficient credits' }),
-        { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      if (!deducted) {
+        return new Response(
+          JSON.stringify({ error: 'Insufficient credits' }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } else {
+      console.log('🧪 Test user detected - skipping credit deduction');
     }
 
     // Update dataset record using specific datasetId if provided

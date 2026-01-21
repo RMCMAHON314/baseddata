@@ -12,18 +12,25 @@ interface GenerateDatasetParams {
 }
 
 export async function generateDataset({ prompt, userId, options }: GenerateDatasetParams): Promise<DatasetResult> {
-  // Create pending dataset record first (source of truth pattern)
-  const { data: dataset, error: createError } = await supabase
-    .from("datasets")
-    .insert({
-      user_id: userId,
-      prompt,
-      status: "pending",
-    })
-    .select()
-    .single();
+  // For test users, skip database record creation (auth disabled)
+  const isTestUser = userId.startsWith('test-user-');
+  let datasetId: string | null = null;
 
-  if (createError) throw createError;
+  if (!isTestUser) {
+    // Create pending dataset record first (source of truth pattern)
+    const { data: dataset, error: createError } = await supabase
+      .from("datasets")
+      .insert({
+        user_id: userId,
+        prompt,
+        status: "pending",
+      })
+      .select()
+      .single();
+
+    if (createError) throw createError;
+    datasetId = dataset.id;
+  }
 
   try {
     // Invoke Ultimate Engine v3 - ZERO AI CREDITS 🔥
@@ -31,7 +38,7 @@ export async function generateDataset({ prompt, userId, options }: GenerateDatas
       body: { 
         prompt, 
         userId,
-        datasetId: dataset.id,
+        datasetId,
         options: {
           dataSize: options?.dataSize || 'standard',
           freshness: options?.freshness || 'cached',
@@ -45,7 +52,7 @@ export async function generateDataset({ prompt, userId, options }: GenerateDatas
     // Edge function handles the dataset update to 'complete' status
     // Just return the result with proper typing
     return {
-      id: dataset.id,
+      id: datasetId || data.id || crypto.randomUUID(),
       title: data.title || prompt,
       description: data.description || `Dataset generated from: ${prompt}`,
       data: data.data || [],
@@ -54,11 +61,13 @@ export async function generateDataset({ prompt, userId, options }: GenerateDatas
       creditsUsed: data.creditsUsed || 8,
     };
   } catch (error) {
-    // Mark dataset as failed on error
-    await supabase
-      .from("datasets")
-      .update({ status: "failed" })
-      .eq("id", dataset.id);
+    // Mark dataset as failed on error (only if we have a real dataset)
+    if (datasetId) {
+      await supabase
+        .from("datasets")
+        .update({ status: "failed" })
+        .eq("id", datasetId);
+    }
     throw error;
   }
 }
