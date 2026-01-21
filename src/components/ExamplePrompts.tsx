@@ -5,10 +5,10 @@ interface ExamplePromptsProps {
 }
 
 const examples = [
-  "SaaS companies in SF",
-  "NBA player stats",
-  "AI patents 2024",
-  "Crypto exchanges",
+  "saas companies in sf",
+  "nba player stats",
+  "ai patents 2024",
+  "crypto exchanges",
 ];
 
 export function ExamplePrompts({ onSelect }: ExamplePromptsProps) {
@@ -17,9 +17,9 @@ export function ExamplePrompts({ onSelect }: ExamplePromptsProps) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5, delay: 0.4 }}
-      className="flex flex-wrap items-center justify-center gap-2 text-sm text-muted-foreground"
+      className="flex flex-wrap items-center justify-center gap-2 text-sm"
     >
-      <span className="hidden sm:inline">Try:</span>
+      <span className="hidden sm:inline text-white/40">try:</span>
       {examples.map((example, index) => (
         <motion.button
           key={example}
@@ -27,7 +27,7 @@ export function ExamplePrompts({ onSelect }: ExamplePromptsProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.5 + index * 0.1 }}
           onClick={() => onSelect(example)}
-          className="px-3 py-1.5 rounded-full bg-secondary/50 border border-border/50 text-muted-foreground hover:text-foreground hover:border-electric/30 hover:bg-secondary transition-all duration-300"
+          className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/50 hover:text-white hover:border-electric/40 hover:bg-white/10 transition-all duration-300"
         >
           '{example}'
         </motion.button>

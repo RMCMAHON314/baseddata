@@ -71,13 +71,13 @@ const Index = () => {
                 transition={{ duration: 0.6 }}
                 className="text-center mb-10"
               >
-                <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-4">
-                  <span className="text-foreground">All the Data.</span>
+                <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6">
+                  <span className="text-white">all the data.</span>
                   <br />
-                  <span className="text-gradient">On Demand.</span>
+                  <span className="text-gradient">on demand.</span>
                 </h1>
-                <p className="text-muted-foreground text-lg sm:text-xl max-w-xl mx-auto">
-                  Describe what you need. Get structured, AI-enriched datasets in seconds.
+                <p className="text-white/60 text-lg sm:text-xl max-w-xl mx-auto font-light">
+                  describe what you need. get structured, AI-enriched datasets in seconds.
                 </p>
               </motion.div>
 
@@ -86,7 +86,7 @@ const Index = () => {
                 value={prompt}
                 onChange={setPrompt}
                 onSubmit={handleSubmit}
-                placeholder="What data do you need?"
+                placeholder="what data do you need?"
                 className="mb-6 px-4 w-full"
               />
 
@@ -100,13 +100,13 @@ const Index = () => {
                 transition={{ duration: 0.5, delay: 0.8 }}
                 className="mt-12 flex flex-col items-center gap-3"
               >
-                <Button variant="hero" size="lg" className="group">
+                <Button variant="hero" size="lg" className="group lowercase">
                   <Zap className="w-5 h-5" />
-                  Get 100 Free Credits
+                  get 100 free credits
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Button>
-                <p className="text-xs text-muted-foreground">
-                  No credit card required • Start generating instantly
+                <p className="text-xs text-white/40 lowercase">
+                  no credit card required • start generating instantly
                 </p>
               </motion.div>
             </main>

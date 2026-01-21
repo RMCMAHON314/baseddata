@@ -68,12 +68,18 @@ export default {
           DEFAULT: "hsl(var(--electric-blue))",
           glow: "hsl(var(--electric-blue-glow))",
           muted: "hsl(var(--electric-blue-muted))",
+          bright: "hsl(var(--electric-blue-bright))",
         },
         purple: {
           DEFAULT: "hsl(var(--purple-accent))",
           glow: "hsl(var(--purple-glow))",
         },
         cyan: "hsl(var(--cyan-accent))",
+        white: {
+          DEFAULT: "hsl(var(--white-pure))",
+          soft: "hsl(var(--white-soft))",
+          muted: "hsl(var(--white-muted))",
+        },
       },
       fontFamily: {
         display: ['var(--font-display)', 'system-ui', 'sans-serif'],

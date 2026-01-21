@@ -7,83 +7,92 @@
 
 @layer base {
   :root {
-    /* Based Data Core Palette */
-    --navy-deep: 240 27% 9%;
-    --navy-medium: 240 25% 12%;
-    --navy-light: 240 22% 16%;
-    --navy-surface: 240 20% 20%;
+    /* baseddata - Premium Unicorn AI Palette */
+    --navy-deep: 230 35% 7%;
+    --navy-medium: 230 30% 10%;
+    --navy-light: 230 25% 14%;
+    --navy-surface: 230 22% 18%;
     
-    --electric-blue: 228 89% 60%;
-    --electric-blue-glow: 228 100% 70%;
-    --electric-blue-muted: 228 60% 45%;
+    /* Electric Blue - Primary Brand */
+    --electric-blue: 220 100% 60%;
+    --electric-blue-glow: 210 100% 70%;
+    --electric-blue-muted: 220 70% 50%;
+    --electric-blue-bright: 210 100% 75%;
     
-    --purple-accent: 292 84% 38%;
-    --purple-glow: 292 100% 55%;
+    /* Purple Accent */
+    --purple-accent: 265 90% 60%;
+    --purple-glow: 265 100% 70%;
     
-    --cyan-accent: 185 85% 50%;
+    /* Cyan for extra pop */
+    --cyan-accent: 185 100% 55%;
+    
+    /* Crispy Whites */
+    --white-pure: 0 0% 100%;
+    --white-soft: 220 30% 96%;
+    --white-muted: 220 20% 75%;
     
     /* Semantic Tokens */
     --background: var(--navy-deep);
-    --foreground: 210 40% 96%;
+    --foreground: var(--white-soft);
     
     --card: var(--navy-medium);
-    --card-foreground: 210 40% 96%;
+    --card-foreground: var(--white-soft);
     
     --popover: var(--navy-medium);
-    --popover-foreground: 210 40% 96%;
+    --popover-foreground: var(--white-soft);
     
     --primary: var(--electric-blue);
-    --primary-foreground: 0 0% 100%;
+    --primary-foreground: var(--white-pure);
     
     --secondary: var(--navy-light);
-    --secondary-foreground: 210 40% 96%;
+    --secondary-foreground: var(--white-soft);
     
     --muted: var(--navy-surface);
-    --muted-foreground: 220 15% 55%;
+    --muted-foreground: var(--white-muted);
     
     --accent: var(--purple-accent);
-    --accent-foreground: 0 0% 100%;
+    --accent-foreground: var(--white-pure);
     
     --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive-foreground: var(--white-pure);
     
-    --border: 240 20% 18%;
-    --input: 240 20% 16%;
+    --border: 230 25% 18%;
+    --input: 230 22% 14%;
     --ring: var(--electric-blue);
     
     --radius: 0.75rem;
     
-    /* Glass Morphism */
-    --glass-background: 240 25% 12% / 0.6;
-    --glass-border: 240 20% 30% / 0.3;
-    --glass-blur: 16px;
+    /* Glass Morphism - cleaner */
+    --glass-background: 230 30% 10% / 0.75;
+    --glass-border: 220 40% 50% / 0.12;
+    --glass-blur: 24px;
     
-    /* Gradients */
+    /* Gradients - Unicorn vibes */
     --gradient-primary: linear-gradient(135deg, hsl(var(--electric-blue)), hsl(var(--purple-accent)));
-    --gradient-glow: linear-gradient(135deg, hsl(var(--electric-blue-glow) / 0.3), hsl(var(--purple-glow) / 0.3));
-    --gradient-radial: radial-gradient(ellipse at center, hsl(var(--electric-blue) / 0.15), transparent 70%);
+    --gradient-glow: linear-gradient(135deg, hsl(var(--electric-blue-glow) / 0.4), hsl(var(--purple-glow) / 0.4));
+    --gradient-text: linear-gradient(135deg, hsl(var(--electric-blue-bright)), hsl(var(--purple-glow)));
     --gradient-mesh: 
-      radial-gradient(at 20% 30%, hsl(var(--electric-blue) / 0.2) 0px, transparent 50%),
-      radial-gradient(at 80% 70%, hsl(var(--purple-accent) / 0.15) 0px, transparent 50%),
-      radial-gradient(at 50% 50%, hsl(var(--cyan-accent) / 0.08) 0px, transparent 70%);
+      radial-gradient(at 10% 20%, hsl(var(--electric-blue) / 0.12) 0px, transparent 50%),
+      radial-gradient(at 90% 80%, hsl(var(--purple-accent) / 0.1) 0px, transparent 50%),
+      radial-gradient(at 50% 50%, hsl(var(--cyan-accent) / 0.04) 0px, transparent 60%);
     
-    /* Shadows */
-    --shadow-glow-sm: 0 0 20px hsl(var(--electric-blue) / 0.3);
-    --shadow-glow-md: 0 0 40px hsl(var(--electric-blue) / 0.4);
-    --shadow-glow-lg: 0 0 60px hsl(var(--electric-blue) / 0.5);
-    --shadow-card: 0 8px 32px hsl(var(--navy-deep) / 0.5);
+    /* Shadows - Electric glow */
+    --shadow-glow-sm: 0 0 25px hsl(var(--electric-blue) / 0.35);
+    --shadow-glow-md: 0 0 50px hsl(var(--electric-blue) / 0.45);
+    --shadow-glow-lg: 0 0 80px hsl(var(--electric-blue) / 0.55);
+    --shadow-card: 0 8px 32px hsl(var(--navy-deep) / 0.6);
     
     /* Typography */
     --font-display: 'Space Grotesk', system-ui, sans-serif;
     --font-body: 'Inter', system-ui, sans-serif;
     
-    /* Sidebar - keeping defaults */
+    /* Sidebar */
     --sidebar-background: var(--navy-medium);
-    --sidebar-foreground: 210 40% 96%;
+    --sidebar-foreground: var(--white-soft);
     --sidebar-primary: var(--electric-blue);
-    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-primary-foreground: var(--white-pure);
     --sidebar-accent: var(--navy-light);
-    --sidebar-accent-foreground: 210 40% 96%;
+    --sidebar-accent-foreground: var(--white-soft);
     --sidebar-border: var(--border);
     --sidebar-ring: var(--electric-blue);
   }
@@ -137,9 +146,17 @@
     box-shadow: var(--shadow-glow-lg);
   }
   
-  /* Text Gradient */
+  /* Text Gradient - Crispy Unicorn */
   .text-gradient {
-    background: var(--gradient-primary);
+    background: var(--gradient-text);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  /* Text Gradient Alt */
+  .text-gradient-subtle {
+    background: linear-gradient(135deg, hsl(var(--electric-blue)), hsl(var(--electric-blue-glow)));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
