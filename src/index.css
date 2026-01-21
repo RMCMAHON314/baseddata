@@ -2,104 +2,80 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Based Data Design System - Dark Mode Premium Theme */
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+/* Based Data Design System - Clean White Theme */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 @layer base {
   :root {
-    /* baseddata - Premium Unicorn AI Palette */
-    --navy-deep: 230 35% 7%;
-    --navy-medium: 230 30% 10%;
-    --navy-light: 230 25% 14%;
-    --navy-surface: 230 22% 18%;
+    /* Based Data - Crispy Clean Palette */
+    --based-blue: 220 100% 60%;
+    --based-blue-light: 225 100% 96%;
+    --based-blue-medium: 220 100% 67%;
     
-    /* Electric Blue - Primary Brand */
-    --electric-blue: 220 100% 60%;
-    --electric-blue-glow: 210 100% 70%;
-    --electric-blue-muted: 220 70% 50%;
-    --electric-blue-bright: 210 100% 75%;
-    
-    /* Purple Accent */
-    --purple-accent: 265 90% 60%;
-    --purple-glow: 265 100% 70%;
-    
-    /* Cyan for extra pop */
-    --cyan-accent: 185 100% 55%;
-    
-    /* Crispy Whites */
+    /* Whites & Grays */
     --white-pure: 0 0% 100%;
-    --white-soft: 220 30% 96%;
-    --white-muted: 220 20% 75%;
+    --gray-50: 210 20% 98%;
+    --gray-100: 220 14% 96%;
+    --gray-200: 220 13% 91%;
+    --gray-300: 216 12% 84%;
+    --gray-400: 218 11% 65%;
+    --gray-500: 220 9% 46%;
+    --gray-600: 215 14% 34%;
+    --gray-700: 217 19% 27%;
+    --gray-800: 215 28% 17%;
+    --gray-900: 221 39% 11%;
+    
+    /* Success Green */
+    --green-500: 160 84% 39%;
+    --green-100: 152 76% 91%;
     
     /* Semantic Tokens */
-    --background: var(--navy-deep);
-    --foreground: var(--white-soft);
+    --background: var(--white-pure);
+    --foreground: var(--gray-900);
     
-    --card: var(--navy-medium);
-    --card-foreground: var(--white-soft);
+    --card: var(--gray-50);
+    --card-foreground: var(--gray-900);
     
-    --popover: var(--navy-medium);
-    --popover-foreground: var(--white-soft);
+    --popover: var(--white-pure);
+    --popover-foreground: var(--gray-900);
     
-    --primary: var(--electric-blue);
+    --primary: var(--based-blue);
     --primary-foreground: var(--white-pure);
     
-    --secondary: var(--navy-light);
-    --secondary-foreground: var(--white-soft);
+    --secondary: var(--gray-100);
+    --secondary-foreground: var(--gray-700);
     
-    --muted: var(--navy-surface);
-    --muted-foreground: var(--white-muted);
+    --muted: var(--gray-100);
+    --muted-foreground: var(--gray-500);
     
-    --accent: var(--purple-accent);
-    --accent-foreground: var(--white-pure);
+    --accent: var(--based-blue-light);
+    --accent-foreground: var(--based-blue);
     
     --destructive: 0 84% 60%;
     --destructive-foreground: var(--white-pure);
     
-    --border: 230 25% 18%;
-    --input: 230 22% 14%;
-    --ring: var(--electric-blue);
+    --success: var(--green-500);
+    --success-foreground: var(--white-pure);
     
-    --radius: 0.75rem;
+    --border: var(--gray-200);
+    --input: var(--gray-100);
+    --ring: var(--based-blue);
     
-    /* Glass Morphism - cleaner */
-    --glass-background: 230 30% 10% / 0.75;
-    --glass-border: 220 40% 50% / 0.12;
-    --glass-blur: 24px;
-    
-    /* Gradients - Unicorn vibes */
-    --gradient-primary: linear-gradient(135deg, hsl(var(--electric-blue)), hsl(var(--purple-accent)));
-    --gradient-glow: linear-gradient(135deg, hsl(var(--electric-blue-glow) / 0.4), hsl(var(--purple-glow) / 0.4));
-    --gradient-text: linear-gradient(135deg, hsl(var(--electric-blue-bright)), hsl(var(--purple-glow)));
-    --gradient-mesh: 
-      radial-gradient(at 10% 20%, hsl(var(--electric-blue) / 0.12) 0px, transparent 50%),
-      radial-gradient(at 90% 80%, hsl(var(--purple-accent) / 0.1) 0px, transparent 50%),
-      radial-gradient(at 50% 50%, hsl(var(--cyan-accent) / 0.04) 0px, transparent 60%);
-    
-    /* Shadows - Electric glow */
-    --shadow-glow-sm: 0 0 25px hsl(var(--electric-blue) / 0.35);
-    --shadow-glow-md: 0 0 50px hsl(var(--electric-blue) / 0.45);
-    --shadow-glow-lg: 0 0 80px hsl(var(--electric-blue) / 0.55);
-    --shadow-card: 0 8px 32px hsl(var(--navy-deep) / 0.6);
+    --radius: 0.5rem;
     
     /* Typography */
-    --font-display: 'Space Grotesk', system-ui, sans-serif;
-    --font-body: 'Inter', system-ui, sans-serif;
+    --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-display: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     
-    /* Sidebar */
-    --sidebar-background: var(--navy-medium);
-    --sidebar-foreground: var(--white-soft);
-    --sidebar-primary: var(--electric-blue);
+    /* Sidebar (keeping for compatibility) */
+    --sidebar-background: var(--white-pure);
+    --sidebar-foreground: var(--gray-900);
+    --sidebar-primary: var(--based-blue);
     --sidebar-primary-foreground: var(--white-pure);
-    --sidebar-accent: var(--navy-light);
-    --sidebar-accent-foreground: var(--white-soft);
-    --sidebar-border: var(--border);
-    --sidebar-ring: var(--electric-blue);
-  }
-
-  /* Dark mode is the default - no .dark override needed */
-  .dark {
-    /* Same as root since dark is default */
+    --sidebar-accent: var(--gray-100);
+    --sidebar-accent-foreground: var(--gray-900);
+    --sidebar-border: var(--gray-200);
+    --sidebar-ring: var(--based-blue);
   }
 }
 
@@ -114,123 +90,51 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    background-image: var(--gradient-mesh);
-    background-attachment: fixed;
     min-height: 100vh;
   }
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
+    letter-spacing: -0.02em;
   }
 }
 
 @layer components {
-  /* Glass Card */
-  .glass {
-    background: hsl(var(--glass-background));
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    border: 1px solid hsl(var(--glass-border));
+  /* Primary Button Style */
+  .btn-primary {
+    @apply bg-primary text-primary-foreground font-semibold rounded-lg px-5 py-2.5;
+    @apply hover:opacity-90 transition-opacity;
   }
   
-  /* Glow Effects */
-  .glow-sm {
-    box-shadow: var(--shadow-glow-sm);
+  /* Card Style */
+  .card-clean {
+    @apply bg-card rounded-2xl border border-border;
   }
   
-  .glow-md {
-    box-shadow: var(--shadow-glow-md);
+  /* Input Focus Ring */
+  .input-focus {
+    @apply focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary;
   }
   
-  .glow-lg {
-    box-shadow: var(--shadow-glow-lg);
+  /* Badge Styles */
+  .badge-primary {
+    @apply px-3 py-1 rounded-full text-xs font-medium;
+    background: hsl(var(--based-blue-light));
+    color: hsl(var(--based-blue));
   }
   
-  /* Text Gradient - Crispy Unicorn */
+  .badge-success {
+    @apply px-3 py-1 rounded-full text-xs font-medium;
+    background: hsl(var(--green-100));
+    color: hsl(var(--green-500));
+  }
+  
+  /* Text Gradient (for special emphasis) */
   .text-gradient {
-    background: var(--gradient-text);
+    background: linear-gradient(135deg, hsl(var(--based-blue)), hsl(var(--based-blue-medium)));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-  }
-  
-  /* Text Gradient Alt */
-  .text-gradient-subtle {
-    background: linear-gradient(135deg, hsl(var(--electric-blue)), hsl(var(--electric-blue-glow)));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-  
-  /* Animated Border */
-  .border-gradient {
-    position: relative;
-    background: hsl(var(--card));
-    border-radius: var(--radius);
-  }
-  
-  .border-gradient::before {
-    content: '';
-    position: absolute;
-    inset: -1px;
-    border-radius: calc(var(--radius) + 1px);
-    padding: 1px;
-    background: var(--gradient-primary);
-    -webkit-mask: 
-      linear-gradient(#fff 0 0) content-box, 
-      linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    pointer-events: none;
-  }
-  
-  /* Pulse animation for loading states */
-  .pulse-glow {
-    animation: pulseGlow 2s ease-in-out infinite;
-  }
-  
-  @keyframes pulseGlow {
-    0%, 100% {
-      box-shadow: var(--shadow-glow-sm);
-    }
-    50% {
-      box-shadow: var(--shadow-glow-lg);
-    }
-  }
-  
-  /* Floating animation */
-  .float {
-    animation: float 6s ease-in-out infinite;
-  }
-  
-  @keyframes float {
-    0%, 100% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-10px);
-    }
-  }
-  
-  /* Shimmer effect for loading */
-  .shimmer {
-    background: linear-gradient(
-      90deg,
-      hsl(var(--navy-light)) 0%,
-      hsl(var(--navy-surface)) 50%,
-      hsl(var(--navy-light)) 100%
-    );
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
-  }
-  
-  @keyframes shimmer {
-    0% {
-      background-position: 200% 0;
-    }
-    100% {
-      background-position: -200% 0;
-    }
   }
 }
 
