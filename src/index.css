@@ -2,95 +2,95 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* Based Data Design System - Dark Mode Premium Theme */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-
-    --radius: 0.5rem;
-
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Based Data Core Palette */
+    --navy-deep: 240 27% 9%;
+    --navy-medium: 240 25% 12%;
+    --navy-light: 240 22% 16%;
+    --navy-surface: 240 20% 20%;
+    
+    --electric-blue: 228 89% 60%;
+    --electric-blue-glow: 228 100% 70%;
+    --electric-blue-muted: 228 60% 45%;
+    
+    --purple-accent: 292 84% 38%;
+    --purple-glow: 292 100% 55%;
+    
+    --cyan-accent: 185 85% 50%;
+    
+    /* Semantic Tokens */
+    --background: var(--navy-deep);
+    --foreground: 210 40% 96%;
+    
+    --card: var(--navy-medium);
+    --card-foreground: 210 40% 96%;
+    
+    --popover: var(--navy-medium);
+    --popover-foreground: 210 40% 96%;
+    
+    --primary: var(--electric-blue);
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: var(--navy-light);
+    --secondary-foreground: 210 40% 96%;
+    
+    --muted: var(--navy-surface);
+    --muted-foreground: 220 15% 55%;
+    
+    --accent: var(--purple-accent);
+    --accent-foreground: 0 0% 100%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 240 20% 18%;
+    --input: 240 20% 16%;
+    --ring: var(--electric-blue);
+    
+    --radius: 0.75rem;
+    
+    /* Glass Morphism */
+    --glass-background: 240 25% 12% / 0.6;
+    --glass-border: 240 20% 30% / 0.3;
+    --glass-blur: 16px;
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--electric-blue)), hsl(var(--purple-accent)));
+    --gradient-glow: linear-gradient(135deg, hsl(var(--electric-blue-glow) / 0.3), hsl(var(--purple-glow) / 0.3));
+    --gradient-radial: radial-gradient(ellipse at center, hsl(var(--electric-blue) / 0.15), transparent 70%);
+    --gradient-mesh: 
+      radial-gradient(at 20% 30%, hsl(var(--electric-blue) / 0.2) 0px, transparent 50%),
+      radial-gradient(at 80% 70%, hsl(var(--purple-accent) / 0.15) 0px, transparent 50%),
+      radial-gradient(at 50% 50%, hsl(var(--cyan-accent) / 0.08) 0px, transparent 70%);
+    
+    /* Shadows */
+    --shadow-glow-sm: 0 0 20px hsl(var(--electric-blue) / 0.3);
+    --shadow-glow-md: 0 0 40px hsl(var(--electric-blue) / 0.4);
+    --shadow-glow-lg: 0 0 60px hsl(var(--electric-blue) / 0.5);
+    --shadow-card: 0 8px 32px hsl(var(--navy-deep) / 0.5);
+    
+    /* Typography */
+    --font-display: 'Space Grotesk', system-ui, sans-serif;
+    --font-body: 'Inter', system-ui, sans-serif;
+    
+    /* Sidebar - keeping defaults */
+    --sidebar-background: var(--navy-medium);
+    --sidebar-foreground: 210 40% 96%;
+    --sidebar-primary: var(--electric-blue);
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: var(--navy-light);
+    --sidebar-accent-foreground: 210 40% 96%;
+    --sidebar-border: var(--border);
+    --sidebar-ring: var(--electric-blue);
   }
 
+  /* Dark mode is the default - no .dark override needed */
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Same as root since dark is default */
   }
 }
 
@@ -99,7 +99,130 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html {
+    font-family: var(--font-body);
+  }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    background-image: var(--gradient-mesh);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+  }
+}
+
+@layer components {
+  /* Glass Card */
+  .glass {
+    background: hsl(var(--glass-background));
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid hsl(var(--glass-border));
+  }
+  
+  /* Glow Effects */
+  .glow-sm {
+    box-shadow: var(--shadow-glow-sm);
+  }
+  
+  .glow-md {
+    box-shadow: var(--shadow-glow-md);
+  }
+  
+  .glow-lg {
+    box-shadow: var(--shadow-glow-lg);
+  }
+  
+  /* Text Gradient */
+  .text-gradient {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  /* Animated Border */
+  .border-gradient {
+    position: relative;
+    background: hsl(var(--card));
+    border-radius: var(--radius);
+  }
+  
+  .border-gradient::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: calc(var(--radius) + 1px);
+    padding: 1px;
+    background: var(--gradient-primary);
+    -webkit-mask: 
+      linear-gradient(#fff 0 0) content-box, 
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  
+  /* Pulse animation for loading states */
+  .pulse-glow {
+    animation: pulseGlow 2s ease-in-out infinite;
+  }
+  
+  @keyframes pulseGlow {
+    0%, 100% {
+      box-shadow: var(--shadow-glow-sm);
+    }
+    50% {
+      box-shadow: var(--shadow-glow-lg);
+    }
+  }
+  
+  /* Floating animation */
+  .float {
+    animation: float 6s ease-in-out infinite;
+  }
+  
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
+  }
+  
+  /* Shimmer effect for loading */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--navy-light)) 0%,
+      hsl(var(--navy-surface)) 50%,
+      hsl(var(--navy-light)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+  
+  @keyframes shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+  
+  .font-body {
+    font-family: var(--font-body);
   }
 }
