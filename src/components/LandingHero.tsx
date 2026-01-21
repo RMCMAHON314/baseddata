@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/Logo';
+import { DatasetsSidebar } from '@/components/DatasetsSidebar';
 import { Zap, ChevronDown, Check } from 'lucide-react';
 import { SAMPLE_PROMPTS, DATA_SIZE_OPTIONS, FRESHNESS_OPTIONS, CREDIT_COSTS } from '@/lib/constants';
 import type { GenerationOptions } from '@/types/dataset';
@@ -69,9 +70,11 @@ export function LandingHero({
                   {credits} credits
                 </span>
               </div>
-              <button className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">
-                My Datasets
-              </button>
+              <DatasetsSidebar>
+                <button className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">
+                  My Datasets
+                </button>
+              </DatasetsSidebar>
               <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center">
                 <span className="text-primary-foreground text-sm font-bold">
                   {userName?.charAt(0).toUpperCase() || 'U'}

@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { FileSpreadsheet, FileJson, Download, Share2, ArrowLeft, Database, Globe, Zap, Plus, Layers, GitMerge } from 'lucide-react';
 import { DataTable } from './DataTable';
 import { InsightsPanel } from './InsightsPanel';
-import { Header } from './Header';
+import { DatasetsSidebar } from './DatasetsSidebar';
+import { Logo } from './Logo';
 import type { DatasetInsights } from '@/types/dataset';
 
 interface ResultsDashboardProps {
@@ -61,15 +62,19 @@ export function ResultsDashboard({
     <div className="min-h-screen bg-card">
       {/* Fixed Header */}
       <header className="bg-background flex items-center justify-between px-8 py-5 border-b border-border">
-        <button onClick={onBack} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-          <span className="text-primary text-xl font-bold tracking-tight uppercase">BASED DATA</span>
+        <button onClick={onBack} className="hover:opacity-80 transition-opacity">
+          <Logo />
         </button>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-accent">
             <div className="w-2 h-2 rounded-full bg-success" />
             <span className="text-accent-foreground text-sm font-semibold">{100 - creditsUsed} credits</span>
           </div>
-          <button className="text-muted-foreground hover:text-foreground text-sm font-medium">My Datasets</button>
+          <DatasetsSidebar>
+            <button className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors">
+              My Datasets
+            </button>
+          </DatasetsSidebar>
           <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-bold">R</div>
         </div>
       </header>
