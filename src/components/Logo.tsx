@@ -1,4 +1,4 @@
-// Based Data Logo - Three squares between BASED and DATA
+// Based Data Logo - Three dots between based and data
 
 export function Logo({ className = "" }: { className?: string }) {
   return (
@@ -11,17 +11,17 @@ export function Logo({ className = "" }: { className?: string }) {
         letterSpacing: '-0.02em',
         color: '#3366FF',
         display: 'inline-flex',
-        alignItems: 'center',
-        gap: '8px',
+        alignItems: 'baseline',
+        gap: '6px',
       }}
     >
-      BASED
-      <span style={{ display: 'inline-flex', gap: '3px' }}>
-        <span style={{ width: '6px', height: '6px', background: '#3366FF', borderRadius: '1px' }} />
-        <span style={{ width: '6px', height: '6px', background: '#3366FF', borderRadius: '1px' }} />
-        <span style={{ width: '6px', height: '6px', background: '#3366FF', borderRadius: '1px' }} />
+      based
+      <span style={{ display: 'inline-flex', gap: '2px', alignItems: 'baseline' }}>
+        <span style={{ width: '4px', height: '4px', background: '#3366FF', borderRadius: '50%' }} />
+        <span style={{ width: '4px', height: '4px', background: '#3366FF', borderRadius: '50%' }} />
+        <span style={{ width: '4px', height: '4px', background: '#3366FF', borderRadius: '50%' }} />
       </span>
-      DATA
+      data
     </span>
   );
 }
