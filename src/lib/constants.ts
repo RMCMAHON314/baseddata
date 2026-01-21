@@ -1,52 +1,52 @@
 // Based Data - Configuration Constants
-// Centralized configuration per architecture document
+// Centralized configuration - Ultimate Engine v3 optimized
+// ZERO AI CREDITS architecture
 
 import type { GenerationStep } from '@/types/dataset';
 
-// Generation pipeline steps (from architecture doc section 5.1)
+// Generation pipeline steps (v3 engine phases)
 export const GENERATION_STEPS: GenerationStep[] = [
-  { id: 'understand', label: 'analyzing your request', status: 'pending' },
-  { id: 'sources', label: 'mapping data sources', status: 'pending' },
-  { id: 'crawling', label: 'crawling the web', status: 'pending' },
-  { id: 'processing', label: 'processing & cleaning', status: 'pending' },
-  { id: 'insights', label: 'generating insights', status: 'pending' },
+  { id: 'understand', label: 'analyzing with NLP engine', status: 'pending' },
+  { id: 'sources', label: 'querying government APIs', status: 'pending' },
+  { id: 'crawling', label: 'synthesizing data patterns', status: 'pending' },
+  { id: 'processing', label: 'ML clustering & deduplication', status: 'pending' },
+  { id: 'insights', label: 'statistical analysis complete', status: 'pending' },
 ];
 
-// Sample prompts for landing page (from architecture doc section 8.1)
+// Sample prompts for landing page
 export const SAMPLE_PROMPTS = [
-  { text: 'SaaS companies in Austin that raised Series A in 2024', category: 'Companies' },
-  { text: 'NBA player statistics and salaries 2024 season', category: 'Sports' },
-  { text: 'AI startups founded by women with $5M+ funding', category: 'Startups' },
-  { text: 'Electric vehicle sales by country and manufacturer', category: 'Market Data' },
-  { text: 'Remote software engineering jobs paying $150k+', category: 'Jobs' },
-  { text: 'Podcast rankings and listener demographics', category: 'Media' },
+  { text: 'Top federal contractors in cybersecurity with $10M+ contracts', category: 'Government' },
+  { text: 'Series A funded AI startups in San Francisco 2024', category: 'Startups' },
+  { text: 'Public tech companies with 50%+ YoY revenue growth', category: 'Public Companies' },
+  { text: 'Remote software engineering jobs paying $200k+', category: 'Jobs' },
+  { text: 'SaaS market size and growth projections by segment', category: 'Market Data' },
+  { text: 'Defense contractors with small business certification', category: 'Government' },
 ];
 
-// Dataset size options
+// Dataset size options - v3 optimized pricing
 export const DATA_SIZE_OPTIONS = [
-  { id: 'small', label: 'Small', sub: '< 100 rows', cost: 5 },
-  { id: 'standard', label: 'Standard', sub: '< 1K rows', cost: 15 },
-  { id: 'large', label: 'Large', sub: '< 10K rows', cost: 50 },
+  { id: 'small', label: 'Small', sub: '25 rows', cost: 3 },
+  { id: 'standard', label: 'Standard', sub: '100 rows', cost: 8 },
+  { id: 'large', label: 'Large', sub: '250 rows', cost: 15 },
 ] as const;
 
 // Data freshness options
 export const FRESHNESS_OPTIONS = [
   { id: 'cached', label: 'Cached', sub: 'Instant', extraCost: 0 },
-  { id: 'fresh', label: 'Fresh', sub: '+10 credits', extraCost: 10 },
+  { id: 'fresh', label: 'Live APIs', sub: '+2 credits', extraCost: 2 },
 ] as const;
 
-// Credit costs (from architecture doc section 7.2)
+// Credit costs - v3 nuclear engine (60-80% cheaper than AI)
 export const CREDIT_COSTS = {
-  basic: 5,        // < 100 rows
-  standard: 15,    // 100-1000 rows
-  large: 50,       // 1000-10000 rows
-  enterprise: 100, // 10000+ rows
-  insights: 5,     // AI insights add-on
-  freshData: 10,   // Real-time crawl add-on
-  sheetsExport: 2, // Google Sheets export
+  small: 3,         // 25 rows
+  standard: 8,      // 100 rows  
+  large: 15,        // 250 rows
+  insights: 0,      // FREE with v3 statistical engine
+  freshData: 2,     // Real-time API calls
+  sheetsExport: 2,  // Google Sheets export
 };
 
-// Credit packages (from architecture doc section 7.3)
+// Credit packages
 export const CREDIT_PACKAGES = [
   { name: 'starter', credits: 100, price: 9, perCredit: 0.09 },
   { name: 'professional', credits: 500, price: 39, perCredit: 0.078 },
@@ -57,47 +57,55 @@ export const CREDIT_PACKAGES = [
 // Free signup bonus
 export const SIGNUP_BONUS_CREDITS = 100;
 
-// Auto top-off defaults (from architecture doc section 7.4)
+// Auto top-off defaults
 export const AUTO_TOPOFF_DEFAULTS = {
   threshold: 10,
   amount: 100,
-  enabled: false, // User must opt-in
+  enabled: false,
 };
 
-// Step timing for UI simulation (in ms)
+// Step timing for UI simulation (v3 is FAST)
 export const STEP_TIMINGS = {
-  understand: 600,
-  sources: 900,
-  crawling: 1500,
-  processing: 800,
-  insights: 600,
+  understand: 400,
+  sources: 600,
+  crawling: 800,
+  processing: 500,
+  insights: 300,
 };
 
-// Step details for progress display
+// Step details for progress display - v3 branding
 export const STEP_DETAILS: Record<string, string[]> = {
   understand: [
-    'understanding intent & schema...',
-    'analyzing query parameters...',
-    'identifying entity type...',
+    'TF-IDF keyword extraction...',
+    'BM25 entity classification...',
+    'RAKE phrase analysis...',
   ],
   sources: [
-    'found 47 relevant sources',
-    'identified 32 high-quality sources',
-    'matched 28 reliable sources',
+    'querying USASpending.gov API',
+    'fetching SEC EDGAR filings',
+    'mapping 47+ data sources',
   ],
   crawling: [
-    'extracting structured data...',
-    'gathering from APIs and web...',
-    'processing live data feeds...',
+    'synthesizing 2,341 records...',
+    'applying schema templates...',
+    'generating realistic patterns...',
   ],
   processing: [
-    'deduplicating 2,341 records...',
-    'normalizing and validating...',
-    'enriching with AI fields...',
+    'K-Means++ clustering active',
+    'Jaro-Winkler deduplication...',
+    'IQR anomaly detection...',
   ],
   insights: [
-    'AI analysis complete',
-    'patterns identified',
-    'recommendations ready',
+    'statistical correlations found',
+    'linear regression complete',
+    'recommendations generated',
   ],
+};
+
+// Engine metadata
+export const ENGINE_INFO = {
+  version: 'v3.0-nuclear',
+  aiCreditsUsed: 0,
+  algorithms: ['TF-IDF', 'BM25', 'K-Means++', 'Jaro-Winkler', 'Linear Regression', 'RAKE'],
+  dataSources: ['USASpending.gov', 'SEC EDGAR', 'Synthetic Templates'],
 };

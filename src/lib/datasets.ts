@@ -1,56 +1,24 @@
+// Based Data - Dataset Service Layer
+// Clean, typed API for dataset operations using Ultimate Engine v3
+// ZERO AI CREDITS - Pure algorithmic generation
+
 import { supabase } from "@/integrations/supabase/client";
+import type { DatasetResult, DatasetInsights, DatasetSchema, GenerationOptions } from "@/types/dataset";
 
 interface GenerateDatasetParams {
   prompt: string;
   userId: string;
+  options?: GenerationOptions;
 }
 
-interface KeyMetric {
-  label: string;
-  value: string;
-  trend: "up" | "down" | "stable";
-}
-
-interface DatasetInsights {
-  summary: string;
-  totalRecords: number;
-  keyFindings: string[];
-  topCategories: string[];
-  keyMetrics: KeyMetric[];
-  recommendations: string[];
-  dataQualityScore: number;
-}
-
-interface SchemaColumn {
-  name: string;
-  type: string;
-  description: string;
-  is_enriched: boolean;
-}
-
-interface DatasetSchema {
-  entity_type: string;
-  columns: SchemaColumn[];
-}
-
-interface DatasetResult {
-  id: string;
-  title: string;
-  description: string;
-  data: Record<string, unknown>[];
-  insights: DatasetInsights;
-  schema: DatasetSchema;
-  creditsUsed: number;
-}
-
-export async function generateDataset({ prompt, userId }: GenerateDatasetParams): Promise<DatasetResult> {
-  // Create pending dataset in the SOURCE OF TRUTH
+export async function generateDataset({ prompt, userId, options }: GenerateDatasetParams): Promise<DatasetResult> {
+  // Create pending dataset record first (source of truth pattern)
   const { data: dataset, error: createError } = await supabase
     .from("datasets")
     .insert({
       user_id: userId,
       prompt,
-      status: "processing",
+      status: "pending",
     })
     .select()
     .single();
@@ -58,24 +26,39 @@ export async function generateDataset({ prompt, userId }: GenerateDatasetParams)
   if (createError) throw createError;
 
   try {
-    // Call the AI-powered edge function
-    const { data, error } = await supabase.functions.invoke("generate-dataset-v2", {
-      body: { prompt, datasetId: dataset.id },
+    // Invoke Ultimate Engine v3 - ZERO AI CREDITS 🔥
+    const { data, error } = await supabase.functions.invoke("generate-dataset-v3", {
+      body: { 
+        prompt, 
+        userId,
+        datasetId: dataset.id,
+        options: {
+          dataSize: options?.dataSize || 'standard',
+          freshness: options?.freshness || 'cached',
+          includeInsights: options?.includeInsights ?? true
+        }
+      },
     });
 
     if (error) throw error;
+
+    // Update dataset with ID from database
+    await supabase
+      .from("datasets")
+      .update({ status: "processing" })
+      .eq("id", dataset.id);
 
     return {
       id: dataset.id,
       title: data.title,
       description: data.description,
       data: data.data,
-      insights: data.insights,
-      schema: data.schema,
+      insights: data.insights as DatasetInsights,
+      schema: data.schema as DatasetSchema,
       creditsUsed: data.creditsUsed,
     };
   } catch (error) {
-    // Mark dataset as failed in the SOURCE OF TRUTH
+    // Mark dataset as failed on error
     await supabase
       .from("datasets")
       .update({ status: "failed" })
