@@ -1,12 +1,12 @@
 import { motion } from "framer-motion";
-import { TrendingUp, Building2, Users, Lightbulb } from "lucide-react";
+import { TrendingUp, Building2, Lightbulb, BarChart3 } from "lucide-react";
 
 interface InsightsPanelProps {
   insights: {
     totalRecords: number;
-    medianRaise: string;
-    topSectors: string[];
-    employeeRange: string;
+    summary: string;
+    topCategories: string[];
+    keyMetric: string;
   };
 }
 
@@ -14,21 +14,21 @@ export function InsightsPanel({ insights }: InsightsPanelProps) {
   const insightItems = [
     {
       icon: Building2,
-      label: "Companies found",
-      value: insights.totalRecords.toString(),
-      detail: `Median raise: ${insights.medianRaise}`,
+      label: "records found",
+      value: insights.totalRecords?.toString() || "0",
+      detail: insights.summary || "",
     },
     {
       icon: TrendingUp,
-      label: "Top sectors",
-      value: insights.topSectors[0],
-      detail: insights.topSectors.slice(1).join(", "),
+      label: "top categories",
+      value: insights.topCategories?.[0] || "N/A",
+      detail: insights.topCategories?.slice(1).join(", ") || "",
     },
     {
-      icon: Users,
-      label: "Company size",
-      value: insights.employeeRange,
-      detail: "Most common range",
+      icon: BarChart3,
+      label: "key metric",
+      value: insights.keyMetric || "N/A",
+      detail: "most significant finding",
     },
   ];
 
@@ -37,11 +37,11 @@ export function InsightsPanel({ insights }: InsightsPanelProps) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.2 }}
-      className="glass rounded-xl p-5 border border-border/50"
+      className="glass rounded-xl p-5 border border-white/10"
     >
       <div className="flex items-center gap-2 mb-4">
         <Lightbulb className="w-4 h-4 text-electric" />
-        <h3 className="font-display font-semibold text-foreground">AI Insights</h3>
+        <h3 className="font-display font-semibold text-white lowercase">ai insights</h3>
       </div>
       
       <div className="space-y-4">
@@ -57,9 +57,9 @@ export function InsightsPanel({ insights }: InsightsPanelProps) {
               <item.icon className="w-4 h-4 text-electric" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">{item.label}</p>
-              <p className="font-display font-semibold text-foreground">{item.value}</p>
-              <p className="text-xs text-muted-foreground">{item.detail}</p>
+              <p className="text-xs text-white/50 lowercase">{item.label}</p>
+              <p className="font-display font-semibold text-white lowercase">{item.value}</p>
+              {item.detail && <p className="text-xs text-white/40 lowercase">{item.detail}</p>}
             </div>
           </motion.div>
         ))}
