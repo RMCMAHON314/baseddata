@@ -1,4 +1,4 @@
-// Based Data Logo - Three dots between based and data
+// Based Data Logo - Stacked, right-aligned
 
 export function Logo({ className = "" }: { className?: string }) {
   return (
@@ -7,21 +7,17 @@ export function Logo({ className = "" }: { className?: string }) {
       style={{
         fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', system-ui, sans-serif",
         fontWeight: 700,
-        fontSize: '22px',
+        fontSize: '18px',
         letterSpacing: '-0.02em',
         color: '#3366FF',
         display: 'inline-flex',
-        alignItems: 'baseline',
-        gap: '6px',
+        flexDirection: 'column',
+        alignItems: 'flex-end',
+        lineHeight: 1.1,
       }}
     >
-      based
-      <span style={{ display: 'inline-flex', gap: '2px', alignItems: 'baseline' }}>
-        <span style={{ width: '4px', height: '4px', background: '#3366FF', borderRadius: '50%' }} />
-        <span style={{ width: '4px', height: '4px', background: '#3366FF', borderRadius: '50%' }} />
-        <span style={{ width: '4px', height: '4px', background: '#3366FF', borderRadius: '50%' }} />
-      </span>
-      data
+      <span>based</span>
+      <span>data</span>
     </span>
   );
 }
