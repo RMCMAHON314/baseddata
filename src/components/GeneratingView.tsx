@@ -1,5 +1,5 @@
 // Based Data - Generation Progress View
-// Transparent AI - shows exactly what's happening with live stats
+// Clean white theme with transparent AI progress
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, Loader2, Brain, Map, Globe, Cog, Sparkles } from 'lucide-react';
@@ -39,17 +39,17 @@ export function GeneratingView({
       className="min-h-screen flex flex-col bg-background"
     >
       {/* Header */}
-      <header className="container mx-auto px-6 py-5 flex items-center justify-between border-b border-border/50">
+      <header className="container mx-auto px-8 py-5 flex items-center justify-between border-b border-border">
         <Logo size="md" />
-        <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10">
-          <div className="w-2 h-2 rounded-full bg-emerald-500" />
-          <span className="text-primary text-sm font-semibold">
+        <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-accent">
+          <div className="w-2 h-2 rounded-full bg-success" />
+          <span className="text-accent-foreground text-sm font-semibold">
             {credits} credits
           </span>
         </div>
       </header>
 
-      <main className="flex-1 flex flex-col items-center justify-center px-4 max-w-2xl mx-auto w-full">
+      <main className="flex-1 flex flex-col items-center justify-center px-8 max-w-2xl mx-auto w-full">
         {/* Query Display */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -72,8 +72,8 @@ export function GeneratingView({
             { label: 'Records Processed', value: stats.recordsProcessed.toLocaleString() },
             { label: 'Time Elapsed', value: `${stats.timeElapsed.toFixed(1)}s` },
           ].map((stat, i) => (
-            <div key={i} className="text-center p-4 rounded-xl bg-electric/10">
-              <div className="text-2xl font-bold text-electric">{stat.value}</div>
+            <div key={i} className="text-center p-4 rounded-xl bg-accent">
+              <div className="text-2xl font-bold text-primary">{stat.value}</div>
               <div className="text-xs text-muted-foreground">{stat.label}</div>
             </div>
           ))}
@@ -98,23 +98,23 @@ export function GeneratingView({
                   }}
                   transition={{ duration: 0.3, delay: index * 0.05 }}
                   className={`flex items-center gap-4 p-4 rounded-xl transition-all duration-500 ${
-                    isComplete ? 'bg-green-500/10' : isActive ? 'bg-secondary/50' : ''
+                    isComplete ? 'bg-success/10' : isActive ? 'bg-card' : ''
                   }`}
                 >
                   {/* Status indicator */}
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center transition-all text-lg ${
                       isComplete
-                        ? 'bg-green-500'
+                        ? 'bg-success'
                         : isActive
-                        ? 'bg-electric'
+                        ? 'bg-primary'
                         : 'bg-secondary'
                     }`}
                   >
                     {isComplete ? (
-                      <Check className="w-5 h-5 text-white" />
+                      <Check className="w-5 h-5 text-success-foreground" />
                     ) : isActive ? (
-                      <Loader2 className="w-5 h-5 text-white animate-spin" />
+                      <Loader2 className="w-5 h-5 text-primary-foreground animate-spin" />
                     ) : (
                       <Icon className="w-5 h-5 text-muted-foreground" />
                     )}
@@ -135,7 +135,7 @@ export function GeneratingView({
 
                   {/* Spinner for active step */}
                   {isActive && (
-                    <div className="w-5 h-5 border-2 border-electric border-t-transparent rounded-full animate-spin" />
+                    <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                   )}
                 </motion.div>
               );
@@ -150,7 +150,7 @@ export function GeneratingView({
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
               transition={{ duration: 0.5, ease: 'easeOut' }}
-              className="h-full bg-electric rounded-full"
+              className="h-full bg-primary rounded-full"
             />
           </div>
           <p className="text-center text-sm text-muted-foreground mt-3">

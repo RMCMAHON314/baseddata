@@ -57,28 +57,15 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
-        // Based Data custom colors
-        navy: {
-          deep: "hsl(var(--navy-deep))",
-          medium: "hsl(var(--navy-medium))",
-          light: "hsl(var(--navy-light))",
-          surface: "hsl(var(--navy-surface))",
+        // Based Data semantic colors
+        based: {
+          blue: "hsl(var(--based-blue))",
+          "blue-light": "hsl(var(--based-blue-light))",
+          "blue-medium": "hsl(var(--based-blue-medium))",
         },
-        electric: {
-          DEFAULT: "hsl(var(--electric-blue))",
-          glow: "hsl(var(--electric-blue-glow))",
-          muted: "hsl(var(--electric-blue-muted))",
-          bright: "hsl(var(--electric-blue-bright))",
-        },
-        purple: {
-          DEFAULT: "hsl(var(--purple-accent))",
-          glow: "hsl(var(--purple-glow))",
-        },
-        cyan: "hsl(var(--cyan-accent))",
-        white: {
-          DEFAULT: "hsl(var(--white-pure))",
-          soft: "hsl(var(--white-soft))",
-          muted: "hsl(var(--white-muted))",
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
         },
       },
       fontFamily: {
@@ -89,6 +76,8 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        xl: "12px",
+        "2xl": "16px",
       },
       keyframes: {
         "accordion-down": {
@@ -107,26 +96,12 @@ export default {
           from: { opacity: "0", transform: "scale(0.95)" },
           to: { opacity: "1", transform: "scale(1)" },
         },
-        "slide-up": {
-          from: { opacity: "0", transform: "translateY(20px)" },
-          to: { opacity: "1", transform: "translateY(0)" },
-        },
-        "glow-pulse": {
-          "0%, 100%": { opacity: "0.5" },
-          "50%": { opacity: "1" },
-        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "fade-in": "fade-in 0.5s ease-out forwards",
         "scale-in": "scale-in 0.3s ease-out forwards",
-        "slide-up": "slide-up 0.6s ease-out forwards",
-        "glow-pulse": "glow-pulse 2s ease-in-out infinite",
-      },
-      backgroundImage: {
-        "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
-        "gradient-primary": "var(--gradient-primary)",
       },
     },
   },

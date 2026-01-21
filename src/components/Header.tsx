@@ -19,9 +19,9 @@ export function Header() {
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="fixed top-0 left-0 right-0 z-50 glass border-b border-white/5"
+      className="fixed top-0 left-0 right-0 z-50 bg-background border-b border-border"
     >
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+      <div className="container mx-auto px-8 h-16 flex items-center justify-between">
         <Logo size="sm" />
         
         <div className="flex items-center gap-4">
@@ -30,20 +30,20 @@ export function Header() {
               <CreditBadge credits={profile.credits_balance} />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="glass" size="icon">
+                  <Button variant="outline" size="icon">
                     <User className="w-5 h-5" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="glass border-white/10">
-                  <DropdownMenuItem className="text-white/70">
+                <DropdownMenuContent align="end" className="bg-background border-border">
+                  <DropdownMenuItem className="text-muted-foreground">
                     {profile.full_name || user.email}
                   </DropdownMenuItem>
                   <DropdownMenuItem 
                     onClick={signOut}
-                    className="text-white/70 hover:text-white cursor-pointer"
+                    className="text-muted-foreground hover:text-foreground cursor-pointer"
                   >
                     <LogOut className="w-4 h-4 mr-2" />
-                    sign out
+                    Sign out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

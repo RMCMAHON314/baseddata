@@ -29,16 +29,16 @@ export function AuthModal({ isOpen, onClose, defaultMode = "signup" }: AuthModal
       if (mode === "signup") {
         const { error } = await signUp(email, password, fullName);
         if (error) throw error;
-        toast.success("account created! you got 100 free credits 🎉");
+        toast.success("Account created! You got 100 free credits 🎉");
         onClose();
       } else {
         const { error } = await signIn(email, password);
         if (error) throw error;
-        toast.success("welcome back!");
+        toast.success("Welcome back!");
         onClose();
       }
     } catch (error: any) {
-      toast.error(error.message || "authentication failed");
+      toast.error(error.message || "Authentication failed");
     } finally {
       setIsLoading(false);
     }
@@ -54,7 +54,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = "signup" }: AuthModal
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 z-50 bg-navy-deep/80 backdrop-blur-sm"
+            className="fixed inset-0 z-50 bg-foreground/20 backdrop-blur-sm"
           />
 
           {/* Modal */}
@@ -64,27 +64,27 @@ export function AuthModal({ isOpen, onClose, defaultMode = "signup" }: AuthModal
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 p-4"
           >
-            <div className="glass rounded-2xl border border-white/10 p-8 shadow-2xl">
+            <div className="bg-background rounded-2xl border border-border p-8 shadow-2xl">
               {/* Close button */}
               <button
                 onClick={onClose}
-                className="absolute right-4 top-4 text-white/40 hover:text-white transition-colors"
+                className="absolute right-4 top-4 text-muted-foreground hover:text-foreground transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
 
               {/* Header */}
               <div className="text-center mb-8">
-                <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br from-electric to-purple mb-4">
-                  <Zap className="w-7 h-7 text-white" />
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-primary mb-4">
+                  <Zap className="w-7 h-7 text-primary-foreground" />
                 </div>
-                <h2 className="font-display text-2xl font-bold text-white lowercase">
-                  {mode === "signup" ? "get started" : "welcome back"}
+                <h2 className="font-display text-2xl font-bold text-foreground">
+                  {mode === "signup" ? "Get Started" : "Welcome Back"}
                 </h2>
-                <p className="text-white/50 text-sm mt-2 lowercase">
+                <p className="text-muted-foreground text-sm mt-2">
                   {mode === "signup"
-                    ? "create an account and get 100 free credits"
-                    : "sign in to continue generating datasets"}
+                    ? "Create an account and get 100 free credits"
+                    : "Sign in to continue generating datasets"}
                 </p>
               </div>
 
@@ -92,29 +92,29 @@ export function AuthModal({ isOpen, onClose, defaultMode = "signup" }: AuthModal
               <form onSubmit={handleSubmit} className="space-y-4">
                 {mode === "signup" && (
                   <div className="space-y-2">
-                    <Label htmlFor="fullName" className="text-white/70 lowercase">
-                      full name
+                    <Label htmlFor="fullName" className="text-foreground">
+                      Full name
                     </Label>
                     <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input
                         id="fullName"
                         type="text"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        placeholder="john doe"
-                        className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-electric/50 lowercase"
+                        placeholder="John Doe"
+                        className="pl-10"
                       />
                     </div>
                   </div>
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-white/70 lowercase">
-                    email
+                  <Label htmlFor="email" className="text-foreground">
+                    Email
                   </Label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       id="email"
                       type="email"
@@ -122,17 +122,17 @@ export function AuthModal({ isOpen, onClose, defaultMode = "signup" }: AuthModal
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="you@example.com"
                       required
-                      className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-electric/50"
+                      className="pl-10"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-white/70 lowercase">
-                    password
+                  <Label htmlFor="password" className="text-foreground">
+                    Password
                   </Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
                       id="password"
                       type="password"
@@ -141,48 +141,47 @@ export function AuthModal({ isOpen, onClose, defaultMode = "signup" }: AuthModal
                       placeholder="••••••••"
                       required
                       minLength={6}
-                      className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30 focus:border-electric/50"
+                      className="pl-10"
                     />
                   </div>
                 </div>
 
                 <Button
                   type="submit"
-                  variant="hero"
                   size="lg"
-                  className="w-full lowercase"
+                  className="w-full"
                   disabled={isLoading}
                 >
                   {isLoading ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
                   ) : mode === "signup" ? (
-                    "create account"
+                    "Create Account"
                   ) : (
-                    "sign in"
+                    "Sign In"
                   )}
                 </Button>
               </form>
 
               {/* Toggle mode */}
-              <p className="text-center text-sm text-white/40 mt-6 lowercase">
+              <p className="text-center text-sm text-muted-foreground mt-6">
                 {mode === "signup" ? (
                   <>
-                    already have an account?{" "}
+                    Already have an account?{" "}
                     <button
                       onClick={() => setMode("signin")}
-                      className="text-electric hover:text-electric-glow transition-colors"
+                      className="text-primary hover:underline transition-colors"
                     >
-                      sign in
+                      Sign in
                     </button>
                   </>
                 ) : (
                   <>
-                    don't have an account?{" "}
+                    Don't have an account?{" "}
                     <button
                       onClick={() => setMode("signup")}
-                      className="text-electric hover:text-electric-glow transition-colors"
+                      className="text-primary hover:underline transition-colors"
                     >
-                      sign up
+                      Sign up
                     </button>
                   </>
                 )}

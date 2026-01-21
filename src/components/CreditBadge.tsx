@@ -1,5 +1,4 @@
 import { motion } from "framer-motion";
-import { Coins } from "lucide-react";
 
 interface CreditBadgeProps {
   credits: number;
@@ -14,10 +13,10 @@ export function CreditBadge({ credits, onClick }: CreditBadgeProps) {
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       onClick={onClick}
-      className="flex items-center gap-2 px-4 py-2 rounded-full glass border border-border/50 hover:border-electric/30 transition-colors duration-300"
+      className="flex items-center gap-2 px-4 py-2 rounded-full bg-accent border border-border hover:border-primary/30 transition-colors duration-300"
     >
-      <Coins className="w-4 h-4 text-electric" />
-      <span className="font-display font-semibold text-foreground">{credits}</span>
+      <div className="w-2 h-2 rounded-full bg-success" />
+      <span className="font-display font-semibold text-accent-foreground">{credits}</span>
       <span className="text-muted-foreground text-sm">credits</span>
     </motion.button>
   );
