@@ -20,3 +20,12 @@ verify_jwt = false
 
 [functions.vote]
 verify_jwt = false
+
+[functions.developer-api]
+verify_jwt = false
+
+[functions.nl-query]
+verify_jwt = false
+
+[functions.scheduled-runner]
+verify_jwt = false

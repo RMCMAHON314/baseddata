@@ -14,6 +14,113 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_keys: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          key_hash: string
+          key_prefix: string
+          last_request_at: string | null
+          last_reset_at: string | null
+          name: string
+          rate_limit_per_day: number | null
+          rate_limit_per_minute: number | null
+          requests_this_minute: number | null
+          requests_today: number | null
+          scopes: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          key_hash: string
+          key_prefix: string
+          last_request_at?: string | null
+          last_reset_at?: string | null
+          name: string
+          rate_limit_per_day?: number | null
+          rate_limit_per_minute?: number | null
+          requests_this_minute?: number | null
+          requests_today?: number | null
+          scopes?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          key_hash?: string
+          key_prefix?: string
+          last_request_at?: string | null
+          last_reset_at?: string | null
+          name?: string
+          rate_limit_per_day?: number | null
+          rate_limit_per_minute?: number | null
+          requests_this_minute?: number | null
+          requests_today?: number | null
+          scopes?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      api_usage_logs: {
+        Row: {
+          api_key_id: string | null
+          created_at: string
+          endpoint: string
+          id: string
+          ip_address: string | null
+          method: string
+          request_body: Json | null
+          response_size_bytes: number | null
+          response_time_ms: number | null
+          status_code: number | null
+          user_agent: string | null
+        }
+        Insert: {
+          api_key_id?: string | null
+          created_at?: string
+          endpoint: string
+          id?: string
+          ip_address?: string | null
+          method: string
+          request_body?: Json | null
+          response_size_bytes?: number | null
+          response_time_ms?: number | null
+          status_code?: number | null
+          user_agent?: string | null
+        }
+        Update: {
+          api_key_id?: string | null
+          created_at?: string
+          endpoint?: string
+          id?: string
+          ip_address?: string | null
+          method?: string
+          request_body?: Json | null
+          response_size_bytes?: number | null
+          response_time_ms?: number | null
+          status_code?: number | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_usage_logs_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credit_transactions: {
         Row: {
           amount: number
@@ -425,6 +532,106 @@ export type Database = {
         }
         Relationships: []
       }
+      nl_queries: {
+        Row: {
+          api_key_id: string | null
+          created_at: string
+          error_message: string | null
+          execution_time_ms: number | null
+          explanation: string | null
+          generated_sql: string | null
+          id: string
+          natural_query: string
+          result_count: number | null
+          user_id: string | null
+          was_successful: boolean | null
+        }
+        Insert: {
+          api_key_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_time_ms?: number | null
+          explanation?: string | null
+          generated_sql?: string | null
+          id?: string
+          natural_query: string
+          result_count?: number | null
+          user_id?: string | null
+          was_successful?: boolean | null
+        }
+        Update: {
+          api_key_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          execution_time_ms?: number | null
+          explanation?: string | null
+          generated_sql?: string | null
+          id?: string
+          natural_query?: string
+          result_count?: number | null
+          user_id?: string | null
+          was_successful?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nl_queries_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pipeline_runs: {
+        Row: {
+          completed_at: string | null
+          credits_used: number | null
+          error_message: string | null
+          id: string
+          insights: Json | null
+          pipeline_id: string | null
+          processing_time_ms: number | null
+          records_collected: number | null
+          sources_queried: string[] | null
+          started_at: string | null
+          status: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          credits_used?: number | null
+          error_message?: string | null
+          id?: string
+          insights?: Json | null
+          pipeline_id?: string | null
+          processing_time_ms?: number | null
+          records_collected?: number | null
+          sources_queried?: string[] | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          credits_used?: number | null
+          error_message?: string | null
+          id?: string
+          insights?: Json | null
+          pipeline_id?: string | null
+          processing_time_ms?: number | null
+          records_collected?: number | null
+          sources_queried?: string[] | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pipeline_runs_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_pipelines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           auto_topoff_amount: number | null
@@ -640,6 +847,57 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_pipelines: {
+        Row: {
+          config: Json | null
+          created_at: string
+          cron_expression: string
+          failure_count: number | null
+          id: string
+          is_active: boolean | null
+          last_run_at: string | null
+          name: string
+          next_run_at: string | null
+          prompt: string
+          run_count: number | null
+          success_count: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          config?: Json | null
+          created_at?: string
+          cron_expression: string
+          failure_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_run_at?: string | null
+          name: string
+          next_run_at?: string | null
+          prompt: string
+          run_count?: number | null
+          success_count?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          config?: Json | null
+          created_at?: string
+          cron_expression?: string
+          failure_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_run_at?: string | null
+          name?: string
+          next_run_at?: string | null
+          prompt?: string
+          run_count?: number | null
+          success_count?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       schema_registry: {
         Row: {
           auto_generated: boolean | null
@@ -770,6 +1028,10 @@ export type Database = {
         }
         Returns: string
       }
+      calculate_next_run: {
+        Args: { p_cron: string; p_from?: string }
+        Returns: string
+      }
       create_record_relationship: {
         Args: {
           p_confidence?: number
@@ -790,6 +1052,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      execute_nl_query: { Args: { p_sql: string }; Returns: Json }
       update_source_performance: {
         Args: {
           p_error_message?: string
@@ -820,6 +1083,16 @@ export type Database = {
           p_source_record_id: string
         }
         Returns: string
+      }
+      validate_api_key: {
+        Args: { p_key_hash: string }
+        Returns: {
+          is_valid: boolean
+          key_id: string
+          owner_id: string
+          rate_limited: boolean
+          scopes: string[]
+        }[]
       }
     }
     Enums: {
