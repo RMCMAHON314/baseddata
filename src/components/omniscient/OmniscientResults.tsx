@@ -198,6 +198,7 @@ export function OmniscientResults({
             layers={layers}
             center={mapCenter}
             zoom={mapCenter ? 9 : 4}
+            selectedFeature={selectedFeature}
             onFeatureClick={(f) => setSelectedFeature(f as any)}
             className="absolute inset-0 w-full h-full"
           />
