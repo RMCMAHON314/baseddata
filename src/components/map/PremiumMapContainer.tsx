@@ -1,5 +1,5 @@
-// BASED DATA v8.0 - Premium Map Container
-// 3D tilted map with glow layers, cursor tracking, premium controls
+// BASED DATA v8.1 - Premium Map Container
+// 3D tilted map with glow layers, cursor tracking, premium controls, two-way sync
 
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import mapboxgl from 'mapbox-gl';
@@ -16,11 +16,11 @@ import {
 } from '@/lib/mapbox';
 import { MapTokenOverlay } from '@/components/map/MapTokenOverlay';
 import type { GeoJSONFeature, GeoJSONFeatureCollection, MapLayer } from '@/types/omniscient';
-import { Globe, ExternalLink, Map, Maximize2, Compass, Layers } from 'lucide-react';
+import { Globe, Maximize2, Layers, Focus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface PremiumMapContainerProps {
   features?: GeoJSONFeatureCollection;
@@ -557,32 +557,72 @@ export function PremiumMapContainer({
 
       {/* Premium Controls */}
       <div className="absolute top-4 left-4 flex flex-col gap-2 z-20">
-        <Button
-          size="icon"
-          variant="outline"
-          className={cn(
-            "w-9 h-9 backdrop-blur-sm",
-            is3D ? "bg-primary/20 text-primary border-primary/30" : "bg-card/50 text-muted-foreground border-border"
-          )}
-          onClick={toggle3D}
-          title={is3D ? "Switch to 2D" : "Switch to 3D"}
-        >
-          <Layers className="w-4 h-4" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="icon"
+              variant="outline"
+              className={cn(
+                "w-9 h-9 backdrop-blur-sm shadow-lg",
+                is3D ? "bg-primary/20 text-primary border-primary/30" : "bg-black/60 text-white/70 border-white/20 hover:bg-black/80"
+              )}
+              onClick={toggle3D}
+            >
+              <Layers className="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="bg-black/90 text-white border-white/20">
+            {is3D ? "Switch to 2D" : "Switch to 3D"}
+          </TooltipContent>
+        </Tooltip>
         
-        <Button
-          size="icon"
-          variant="outline"
-          className="w-9 h-9 bg-card/50 backdrop-blur-sm border-border text-muted-foreground hover:text-foreground"
-          onClick={() => {
-            if (outerRef.current?.requestFullscreen) {
-              outerRef.current.requestFullscreen();
-            }
-          }}
-          title="Fullscreen"
-        >
-          <Maximize2 className="w-4 h-4" />
-        </Button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="icon"
+              variant="outline"
+              className="w-9 h-9 bg-black/60 backdrop-blur-sm border-white/20 text-white/70 hover:text-white hover:bg-black/80 shadow-lg"
+              onClick={() => {
+                if (!map.current || !filteredFeatures?.features?.length) return;
+                const bounds = new mapboxgl.LngLatBounds();
+                for (const f of filteredFeatures.features) {
+                  if (f.geometry?.type === 'Point') {
+                    const coords = f.geometry.coordinates as [number, number];
+                    bounds.extend(coords);
+                  }
+                }
+                if (!bounds.isEmpty()) {
+                  map.current.fitBounds(bounds, { padding: 60, maxZoom: 14, duration: 1200 });
+                }
+              }}
+            >
+              <Focus className="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="bg-black/90 text-white border-white/20">
+            Fit to results
+          </TooltipContent>
+        </Tooltip>
+        
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="icon"
+              variant="outline"
+              className="w-9 h-9 bg-black/60 backdrop-blur-sm border-white/20 text-white/70 hover:text-white hover:bg-black/80 shadow-lg"
+              onClick={() => {
+                if (outerRef.current?.requestFullscreen) {
+                  outerRef.current.requestFullscreen();
+                }
+              }}
+            >
+              <Maximize2 className="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="bg-black/90 text-white border-white/20">
+            Fullscreen
+          </TooltipContent>
+        </Tooltip>
       </div>
     </div>
   );

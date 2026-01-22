@@ -1,13 +1,14 @@
-// BASED DATA v8.0 - Premium Layer Panel
-// Glass-morphism left sidebar with layer controls, opacity sliders, stats
+// BASED DATA v8.1 - Premium Layer Panel
+// Glass-morphism left sidebar with layer controls, opacity sliders, stats, polished UI
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Layers, ChevronDown, Eye, EyeOff, Database, Sparkles } from 'lucide-react';
+import { Layers, ChevronDown, Eye, EyeOff, Database, Sparkles, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { MapLayer } from '@/types/omniscient';
 import { CATEGORY_COLORS } from '@/lib/mapbox';
 import { Slider } from '@/components/ui/slider';
+import { Progress } from '@/components/ui/progress';
 
 interface PremiumLayerPanelProps {
   layers: MapLayer[];
@@ -58,12 +59,17 @@ export function PremiumLayerPanel({
     >
       {/* Header */}
       <div className="flex-none p-5 border-b border-white/10">
-        <h2 className="text-white font-semibold flex items-center gap-2">
-          <Layers className="w-5 h-5 text-cyan-400" />
-          Data Layers
-        </h2>
-        <p className="text-white/50 text-sm mt-1">
-          {totalFeatures.toLocaleString()} features loaded
+        <div className="flex items-center justify-between">
+          <h2 className="text-white font-semibold flex items-center gap-2">
+            <Layers className="w-5 h-5 text-cyan-400" />
+            Data Layers
+          </h2>
+          <span className="text-xs text-cyan-400 font-medium bg-cyan-400/10 px-2 py-1 rounded-full">
+            {visibleCount} active
+          </span>
+        </div>
+        <p className="text-white/40 text-xs mt-2">
+          {totalFeatures.toLocaleString()} features across {layers.length} categories
         </p>
       </div>
 
@@ -85,29 +91,35 @@ export function PremiumLayerPanel({
       </div>
 
       {/* Footer Stats */}
-      <div className="flex-none p-4 border-t border-white/10 bg-white/5">
-        <div className="grid grid-cols-2 gap-3 text-center">
-          <div>
-            <p className="text-2xl font-bold text-white">{sourcesCount}</p>
-            <p className="text-xs text-white/50">Sources</p>
+      <div className="flex-none p-4 border-t border-white/10 bg-gradient-to-t from-black/40 to-transparent">
+        <div className="grid grid-cols-2 gap-3 text-center mb-4">
+          <div className="p-3 rounded-xl bg-white/5">
+            <div className="flex items-center justify-center gap-1 mb-1">
+              <Database className="w-3.5 h-3.5 text-cyan-400" />
+            </div>
+            <p className="text-xl font-bold text-white tabular-nums">{sourcesCount}</p>
+            <p className="text-[10px] text-white/40 uppercase tracking-wide">Sources</p>
           </div>
-          <div>
-            <p className="text-2xl font-bold text-cyan-400">{visibleCount}</p>
-            <p className="text-xs text-white/50">Active Layers</p>
+          <div className="p-3 rounded-xl bg-white/5">
+            <div className="flex items-center justify-center gap-1 mb-1">
+              <Zap className="w-3.5 h-3.5 text-amber-400" />
+            </div>
+            <p className="text-xl font-bold text-cyan-400 tabular-nums">{visibleCount}</p>
+            <p className="text-[10px] text-white/40 uppercase tracking-wide">Active</p>
           </div>
         </div>
 
-        <div className="mt-4 pt-4 border-t border-white/10">
+        <div className="space-y-2">
           <div className="flex items-center justify-between text-xs">
-            <span className="text-white/50">Visible Features</span>
-            <span className="text-white font-medium">{visibleFeatures.toLocaleString()}</span>
+            <span className="text-white/40">Visible Features</span>
+            <span className="text-white font-semibold tabular-nums">{visibleFeatures.toLocaleString()}</span>
           </div>
-          <div className="mt-2 h-1.5 bg-white/10 rounded-full overflow-hidden">
+          <div className="h-2 bg-white/5 rounded-full overflow-hidden">
             <motion.div
-              className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full"
+              className="h-full bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 rounded-full"
               initial={{ width: 0 }}
               animate={{ width: totalFeatures > 0 ? `${(visibleFeatures / totalFeatures) * 100}%` : '0%' }}
-              transition={{ duration: 0.5, ease: 'easeOut' }}
+              transition={{ duration: 0.6, ease: 'easeOut' }}
             />
           </div>
         </div>
