@@ -102,20 +102,23 @@ export interface OmniscientInsights {
 }
 
 export interface OmniscientQuery {
-  id: string;
-  user_id: string;
-  raw_prompt: string;
-  parsed_intent: ParsedIntent;
+  id?: string;
+  user_id?: string;
+  prompt?: string;
+  raw_prompt?: string;
+  parsed_intent?: ParsedIntent;
   location_bbox?: [number, number, number, number];
   location_center?: [number, number];
-  status: 'pending' | 'collecting' | 'analyzing' | 'complete' | 'failed';
-  credits_used: number;
-  created_at: string;
+  status?: 'pending' | 'collecting' | 'analyzing' | 'complete' | 'failed';
+  credits_used?: number;
+  created_at?: string;
   completed_at?: string;
+  timestamp?: string;
 }
 
-export interface OmniscientResult {
-  query_id: string;
+// Response from the OMNISCIENT edge function
+export interface OmniscientResponse {
+  engine_version: string;
   prompt: string;
   intent: ParsedIntent;
   collected_data: CollectedData[];
@@ -127,6 +130,18 @@ export interface OmniscientResult {
   credits_used: number;
 }
 
+export interface OmniscientResult {
+  query_id?: string;
+  prompt: string;
+  intent: ParsedIntent;
+  collected_data: CollectedData[];
+  features: GeoJSONFeatureCollection;
+  insights: OmniscientInsights;
+  tabular_data: Record<string, any>[];
+  sources_used: string[];
+  processing_time_ms: number;
+  credits_used: number;
+}
 export interface MapLayer {
   id: string;
   name: string;
