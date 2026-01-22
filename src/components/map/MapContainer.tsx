@@ -1,5 +1,6 @@
-// BASED DATA v7.5 - Map Container
+// BASED DATA v7.6 - Map Container
 // Interactive Mapbox GL map with robust runtime token support + fallback
+// Fixed: map initializes into a dedicated child div (prevents React from overwriting Mapbox DOM)
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
@@ -14,7 +15,7 @@ import {
   setRuntimeMapboxToken,
 } from '@/lib/mapbox';
 import type { GeoJSONFeatureCollection, MapLayer } from '@/types/omniscient';
-import { Globe, ExternalLink, Layers, Database, Map } from 'lucide-react';
+import { Globe, ExternalLink, Layers, Database, Map, CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { motion } from 'framer-motion';
@@ -36,7 +37,10 @@ export function MapContainer({
   onFeatureClick,
   className = '',
 }: MapContainerProps) {
-  const mapContainer = useRef<HTMLDivElement>(null);
+  // Outer container ref (React manages) – never passed to Mapbox
+  const outerRef = useRef<HTMLDivElement>(null);
+  // Inner container ref (dedicated empty div Mapbox owns)
+  const innerRef = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [noToken, setNoToken] = useState(false);
@@ -61,14 +65,17 @@ export function MapContainer({
     };
   }, [features, layers]);
 
+  // ------------------------------------
+  // Initialize Mapbox map
+  // ------------------------------------
   useEffect(() => {
-    if (!mapContainer.current) return;
+    if (!innerRef.current) return;
 
-    // reset
+    // Reset state
     setMapLoaded(false);
     setTokenError(null);
 
-    // Always fully tear down before re-init (token can be provided at runtime)
+    // Tear down previous map instance
     map.current?.remove();
     map.current = null;
 
@@ -88,7 +95,7 @@ export function MapContainer({
 
     try {
       map.current = new mapboxgl.Map({
-        container: mapContainer.current,
+        container: innerRef.current,
         style: MAP_STYLES.dark,
         center,
         zoom,
@@ -101,7 +108,6 @@ export function MapContainer({
 
       map.current.on('error', (e) => {
         const message = (e as any)?.error?.message || '';
-        // Most common: invalid/missing token => tiles return 401
         if (message.toLowerCase().includes('unauthorized') || message.toLowerCase().includes('access token')) {
           setTokenError('That token looks invalid (Mapbox returned Unauthorized).');
           setNoToken(true);
@@ -115,11 +121,14 @@ export function MapContainer({
       map.current?.remove();
       map.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  // Keep map sizing correct in split views / resizable layouts
+  // ------------------------------------
+  // Resize observer for layout changes
+  // ------------------------------------
   useEffect(() => {
-    if (!mapContainer.current) return;
+    if (!outerRef.current) return;
     if (!map.current) return;
 
     const resize = () => map.current?.resize();
@@ -128,7 +137,7 @@ export function MapContainer({
     let ro: ResizeObserver | null = null;
     try {
       ro = new ResizeObserver(() => resize());
-      ro.observe(mapContainer.current);
+      ro.observe(outerRef.current);
     } catch {
       // ignore
     }
@@ -139,12 +148,18 @@ export function MapContainer({
     };
   }, [mapLoaded]);
 
+  // ------------------------------------
+  // Fly to center when it changes
+  // ------------------------------------
   useEffect(() => {
     if (map.current && mapLoaded && center) {
       map.current.flyTo({ center, zoom: zoom || 8, duration: 1500 });
     }
   }, [center, zoom, mapLoaded]);
 
+  // ------------------------------------
+  // Add GeoJSON data layers
+  // ------------------------------------
   useEffect(() => {
     if (!map.current || !mapLoaded || !filteredFeatures?.features?.length) return;
 
@@ -214,6 +229,9 @@ export function MapContainer({
 
   }, [filteredFeatures, mapLoaded, onFeatureClick]);
 
+  // ------------------------------------
+  // Token input handlers
+  // ------------------------------------
   const handleSaveToken = () => {
     const cleaned = tokenInput.trim();
     if (!cleaned) {
@@ -232,6 +250,9 @@ export function MapContainer({
     setNoToken(false);
   };
 
+  // ------------------------------------
+  // Fallback UI when no token
+  // ------------------------------------
   if (noToken) {
     const featureCount = filteredFeatures?.features?.length || features?.features?.length || 0;
     const categories = new Set((filteredFeatures?.features || features?.features || []).map(f => f.properties.category) || []);
@@ -282,13 +303,30 @@ export function MapContainer({
     );
   }
 
+  // ------------------------------------
+  // Normal map view
+  // ------------------------------------
   return (
-    <div ref={mapContainer} className={`relative ${className}`}>
+    <div ref={outerRef} className={`relative ${className}`}>
+      {/* Dedicated child div that Mapbox owns */}
+      <div ref={innerRef} className="absolute inset-0" />
+
+      {/* Loading overlay */}
       {!mapLoaded && (
-        <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
+        <div className="absolute inset-0 bg-background/80 flex items-center justify-center pointer-events-none z-10">
           <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
         </div>
       )}
+
+      {/* Status badge (debug) */}
+      <div className="absolute bottom-2 right-2 bg-card/80 backdrop-blur-sm border border-border rounded-md px-2 py-1 flex items-center gap-2 text-[10px] text-muted-foreground z-20">
+        {mapLoaded ? (
+          <CheckCircle2 className="w-3 h-3 text-success" />
+        ) : (
+          <XCircle className="w-3 h-3 text-destructive" />
+        )}
+        <span>{mapLoaded ? 'Map ready' : 'Loading...'}</span>
+      </div>
     </div>
   );
 }
