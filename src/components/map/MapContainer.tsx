@@ -318,14 +318,19 @@ export function MapContainer({
         </div>
       )}
 
-      {/* Status badge (debug) */}
-      <div className="absolute bottom-2 right-2 bg-card/80 backdrop-blur-sm border border-border rounded-md px-2 py-1 flex items-center gap-2 text-[10px] text-muted-foreground z-20">
+      {/* Status badge */}
+      <div className="absolute bottom-2 right-2 bg-card/90 backdrop-blur-sm border border-border rounded-md px-2.5 py-1 flex items-center gap-2 text-xs text-muted-foreground z-20 shadow-sm">
         {mapLoaded ? (
-          <CheckCircle2 className="w-3 h-3 text-success" />
+          <>
+            <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+            <span className="font-medium text-success">Map ready</span>
+          </>
         ) : (
-          <XCircle className="w-3 h-3 text-destructive" />
+          <>
+            <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <span>Initializing...</span>
+          </>
         )}
-        <span>{mapLoaded ? 'Map ready' : 'Loading...'}</span>
       </div>
     </div>
   );
