@@ -7,6 +7,7 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import {
   MAP_STYLES,
+  OSM_RASTER_STYLE,
   DEFAULT_MAP_CENTER,
   DEFAULT_ZOOM,
   CATEGORY_COLORS,
@@ -19,6 +20,7 @@ import { Globe, ExternalLink, Layers, Database, Map, CheckCircle2 } from 'lucide
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { motion } from 'framer-motion';
+import { MapTokenOverlay } from '@/components/map/MapTokenOverlay';
 
 interface MapContainerProps {
   features?: GeoJSONFeatureCollection;
@@ -45,7 +47,8 @@ export function MapContainer({
   const innerRef = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
-  const [noToken, setNoToken] = useState(false);
+  const [basemap, setBasemap] = useState<'mapbox' | 'osm'>('mapbox');
+  const [showTokenOverlay, setShowTokenOverlay] = useState(false);
   const [token, setToken] = useState(() => getRuntimeMapboxToken());
   const [tokenInput, setTokenInput] = useState('');
   const [tokenError, setTokenError] = useState<string | null>(null);
@@ -130,10 +133,9 @@ export function MapContainer({
     map.current = null;
 
     const activeToken = token || getRuntimeMapboxToken();
-    if (!hasMapboxToken() || !activeToken) {
-      setNoToken(true);
-      return;
-    }
+    const hasAnyToken = Boolean((activeToken || '').trim());
+    // We always render *a real map*. If token is missing/invalid we fall back to OSM.
+    setShowTokenOverlay(!hasAnyToken);
 
     let cancelled = false;
 
@@ -142,22 +144,29 @@ export function MapContainer({
       await ensureContainerReady();
       if (cancelled) return;
 
-      // Fail fast on invalid tokens so users see the token UI instead of a blank map.
-      const check = await validateToken(activeToken);
-      if (cancelled) return;
-      if (check.ok === false || check.status === 401 || check.status === 403) {
-        setTokenError('That token looks invalid (Mapbox returned Unauthorized).');
-        setNoToken(true);
-        return;
+      // If user chose Mapbox basemap, validate token; otherwise skip.
+      let resolvedBasemap: 'mapbox' | 'osm' = basemap;
+      if (resolvedBasemap === 'mapbox') {
+        if (!activeToken || !hasMapboxToken()) {
+          resolvedBasemap = 'osm';
+        } else {
+          const check = await validateToken(activeToken);
+          if (cancelled) return;
+          if (check.ok === false || check.status === 401 || check.status === 403) {
+            setTokenError('Invalid Mapbox token — showing free basemap.');
+            setShowTokenOverlay(true);
+            resolvedBasemap = 'osm';
+          }
+        }
       }
 
-      setNoToken(false);
-      mapboxgl.accessToken = activeToken;
+      // Mapbox GL may require *some* token string to boot; keep a harmless placeholder when missing.
+      mapboxgl.accessToken = activeToken || `pk.${'0'.repeat(32)}`;
 
       try {
         map.current = new mapboxgl.Map({
           container: innerRef.current!,
-          style: MAP_STYLES.dark,
+          style: resolvedBasemap === 'mapbox' ? MAP_STYLES.dark : (OSM_RASTER_STYLE as any),
           center,
           zoom,
         });
@@ -174,15 +183,18 @@ export function MapContainer({
         map.current.on('error', (e) => {
           const message = (e as any)?.error?.message || '';
           if (message.toLowerCase().includes('unauthorized') || message.toLowerCase().includes('access token')) {
-            setTokenError('That token looks invalid (Mapbox returned Unauthorized).');
-            setNoToken(true);
+            // Don’t brick the map: drop to OSM, keep overlay available.
+            setTokenError('Invalid Mapbox token — showing free basemap.');
+            setShowTokenOverlay(true);
+            setBasemap('osm');
           }
         });
 
         // Initial resize once constructed (helps when parent is animating).
         requestAnimationFrame(() => map.current?.resize());
       } catch {
-        setNoToken(true);
+        // As a last resort, still show overlay.
+        setShowTokenOverlay(true);
       }
     })();
 
@@ -192,7 +204,7 @@ export function MapContainer({
       map.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, basemap]);
 
   // ------------------------------------
   // Resize observer for layout changes
@@ -416,56 +428,6 @@ export function MapContainer({
   // ------------------------------------
   // Fallback UI when no token
   // ------------------------------------
-  if (noToken) {
-    const featureCount = filteredFeatures?.features?.length || features?.features?.length || 0;
-    const categories = new Set((filteredFeatures?.features || features?.features || []).map(f => f.properties.category) || []);
-    
-    return (
-      <div className={`relative bg-gradient-to-br from-background via-secondary/30 to-background flex flex-col items-center justify-center ${className}`}>
-        <div className="absolute inset-0 bg-grid bg-grid-fade opacity-20 pointer-events-none" />
-        
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center p-6 relative z-10 max-w-sm">
-          <Globe className="w-12 h-12 mx-auto text-primary/50 mb-4" />
-          <h3 className="text-lg font-bold text-foreground mb-2">Map Visualization</h3>
-          <p className="text-sm text-muted-foreground mb-4">Add a Mapbox token to enable interactive maps</p>
-          
-          {featureCount > 0 && (
-            <div className="bg-card/50 rounded-lg border p-3 mb-4">
-              <div className="flex items-center justify-center gap-4 text-sm">
-                <span className="flex items-center gap-1"><Database className="w-4 h-4 text-primary" /><b>{featureCount}</b> features</span>
-                <span className="flex items-center gap-1"><Layers className="w-4 h-4 text-success" /><b>{categories.size}</b> categories</span>
-              </div>
-            </div>
-          )}
-
-          <div className="w-full space-y-2 mb-3">
-            <div className="flex gap-2">
-              <Input
-                value={tokenInput}
-                onChange={(e) => setTokenInput(e.target.value)}
-                placeholder='Paste public token (starts with "pk.")'
-                className="h-9"
-              />
-              <Button size="sm" className="h-9" onClick={handleSaveToken}>
-                Save
-              </Button>
-            </div>
-            {tokenError && <p className="text-xs text-destructive">{tokenError}</p>}
-            <p className="text-xs text-muted-foreground">
-              Token is stored locally in this browser.
-            </p>
-          </div>
-          
-          <a href="https://account.mapbox.com/access-tokens/" target="_blank" rel="noopener noreferrer">
-            <Button variant="outline" size="sm" className="gap-2">
-              <Map className="w-4 h-4" />Get Mapbox Token<ExternalLink className="w-3 h-3" />
-            </Button>
-          </a>
-        </motion.div>
-      </div>
-    );
-  }
-
   // ------------------------------------
   // Normal map view
   // ------------------------------------
@@ -473,6 +435,20 @@ export function MapContainer({
     <div ref={outerRef} className={`relative ${className}`}>
       {/* Dedicated child div that Mapbox owns */}
       <div ref={innerRef} className="absolute inset-0" />
+
+      {/* Token/basemap overlay (never blocks map) */}
+      {showTokenOverlay && (
+        <MapTokenOverlay
+          basemap={basemap}
+          tokenInput={tokenInput}
+          onTokenInputChange={setTokenInput}
+          tokenError={tokenError}
+          onSaveToken={handleSaveToken}
+          onUseOsm={() => setBasemap('osm')}
+          onUseMapbox={() => setBasemap('mapbox')}
+          className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-[min(520px,calc(100%-2rem))]"
+        />
+      )}
 
       {/* Loading overlay */}
       {!mapLoaded && (
