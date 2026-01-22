@@ -1,14 +1,14 @@
-// BASED DATA v7.0 - Results View
-// Premium split-view with map + spreadsheet data grid + 15/10 visualizations + multi-format export
-// All sources have clickable links to original sites
+// BASED DATA v7.5 - Results View
+// Shows ACTUAL DATA not just counts - species, weather, regulations with source links
+// Premium split-view with scrollable panels
 
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  ArrowLeft, Layers, Table, Lightbulb, Download, 
-  FileJson, FileSpreadsheet, Share2, ChevronRight, Clock, Database, 
-  CheckCircle2, Zap, Globe, Sparkles, Copy, ExternalLink, Filter,
-  ThumbsUp, ThumbsDown, Flag, FileText, BarChart3, PieChart, Link2
+  ArrowLeft, Layers, Table, Lightbulb, 
+  Share2, ChevronRight, Clock, Database, 
+  CheckCircle2, Zap, Globe, Sparkles, Copy, 
+  FileText, BarChart3, PieChart, Link2, Eye
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -17,13 +17,13 @@ import { MapContainer } from '@/components/map/MapContainer';
 import { LayerControls } from '@/components/map/LayerControls';
 import { FeaturePopup } from '@/components/map/FeaturePopup';
 import { DataGrid } from '@/components/data/DataGrid';
-import { DataVisualization } from '@/components/data/DataVisualization';
+import { DataShowcase } from '@/components/data/DataShowcase';
 import { EnrichmentBadges } from '@/components/data/EnrichmentBadges';
 import { SourceCard } from '@/components/data/SourceCard';
 import type { GeoJSONFeature, GeoJSONFeatureCollection, CollectedData, OmniscientInsights, MapLayer } from '@/types/omniscient';
 import { CATEGORY_COLORS } from '@/lib/mapbox';
 import { toast } from 'sonner';
-import { exportData, EXPORT_FORMATS, type ExportFormat } from '@/lib/export';
+import { exportData, type ExportFormat } from '@/lib/export';
 import { useVoting } from '@/hooks/useVoting';
 
 interface OmniscientResultsProps {
@@ -265,11 +265,12 @@ export function OmniscientResults({
           <Tabs defaultValue="visualize" className="flex-1 flex flex-col">
             <TabsList className="flex-none border-b border-border bg-transparent p-0 h-auto">
               <TabsTrigger 
-                value="visualize"
+                value="data"
                 className="data-[state=active]:bg-accent rounded-none border-b-2 border-transparent data-[state=active]:border-primary px-4 py-3.5 gap-2"
               >
-                <BarChart3 className="w-4 h-4" />
-                <span className="hidden sm:inline">Visualize</span>
+                <Eye className="w-4 h-4" />
+                <span className="hidden sm:inline">Data</span>
+                <span className="text-xs text-muted-foreground">({totalRecords})</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="insights"
@@ -279,12 +280,11 @@ export function OmniscientResults({
                 <span className="hidden sm:inline">Insights</span>
               </TabsTrigger>
               <TabsTrigger 
-                value="data"
+                value="grid"
                 className="data-[state=active]:bg-accent rounded-none border-b-2 border-transparent data-[state=active]:border-primary px-4 py-3.5 gap-2"
               >
                 <Table className="w-4 h-4" />
                 <span className="hidden sm:inline">Grid</span>
-                <span className="text-xs text-muted-foreground">({totalRecords})</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="sources"
@@ -295,14 +295,17 @@ export function OmniscientResults({
               </TabsTrigger>
             </TabsList>
 
-            {/* Visualize Tab - NEW 15/10 Visualization */}
-            <TabsContent value="visualize" className="flex-1 overflow-y-auto p-4 m-0 scrollbar-hide">
+            {/* DATA SHOWCASE - Shows ACTUAL data not meta-charts */}
+            <TabsContent value="data" className="flex-1 overflow-y-auto p-4 m-0">
               {features?.features?.length ? (
-                <DataVisualization features={features.features} />
+                <DataShowcase 
+                  features={features.features} 
+                  onFeatureClick={(f) => setSelectedFeature(f)}
+                />
               ) : (
                 <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
-                  <PieChart className="w-12 h-12 mb-3 opacity-30" />
-                  <p className="font-medium">No data to visualize</p>
+                  <Database className="w-12 h-12 mb-3 opacity-30" />
+                  <p className="font-medium">No data available</p>
                 </div>
               )}
             </TabsContent>
@@ -406,8 +409,8 @@ export function OmniscientResults({
               )}
             </TabsContent>
 
-            {/* Data Tab - Spreadsheet Grid */}
-            <TabsContent value="data" className="flex-1 overflow-hidden m-0">
+            {/* Grid Tab - Spreadsheet Grid */}
+            <TabsContent value="grid" className="flex-1 overflow-hidden m-0">
               {features?.features?.length ? (
                 <DataGrid
                   features={features.features}
