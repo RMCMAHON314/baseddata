@@ -2,7 +2,7 @@
 // Shows REAL data: individual records, species, observations, actual values
 // NOT just meta-charts about counts - the actual data itself!
 
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ExternalLink, MapPin, Star, Clock, Tag, Eye, 
@@ -19,6 +19,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 interface DataShowcaseProps {
   features: GeoJSONFeature[];
   onFeatureClick?: (feature: GeoJSONFeature) => void;
+  selectedCategory?: string | null;
+  onSelectedCategoryChange?: (category: string | null) => void;
+  selectedFeatureId?: string | null;
   className?: string;
 }
 
@@ -54,9 +57,40 @@ function getNumProp(props: GeoJSONFeature['properties'], key: string, fallback =
   return typeof val === 'number' ? val : Number(val) || fallback;
 }
 
-export function DataShowcase({ features, onFeatureClick, className }: DataShowcaseProps) {
+function getFeatureKey(feature: GeoJSONFeature): string {
+  const props = feature.properties;
+  const explicit = getProp(props, 'source_record_id') || getProp(props, 'id');
+  if (explicit) return explicit;
+
+  const name = getProp(props, 'name') || getProp(props, 'species') || getProp(props, 'title', 'Record');
+
+  if (feature.geometry?.type === 'Point') {
+    const coords = feature.geometry.coordinates as number[];
+    const lng = Number(coords?.[0] ?? 0);
+    const lat = Number(coords?.[1] ?? 0);
+    return `${name}:${lng.toFixed(5)},${lat.toFixed(5)}`;
+  }
+
+  return `${name}:${JSON.stringify(feature.geometry?.coordinates ?? '').slice(0, 64)}`;
+}
+
+function toDomId(key: string): string {
+  return `feat_${key.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 80)}`;
+}
+
+export function DataShowcase({
+  features,
+  onFeatureClick,
+  selectedCategory: selectedCategoryProp,
+  onSelectedCategoryChange,
+  selectedFeatureId,
+  className,
+}: DataShowcaseProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [uncontrolledCategory, setUncontrolledCategory] = useState<string | null>(null);
+
+  const selectedCategory = selectedCategoryProp ?? uncontrolledCategory;
+  const setSelectedCategory = onSelectedCategoryChange ?? setUncontrolledCategory;
 
   // Group and analyze features - showing ACTUAL DATA
   const showcase = useMemo(() => {
@@ -122,6 +156,23 @@ export function DataShowcase({ features, onFeatureClick, className }: DataShowca
     return features.filter(f => getProp(f.properties, 'category') === selectedCategory);
   }, [features, selectedCategory]);
 
+  // If selection comes from the map, make sure the correct category tab is visible
+  // and scroll the matching card/row into view.
+  useEffect(() => {
+    if (!selectedFeatureId) return;
+
+    const match = features.find((f) => getFeatureKey(f) === selectedFeatureId);
+    const matchCat = match ? getProp(match.properties, 'category') : null;
+    if (matchCat && selectedCategory !== matchCat) setSelectedCategory(matchCat);
+
+    // Scroll after the DOM has a chance to render the right category section.
+    window.requestAnimationFrame(() => {
+      const el = document.getElementById(toDomId(selectedFeatureId));
+      el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedFeatureId]);
+
   return (
     <div className={cn("space-y-6", className)}>
       {/* Category Quick Filters */}
@@ -157,11 +208,20 @@ export function DataShowcase({ features, onFeatureClick, className }: DataShowca
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {showcase.featured.map((feature, i) => (
+          (() => {
+            const fid = getFeatureKey(feature);
+            const domId = toDomId(fid);
+            const isSelected = selectedFeatureId === fid;
+            return (
               <FeaturedCard
-                key={getProp(feature.properties, 'id') || i}
+                key={fid || i}
                 feature={feature}
                 onClick={() => onFeatureClick?.(feature)}
+                domId={domId}
+                selected={isSelected}
               />
+            );
+          })()
             ))}
           </div>
         </section>
@@ -211,7 +271,20 @@ export function DataShowcase({ features, onFeatureClick, className }: DataShowca
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {showcase.weatherData.map((feature, i) => (
-              <WeatherCard key={i} feature={feature} onClick={() => onFeatureClick?.(feature)} />
+              (() => {
+                const fid = getFeatureKey(feature);
+                const domId = toDomId(fid);
+                const isSelected = selectedFeatureId === fid;
+                return (
+                  <WeatherCard
+                    key={fid || i}
+                    feature={feature}
+                    onClick={() => onFeatureClick?.(feature)}
+                    domId={domId}
+                    selected={isSelected}
+                  />
+                );
+              })()
             ))}
           </div>
         </section>
@@ -226,7 +299,20 @@ export function DataShowcase({ features, onFeatureClick, className }: DataShowca
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {showcase.marineData.slice(0, 8).map((feature, i) => (
-              <MarineCard key={i} feature={feature} onClick={() => onFeatureClick?.(feature)} />
+              (() => {
+                const fid = getFeatureKey(feature);
+                const domId = toDomId(fid);
+                const isSelected = selectedFeatureId === fid;
+                return (
+                  <MarineCard
+                    key={fid || i}
+                    feature={feature}
+                    onClick={() => onFeatureClick?.(feature)}
+                    domId={domId}
+                    selected={isSelected}
+                  />
+                );
+              })()
             ))}
           </div>
         </section>
@@ -241,7 +327,20 @@ export function DataShowcase({ features, onFeatureClick, className }: DataShowca
           </h3>
           <div className="space-y-2">
             {showcase.regulations.map((feature, i) => (
-              <RegulationCard key={i} feature={feature} onClick={() => onFeatureClick?.(feature)} />
+              (() => {
+                const fid = getFeatureKey(feature);
+                const domId = toDomId(fid);
+                const isSelected = selectedFeatureId === fid;
+                return (
+                  <RegulationCard
+                    key={fid || i}
+                    feature={feature}
+                    onClick={() => onFeatureClick?.(feature)}
+                    domId={domId}
+                    selected={isSelected}
+                  />
+                );
+              })()
             ))}
           </div>
         </section>
@@ -256,17 +355,26 @@ export function DataShowcase({ features, onFeatureClick, className }: DataShowca
         <ScrollArea className="h-[400px]">
           <div className="space-y-2 pr-4">
             {filteredFeatures.slice(0, 100).map((feature, i) => (
+              (() => {
+                const fid = getFeatureKey(feature);
+                const domId = toDomId(fid);
+                const isSelected = selectedFeatureId === fid;
+                return (
               <ObservationRow
-                key={getProp(feature.properties, 'id') || i}
+                    key={fid || i}
                 feature={feature}
                 onClick={() => onFeatureClick?.(feature)}
-                isExpanded={expandedId === (getProp(feature.properties, 'id') || String(i))}
+                    domId={domId}
+                    selected={isSelected}
+                    isExpanded={expandedId === (fid || String(i))}
                 onToggle={() => setExpandedId(
-                  expandedId === (getProp(feature.properties, 'id') || String(i)) 
+                      expandedId === (fid || String(i)) 
                     ? null 
-                    : (getProp(feature.properties, 'id') || String(i))
+                        : (fid || String(i))
                 )}
               />
+                );
+              })()
             ))}
           </div>
         </ScrollArea>
@@ -276,7 +384,17 @@ export function DataShowcase({ features, onFeatureClick, className }: DataShowca
 }
 
 // Featured Card - Premium display of important data
-function FeaturedCard({ feature, onClick }: { feature: GeoJSONFeature; onClick?: () => void }) {
+function FeaturedCard({
+  feature,
+  onClick,
+  domId,
+  selected,
+}: {
+  feature: GeoJSONFeature;
+  onClick?: () => void;
+  domId?: string;
+  selected?: boolean;
+}) {
   const props = feature.properties;
   const cat = getProp(props, 'category', 'OTHER');
   const name = getProp(props, 'name') || getProp(props, 'species') || getProp(props, 'common_name', 'Unknown');
@@ -289,7 +407,11 @@ function FeaturedCard({ feature, onClick }: { feature: GeoJSONFeature; onClick?:
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="group p-4 rounded-xl bg-card border border-border hover:border-primary/50 hover:shadow-lg transition-all cursor-pointer"
+      id={domId}
+      className={cn(
+        'group p-4 rounded-xl bg-card border border-border hover:border-primary/50 hover:shadow-lg transition-all cursor-pointer',
+        selected && 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+      )}
       onClick={onClick}
     >
       <div className="flex items-start justify-between gap-3 mb-3">
@@ -341,7 +463,17 @@ function FeaturedCard({ feature, onClick }: { feature: GeoJSONFeature; onClick?:
 }
 
 // Weather Card - Show actual weather values
-function WeatherCard({ feature, onClick }: { feature: GeoJSONFeature; onClick?: () => void }) {
+function WeatherCard({
+  feature,
+  onClick,
+  domId,
+  selected,
+}: {
+  feature: GeoJSONFeature;
+  onClick?: () => void;
+  domId?: string;
+  selected?: boolean;
+}) {
   const props = feature.properties;
   const temp = props.temperature ?? props.temp;
   const humidity = props.humidity;
@@ -353,7 +485,11 @@ function WeatherCard({ feature, onClick }: { feature: GeoJSONFeature; onClick?: 
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-4 rounded-xl bg-warning/5 border border-warning/20 hover:border-warning/40 transition-all cursor-pointer"
+      id={domId}
+      className={cn(
+        'p-4 rounded-xl bg-warning/5 border border-warning/20 hover:border-warning/40 transition-all cursor-pointer',
+        selected && 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+      )}
       onClick={onClick}
     >
       <div className="flex items-center gap-2 mb-3">
@@ -393,7 +529,17 @@ function WeatherCard({ feature, onClick }: { feature: GeoJSONFeature; onClick?: 
 }
 
 // Marine Card - Tide and ocean data
-function MarineCard({ feature, onClick }: { feature: GeoJSONFeature; onClick?: () => void }) {
+function MarineCard({
+  feature,
+  onClick,
+  domId,
+  selected,
+}: {
+  feature: GeoJSONFeature;
+  onClick?: () => void;
+  domId?: string;
+  selected?: boolean;
+}) {
   const props = feature.properties;
   const name = getProp(props, 'name') || getProp(props, 'station_name', 'Station');
   const tideHeight = props.tide_height ?? props.height ?? props.water_level;
@@ -404,7 +550,11 @@ function MarineCard({ feature, onClick }: { feature: GeoJSONFeature; onClick?: (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-3 rounded-xl bg-primary/5 border border-primary/20 hover:border-primary/40 transition-all cursor-pointer"
+      id={domId}
+      className={cn(
+        'p-3 rounded-xl bg-primary/5 border border-primary/20 hover:border-primary/40 transition-all cursor-pointer',
+        selected && 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+      )}
       onClick={onClick}
     >
       <div className="flex items-center justify-between mb-2">
@@ -434,7 +584,17 @@ function MarineCard({ feature, onClick }: { feature: GeoJSONFeature; onClick?: (
 }
 
 // Regulation Card
-function RegulationCard({ feature, onClick }: { feature: GeoJSONFeature; onClick?: () => void }) {
+function RegulationCard({
+  feature,
+  onClick,
+  domId,
+  selected,
+}: {
+  feature: GeoJSONFeature;
+  onClick?: () => void;
+  domId?: string;
+  selected?: boolean;
+}) {
   const props = feature.properties;
   const name = getProp(props, 'name') || getProp(props, 'title', 'Regulation');
   const description = getProp(props, 'description') || getProp(props, 'details');
@@ -444,7 +604,11 @@ function RegulationCard({ feature, onClick }: { feature: GeoJSONFeature; onClick
     <motion.div
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
-      className="flex items-start gap-3 p-3 rounded-xl bg-accent/50 border border-border hover:border-primary/30 transition-all cursor-pointer group"
+      id={domId}
+      className={cn(
+        'flex items-start gap-3 p-3 rounded-xl bg-accent/50 border border-border hover:border-primary/30 transition-all cursor-pointer group',
+        selected && 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+      )}
       onClick={onClick}
     >
       <FileText className="w-5 h-5 text-accent-foreground flex-shrink-0 mt-0.5" />
@@ -475,11 +639,15 @@ function RegulationCard({ feature, onClick }: { feature: GeoJSONFeature; onClick
 function ObservationRow({ 
   feature, 
   onClick, 
+  domId,
+  selected,
   isExpanded,
   onToggle 
 }: { 
   feature: GeoJSONFeature; 
   onClick?: () => void;
+  domId?: string;
+  selected?: boolean;
   isExpanded: boolean;
   onToggle: () => void;
 }) {
@@ -493,7 +661,11 @@ function ObservationRow({
   return (
     <motion.div
       layout
-      className="rounded-lg border border-border bg-card overflow-hidden"
+      id={domId}
+      className={cn(
+        'rounded-lg border border-border bg-card overflow-hidden',
+        selected && 'ring-2 ring-primary ring-offset-2 ring-offset-background'
+      )}
     >
       <button
         onClick={onToggle}
