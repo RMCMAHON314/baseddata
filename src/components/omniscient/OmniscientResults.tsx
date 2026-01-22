@@ -1,5 +1,5 @@
-// OMNISCIENT v4.1 - Results View
-// Premium split-view with map + data panel + multi-format export + voting
+// BASED DATA v6.0 - Results View
+// Premium split-view with map + spreadsheet data grid + multi-format export + voting
 
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -15,6 +15,7 @@ import { Logo } from '@/components/Logo';
 import { MapContainer } from '@/components/map/MapContainer';
 import { LayerControls } from '@/components/map/LayerControls';
 import { FeaturePopup } from '@/components/map/FeaturePopup';
+import { DataGrid } from '@/components/data/DataGrid';
 import type { GeoJSONFeature, GeoJSONFeatureCollection, CollectedData, OmniscientInsights, MapLayer } from '@/types/omniscient';
 import { CATEGORY_COLORS } from '@/lib/mapbox';
 import { toast } from 'sonner';
@@ -43,7 +44,6 @@ export function OmniscientResults({
   onBack 
 }: OmniscientResultsProps) {
   const [selectedFeature, setSelectedFeature] = useState<GeoJSONFeature | null>(null);
-  const [searchFilter, setSearchFilter] = useState('');
   const [showExportMenu, setShowExportMenu] = useState(false);
   const { upvote, downvote, flag, getVoteState, isVoting } = useVoting();
   
@@ -83,29 +83,10 @@ export function OmniscientResults({
     return [sumLng / count, sumLat / count];
   }, [features]);
 
-  // Build tabular data from features with filtering
-  const tabularData = useMemo(() => {
-    if (!features?.features?.length) return [];
-    let data = features.features.map(f => ({
-      source: f.properties.source,
-      category: f.properties.category,
-      name: f.properties.name,
-      description: f.properties.description || '',
-      timestamp: f.properties.timestamp || '',
-      confidence: f.properties.confidence || 0,
-    }));
-    
-    if (searchFilter) {
-      const filter = searchFilter.toLowerCase();
-      data = data.filter(row => 
-        row.name.toLowerCase().includes(filter) ||
-        row.source.toLowerCase().includes(filter) ||
-        row.category.toLowerCase().includes(filter)
-      );
-    }
-    
-    return data;
-  }, [features, searchFilter]);
+  // Grid export handler
+  const handleGridExport = (format: 'xlsx' | 'csv') => {
+    handleExport(format);
+  };
 
   const handleLayerToggle = (layerId: string) => {
     setLayers(prev => prev.map(l => 
@@ -394,100 +375,22 @@ export function OmniscientResults({
               )}
             </TabsContent>
 
-            {/* Data Tab */}
-            <TabsContent value="data" className="flex-1 overflow-hidden m-0 flex flex-col">
-              {/* Search/Filter */}
-              <div className="flex-none p-3 border-b border-border">
-                <div className="relative">
-                  <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input
-                    type="text"
-                    placeholder="Filter records..."
-                    value={searchFilter}
-                    onChange={(e) => setSearchFilter(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 text-sm bg-secondary rounded-lg border border-border focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  />
+            {/* Data Tab - Spreadsheet Grid */}
+            <TabsContent value="data" className="flex-1 overflow-hidden m-0">
+              {features?.features?.length ? (
+                <DataGrid
+                  features={features.features}
+                  onExport={handleGridExport}
+                  onRowClick={(f) => setSelectedFeature(f)}
+                  className="h-full rounded-none border-0"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                  <Database className="w-12 h-12 mb-3 opacity-30" />
+                  <p className="font-medium">No data available</p>
+                  <p className="text-sm mt-1">Try a different query</p>
                 </div>
-              </div>
-              
-              <div className="flex-1 overflow-auto">
-                {tabularData.length > 0 ? (
-                  <table className="w-full text-xs">
-                    <thead className="bg-secondary sticky top-0">
-                      <tr>
-                        <th className="text-left p-3 font-semibold text-foreground">Source</th>
-                        <th className="text-left p-3 font-semibold text-foreground">Name</th>
-                        <th className="text-left p-3 font-semibold text-foreground">Category</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {tabularData.slice(0, 200).map((row, i) => (
-                        <tr key={i} className="border-b border-border/50 hover:bg-accent/50 transition-colors">
-                          <td className="p-3 text-muted-foreground font-mono">{row.source}</td>
-                          <td className="p-3 text-foreground">{row.name}</td>
-                          <td className="p-3">
-                            <span className="px-2 py-1 rounded-full bg-secondary text-muted-foreground text-xs">
-                              {row.category}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                ) : (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Database className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p>No data available</p>
-                  </div>
-                )}
-              </div>
-              
-              {/* Export Options - Multi-Format */}
-              <div className="flex-none border-t border-border p-3 relative">
-                <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => setShowExportMenu(!showExportMenu)} 
-                    className="flex-1"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Export Data
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleExport('pdf')} className="flex-1">
-                    <FileText className="w-4 h-4 mr-2" />
-                    PDF Report
-                  </Button>
-                </div>
-                
-                {/* Export Menu Dropdown */}
-                <AnimatePresence>
-                  {showExportMenu && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 10 }}
-                      className="absolute bottom-full left-3 right-3 mb-2 card-glass p-2 border border-border rounded-xl shadow-xl"
-                    >
-                      <div className="grid grid-cols-2 gap-2">
-                        {EXPORT_FORMATS.filter(f => f.format !== 'pdf').map(({ format, label, icon, description }) => (
-                          <button
-                            key={format}
-                            onClick={() => handleExport(format)}
-                            className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent text-left transition-colors"
-                          >
-                            <span className="text-xl">{icon}</span>
-                            <div>
-                              <div className="font-medium text-sm">{label}</div>
-                              <div className="text-xs text-muted-foreground">{description}</div>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+              )}
             </TabsContent>
 
             {/* Sources Tab */}
