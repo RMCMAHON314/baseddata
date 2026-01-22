@@ -190,15 +190,16 @@ export function OmniscientResults({
       </header>
 
       {/* Main Content - Split View */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* Map Panel */}
-        <div className="w-full lg:w-3/5 h-[45vh] lg:h-auto relative border-b border-border lg:border-b-0 lg:border-r">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden min-h-0">
+        {/* Map Panel - CRITICAL: explicit h-full on desktop for absolute positioned map child */}
+        <div className="w-full lg:w-3/5 h-[45vh] lg:h-full relative border-b border-border lg:border-b-0 lg:border-r flex-shrink-0">
           <MapContainer
             features={features}
+            layers={layers}
             center={mapCenter}
             zoom={mapCenter ? 9 : 4}
             onFeatureClick={(f) => setSelectedFeature(f as any)}
-            className="absolute inset-0"
+            className="absolute inset-0 w-full h-full"
           />
           
           {/* Layer Controls */}
