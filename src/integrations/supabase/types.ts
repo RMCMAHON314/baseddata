@@ -464,6 +464,57 @@ export type Database = {
           },
         ]
       }
+      discovery_metrics: {
+        Row: {
+          avg_confidence_score: number | null
+          avg_generation_time_ms: number | null
+          collectors_approved: number | null
+          collectors_failed: number | null
+          collectors_generated: number | null
+          created_at: string
+          date: string
+          discoveries_queued: number | null
+          discoveries_validated: number | null
+          gaps_filled: number | null
+          gaps_identified: number | null
+          id: string
+          new_sources_added: number | null
+          records_from_new_sources: number | null
+        }
+        Insert: {
+          avg_confidence_score?: number | null
+          avg_generation_time_ms?: number | null
+          collectors_approved?: number | null
+          collectors_failed?: number | null
+          collectors_generated?: number | null
+          created_at?: string
+          date?: string
+          discoveries_queued?: number | null
+          discoveries_validated?: number | null
+          gaps_filled?: number | null
+          gaps_identified?: number | null
+          id?: string
+          new_sources_added?: number | null
+          records_from_new_sources?: number | null
+        }
+        Update: {
+          avg_confidence_score?: number | null
+          avg_generation_time_ms?: number | null
+          collectors_approved?: number | null
+          collectors_failed?: number | null
+          collectors_generated?: number | null
+          created_at?: string
+          date?: string
+          discoveries_queued?: number | null
+          discoveries_validated?: number | null
+          gaps_filled?: number | null
+          gaps_identified?: number | null
+          id?: string
+          new_sources_added?: number | null
+          records_from_new_sources?: number | null
+        }
+        Relationships: []
+      }
       dynamic_collectors: {
         Row: {
           api_method: string
@@ -698,6 +749,68 @@ export type Database = {
             columns: ["base_record_id"]
             isOneToOne: true
             referencedRelation: "records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gap_analysis: {
+        Row: {
+          created_at: string
+          gap_description: string
+          gap_type: string
+          id: string
+          identified_at: string
+          query_frequency: number | null
+          resolution_discovery_id: string | null
+          resolved_at: string | null
+          sample_queries: Json | null
+          severity: number | null
+          status: string | null
+          target_category: string | null
+          target_keywords: string[] | null
+          target_region: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          gap_description: string
+          gap_type: string
+          id?: string
+          identified_at?: string
+          query_frequency?: number | null
+          resolution_discovery_id?: string | null
+          resolved_at?: string | null
+          sample_queries?: Json | null
+          severity?: number | null
+          status?: string | null
+          target_category?: string | null
+          target_keywords?: string[] | null
+          target_region?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          gap_description?: string
+          gap_type?: string
+          id?: string
+          identified_at?: string
+          query_frequency?: number | null
+          resolution_discovery_id?: string | null
+          resolved_at?: string | null
+          sample_queries?: Json | null
+          severity?: number | null
+          status?: string | null
+          target_category?: string | null
+          target_keywords?: string[] | null
+          target_region?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gap_analysis_resolution_discovery_id_fkey"
+            columns: ["resolution_discovery_id"]
+            isOneToOne: false
+            referencedRelation: "source_discoveries"
             referencedColumns: ["id"]
           },
         ]
@@ -1343,6 +1456,92 @@ export type Database = {
         }
         Relationships: []
       }
+      source_discoveries: {
+        Row: {
+          confidence_score: number | null
+          created_at: string
+          error_count: number | null
+          error_message: string | null
+          estimated_value_score: number | null
+          generated_collector_id: string | null
+          generation_attempts: number | null
+          id: string
+          inferred_categories: string[]
+          inferred_keywords: string[]
+          last_generation_at: string | null
+          priority: number | null
+          processed_at: string | null
+          status: string | null
+          target_api_name: string
+          target_api_url: string | null
+          target_description: string | null
+          target_documentation_url: string | null
+          trigger_id: string | null
+          trigger_prompt: string | null
+          trigger_type: string
+          updated_at: string
+          validation_result: Json | null
+        }
+        Insert: {
+          confidence_score?: number | null
+          created_at?: string
+          error_count?: number | null
+          error_message?: string | null
+          estimated_value_score?: number | null
+          generated_collector_id?: string | null
+          generation_attempts?: number | null
+          id?: string
+          inferred_categories?: string[]
+          inferred_keywords?: string[]
+          last_generation_at?: string | null
+          priority?: number | null
+          processed_at?: string | null
+          status?: string | null
+          target_api_name: string
+          target_api_url?: string | null
+          target_description?: string | null
+          target_documentation_url?: string | null
+          trigger_id?: string | null
+          trigger_prompt?: string | null
+          trigger_type?: string
+          updated_at?: string
+          validation_result?: Json | null
+        }
+        Update: {
+          confidence_score?: number | null
+          created_at?: string
+          error_count?: number | null
+          error_message?: string | null
+          estimated_value_score?: number | null
+          generated_collector_id?: string | null
+          generation_attempts?: number | null
+          id?: string
+          inferred_categories?: string[]
+          inferred_keywords?: string[]
+          last_generation_at?: string | null
+          priority?: number | null
+          processed_at?: string | null
+          status?: string | null
+          target_api_name?: string
+          target_api_url?: string | null
+          target_description?: string | null
+          target_documentation_url?: string | null
+          trigger_id?: string | null
+          trigger_prompt?: string | null
+          trigger_type?: string
+          updated_at?: string
+          validation_result?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "source_discoveries_generated_collector_id_fkey"
+            columns: ["generated_collector_id"]
+            isOneToOne: false
+            referencedRelation: "dynamic_collectors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       source_performance: {
         Row: {
           avg_response_time_ms: number | null
@@ -1424,6 +1623,16 @@ export type Database = {
         }
         Returns: string
       }
+      analyze_data_gaps: {
+        Args: never
+        Returns: {
+          gap_description: string
+          gap_type: string
+          severity: number
+          target_category: string
+          target_keywords: string[]
+        }[]
+      }
       cache_location: {
         Args: {
           p_admin_level?: string
@@ -1488,7 +1697,32 @@ export type Database = {
         }
         Returns: string
       }
+      queue_discovery: {
+        Args: {
+          p_confidence?: number
+          p_inferred_categories?: string[]
+          p_inferred_keywords?: string[]
+          p_priority?: number
+          p_target_api_name?: string
+          p_target_api_url?: string
+          p_target_description?: string
+          p_trigger_id?: string
+          p_trigger_prompt?: string
+          p_trigger_type: string
+        }
+        Returns: string
+      }
       record_master_dataset_stats: { Args: never; Returns: string }
+      update_discovery_status: {
+        Args: {
+          p_discovery_id: string
+          p_error_message?: string
+          p_generated_collector_id?: string
+          p_status: string
+          p_validation_result?: Json
+        }
+        Returns: boolean
+      }
       update_source_performance: {
         Args: {
           p_error_message?: string
