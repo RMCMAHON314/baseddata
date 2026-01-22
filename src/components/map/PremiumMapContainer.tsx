@@ -171,13 +171,21 @@ export function PremiumMapContainer({
         }
       }
 
-      // Mapbox GL needs some token string to boot; harmless placeholder when missing
-      mapboxgl.accessToken = activeToken || `pk.${'0'.repeat(32)}`;
+      // For OSM, we need a placeholder token (Mapbox GL requires one to init)
+      // For Mapbox, use the real token
+      // CRITICAL: Use a minimal valid-looking placeholder for OSM to avoid auth errors
+      if (resolvedBasemap === 'osm') {
+        // OSM doesn't need Mapbox auth - use empty string
+        // Mapbox GL 3.x allows empty token when using non-Mapbox styles
+        mapboxgl.accessToken = '';
+      } else {
+        mapboxgl.accessToken = activeToken;
+      }
 
       try {
         map.current = new mapboxgl.Map({
           container: innerRef.current!,
-          style: resolvedBasemap === 'mapbox' ? MAP_STYLES.dark : (OSM_RASTER_STYLE as any),
+          style: resolvedBasemap === 'mapbox' ? MAP_STYLES.dark : OSM_RASTER_STYLE,
           center,
           zoom,
           pitch: resolvedBasemap === 'mapbox' && is3D ? 45 : 0,
