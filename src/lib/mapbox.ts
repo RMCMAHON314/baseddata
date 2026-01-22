@@ -1,7 +1,16 @@
-// OMNISCIENT - Mapbox Configuration
+// BASED DATA v7.0 - Mapbox Configuration
 // Map integration for geospatial data visualization
+// 
+// NOTE: VITE_MAPBOX_TOKEN should be set in your .env file
+// Mapbox public tokens are safe to expose in frontend code
+// Get your free token at: https://account.mapbox.com/access-tokens/
 
 export const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
+
+// Check if token is available
+export const hasMapboxToken = (): boolean => {
+  return Boolean(MAPBOX_TOKEN && MAPBOX_TOKEN.length > 10);
+};
 
 export const MAP_STYLES = {
   dark: 'mapbox://styles/mapbox/dark-v11',

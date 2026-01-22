@@ -1,11 +1,13 @@
-// OMNISCIENT Map Container
-// Interactive Mapbox GL map with data layers
+// BASED DATA v7.0 - Map Container
+// Interactive Mapbox GL map with data layers and fallback visualization
 
 import { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { MAPBOX_TOKEN, MAP_STYLES, DEFAULT_MAP_CENTER, DEFAULT_ZOOM, CATEGORY_COLORS } from '@/lib/mapbox';
+import { MAPBOX_TOKEN, MAP_STYLES, DEFAULT_MAP_CENTER, DEFAULT_ZOOM, CATEGORY_COLORS, hasMapboxToken } from '@/lib/mapbox';
 import type { GeoJSONFeatureCollection, MapLayer } from '@/types/omniscient';
+import { MapPin, Globe, ExternalLink, Layers, Database } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface MapContainerProps {
   features?: GeoJSONFeatureCollection;
@@ -32,7 +34,7 @@ export function MapContainer({
   useEffect(() => {
     if (!mapContainer.current) return;
     
-    if (!MAPBOX_TOKEN) {
+    if (!hasMapboxToken()) {
       setNoToken(true);
       return;
     }
@@ -197,14 +199,74 @@ export function MapContainer({
 
   }, [features, mapLoaded, onFeatureClick]);
 
+  // Enhanced fallback when no Mapbox token
   if (noToken) {
+    const featureCount = features?.features?.length || 0;
+    const categories = new Set(features?.features?.map(f => f.properties.category) || []);
+    
     return (
-      <div className={`relative bg-gray-900 flex items-center justify-center ${className}`}>
-        <div className="text-center p-8">
-          <div className="text-4xl mb-4">🗺️</div>
-          <h3 className="text-lg font-semibold text-white mb-2">Map Preview</h3>
-          <p className="text-gray-400 text-sm max-w-xs">
-            Add a Mapbox token to enable the interactive map. Data is still generated and available in the table view.
+      <div className={`relative bg-gradient-to-br from-background via-secondary/50 to-background flex flex-col items-center justify-center ${className}`}>
+        {/* Grid pattern background */}
+        <div className="absolute inset-0 bg-grid bg-grid-fade opacity-30 pointer-events-none" />
+        
+        <div className="text-center p-8 relative z-10 max-w-md">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-primary/10 border border-primary/20 mb-6">
+            <Globe className="w-10 h-10 text-primary" />
+          </div>
+          
+          <h3 className="text-xl font-bold text-foreground mb-2">Interactive Map</h3>
+          <p className="text-muted-foreground text-sm mb-6">
+            Add a Mapbox token to enable the interactive map visualization with clustering, 
+            category-colored markers, and click-to-explore features.
+          </p>
+          
+          {/* Data Summary */}
+          {featureCount > 0 && (
+            <div className="bg-card rounded-xl border border-border p-4 mb-6">
+              <div className="flex items-center justify-center gap-6 text-sm">
+                <div className="flex items-center gap-2">
+                  <Database className="w-4 h-4 text-primary" />
+                  <span className="font-bold text-foreground">{featureCount}</span>
+                  <span className="text-muted-foreground">features</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-success" />
+                  <span className="font-bold text-foreground">{categories.size}</span>
+                  <span className="text-muted-foreground">categories</span>
+                </div>
+              </div>
+              
+              {/* Category badges */}
+              <div className="flex flex-wrap gap-1.5 justify-center mt-3">
+                {Array.from(categories).slice(0, 6).map(cat => (
+                  <span 
+                    key={cat} 
+                    className="px-2 py-0.5 rounded-full text-xs font-medium"
+                    style={{ 
+                      backgroundColor: `${CATEGORY_COLORS[cat as keyof typeof CATEGORY_COLORS]}20`,
+                      color: CATEGORY_COLORS[cat as keyof typeof CATEGORY_COLORS] || '#3366FF'
+                    }}
+                  >
+                    {cat}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          <a
+            href="https://account.mapbox.com/access-tokens/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            <MapPin className="w-4 h-4" />
+            Get Free Mapbox Token
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+          
+          <p className="text-xs text-muted-foreground mt-4">
+            Data is available in the Grid and Visualize tabs
           </p>
         </div>
       </div>
@@ -214,7 +276,7 @@ export function MapContainer({
   return (
     <div ref={mapContainer} className={`relative ${className}`}>
       {!mapLoaded && (
-        <div className="absolute inset-0 bg-gray-900 flex items-center justify-center">
+        <div className="absolute inset-0 bg-background flex items-center justify-center">
           <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
         </div>
       )}
