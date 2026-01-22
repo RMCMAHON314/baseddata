@@ -1854,32 +1854,82 @@ async function generateNewCollector(prompt: string, intent: ParsedIntent): Promi
   try {
     console.log('🧬 GENESIS: Generating new collector for:', prompt);
     
-    const systemPrompt = `You are an expert API researcher. Given a user query, identify a PUBLIC API that can provide the requested data.
-Return a JSON object with:
-- name: short name for this data source
-- description: what data it provides
-- api_url: the actual API endpoint URL (must be a real, working public API)
-- api_method: GET or POST
-- headers: any required headers (as object)
-- params_template: URL params with placeholders like {lat}, {lng}, {bbox}, {keyword}
-- response_mapping: how to extract data:
-  - features_path: JSONPath to array of results (e.g., "results", "data.items")
-  - lat_path: path to latitude within each item
-  - lng_path: path to longitude within each item  
-  - name_path: path to name/title
-  - description_path: path to description (optional)
-  - id_path: path to unique ID (optional)
-- categories: array of categories this covers
-- keywords: array of keywords this matches
+    const systemPrompt = `You are an EXPERT API researcher with encyclopedic knowledge of public data sources worldwide.
 
-Focus on FREE, no-auth-required APIs. Examples:
-- Wikipedia/Wikidata APIs
-- OpenStreetMap Nominatim/Overpass
-- Government open data portals
-- Academic/research APIs
-- International organization APIs (UN, WHO, World Bank)
+Your mission: Find the PERFECT public API to answer ANY data query. You have access to thousands of APIs.
 
-Return ONLY valid JSON, no explanation.`;
+## API KNOWLEDGE BASE (100+ sources you know):
+
+**GOVERNMENT/CIVIC:**
+- Data.gov, Data.europa.eu, UK Open Data, Canada Open Data
+- Census Bureau, BLS, SEC EDGAR, USASpending
+- World Bank Data API, IMF Data, OECD Stats
+- UN Data, WHO GHO, FAO FAOSTAT
+
+**GEOSPATIAL/MAPPING:**
+- OpenStreetMap Overpass, Nominatim geocoding
+- USGS APIs (earthquakes, volcanoes, water)
+- NASA APIs (FIRMS fires, EONET events, Mars photos)
+- Geonames, Natural Earth
+
+**ENVIRONMENT/SCIENCE:**
+- NOAA (weather, climate, ocean), EPA (air quality)
+- GBIF (biodiversity), iNaturalist
+- USDA (agriculture, soil), Forest Service
+- European Environment Agency
+
+**CULTURAL/HISTORICAL:**
+- Wikipedia/Wikidata SPARQL, DBpedia
+- Library of Congress, Europeana
+- UNESCO World Heritage API
+- Smithsonian Open Access
+
+**ECONOMIC/BUSINESS:**
+- FRED (Federal Reserve), BEA, Treasury
+- Yahoo Finance, Alpha Vantage (stocks)
+- Crunchbase (startups), OpenCorporates
+
+**TRANSPORTATION:**
+- OpenSky (flights), OpenRailwayMap
+- GTFS feeds, TransitLand
+- MarineTraffic AIS, VesselFinder
+
+**HEALTH/RESEARCH:**
+- ClinicalTrials.gov, PubMed, NIH Reporter
+- CDC WONDER, CMS data
+- OpenFDA (drugs, recalls)
+
+**RECREATION/CULTURE:**
+- OpenWeatherMap, Open-Meteo
+- RecreationGov (RIDB), NPS API
+- Yelp Fusion, Foursquare Places
+
+Return a JSON object:
+{
+  "name": "short source name",
+  "description": "what data it provides",
+  "api_url": "REAL working endpoint with placeholders like {lat}, {lng}, {bbox}, {query}, {keyword}",
+  "api_method": "GET",
+  "headers": {},
+  "params_template": {},
+  "response_mapping": {
+    "features_path": "path.to.results.array",
+    "lat_path": "latitude or lat or coordinates[1]",
+    "lng_path": "longitude or lon or coordinates[0]",
+    "name_path": "name or title or label",
+    "description_path": "description or summary",
+    "id_path": "id or _id"
+  },
+  "categories": ["GEOSPATIAL"],
+  "keywords": ["relevant", "keywords"]
+}
+
+CRITICAL RULES:
+1. ONLY use FREE, public, no-auth-required APIs
+2. The api_url MUST be a real, working endpoint
+3. Include proper response_mapping paths
+4. If unsure, default to Wikidata SPARQL or OpenStreetMap Overpass
+5. Return ONLY valid JSON, no markdown, no explanation`;
 
     const response = await fetch(LOVABLE_AI_URL, {
       method: 'POST',
@@ -1891,9 +1941,10 @@ Return ONLY valid JSON, no explanation.`;
         model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Query: "${prompt}"\nLocation: ${intent.location?.name || 'unspecified'}\nCategories needed: ${intent.categories.join(', ')}\nKeywords: ${intent.keywords.join(', ')}` }
+          { role: 'user', content: `Query: "${prompt}"\nLocation: ${intent.location?.name || 'unspecified'}\nCategories needed: ${intent.categories.join(', ')}\nKeywords: ${intent.keywords.join(', ')}\n\nFind the BEST API to answer this query. Be creative - there's almost always a public data source!` }
         ],
-        temperature: 0.3,
+        temperature: 0.4,
+        max_tokens: 1000,
       }),
     });
 

@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.enrich]
 verify_jwt = false
+
+[functions.export]
+verify_jwt = false
+
+[functions.vote]
+verify_jwt = false
