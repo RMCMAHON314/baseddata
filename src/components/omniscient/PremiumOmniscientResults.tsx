@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Logo } from '@/components/Logo';
-import { PremiumMapContainer } from '@/components/map/PremiumMapContainer';
+import { SimpleMap } from '@/components/map/SimpleMap';
 import { PremiumLayerPanel } from '@/components/map/PremiumLayerPanel';
 import { PremiumStatsBar } from '@/components/map/PremiumStatsBar';
 import { PremiumDetailPanel, PremiumHoverPopup } from '@/components/map/PremiumMapPopup';
@@ -251,7 +251,7 @@ export function PremiumOmniscientResults({
           {/* MAP CONTAINER - CRITICAL: needs flex-1 relative min-h-0 with absolute inset-0 child */}
           <div className="flex-1 relative min-h-0">
             <div className="absolute inset-0">
-              <PremiumMapContainer
+              <SimpleMap
                 features={features}
                 layers={layers}
                 layerOpacities={layerOpacities}
