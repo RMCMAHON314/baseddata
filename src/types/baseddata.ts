@@ -1,46 +1,58 @@
-// BASED DATA v6.0 - Type Definitions
-// The Self-Growing Universal Data Platform
+// ============================================================================
+// BASED DATA v7.0 - CRAWLER & AUTOMATION TYPES
+// Types for the self-evolving data discovery system
+// ============================================================================
 
-// Re-export all omniscient types
+// Re-export core types
 export * from './omniscient';
 
-// Re-export constants from central source
+// Re-export constants
 export { 
   BASED_DATA_VERSION, 
   BASED_DATA_TAGLINE, 
   BASED_DATA_DESCRIPTION,
-  CRAWLER_TYPES,
+  CRAWLER_TYPES, 
   CRAWLER_SCHEDULES,
+  USER_TIERS,
 } from '@/lib/constants';
 
-// Auto-Crawler Types
+export type { UserTier } from '@/lib/constants';
+
+// ============================================================================
+// AUTO-CRAWLER TYPES
+// ============================================================================
+
 export interface AutoCrawler {
   id: string;
   name: string;
   description?: string | null;
-  crawler_type: string;
-  target_patterns: any;
-  similarity_config: any;
-  firecrawl_config: any;
+  crawler_type: 'pattern' | 'similarity' | 'expansion' | 'firecrawl';
+  target_patterns: unknown[];
   target_categories: string[];
   expansion_keywords: string[];
+  similarity_config?: Record<string, unknown>;
+  firecrawl_config?: FirecrawlConfig;
   schedule_cron: string;
+  is_active: boolean;
   last_run_at?: string | null;
   next_run_at?: string | null;
   total_runs: number;
-  total_records_discovered: number;
   total_sources_found: number;
+  total_records_discovered: number;
   success_rate: number | null;
-  is_active: boolean | null;
   created_at: string;
   updated_at: string;
 }
 
 export interface FirecrawlConfig {
-  mode: 'scrape' | 'map' | 'crawl';
-  urls: string[];
+  mode: 'scrape' | 'crawl' | 'map';
+  url?: string;
+  urls?: string[];
+  limit?: number;
+  include_patterns?: string[];
+  exclude_patterns?: string[];
+  extract_schema?: Record<string, unknown>;
   options?: {
-    limit?: number;
     maxDepth?: number;
     search?: string;
     formats?: string[];
@@ -50,62 +62,78 @@ export interface FirecrawlConfig {
 export interface CrawlerRun {
   id: string;
   crawler_id: string;
+  status: 'running' | 'complete' | 'completed' | 'failed';
   started_at: string;
   completed_at?: string;
-  status: 'running' | 'completed' | 'failed';
-  urls_discovered: string[];
-  sources_discovered: Array<{ name: string; url: string }>;
+  sources_discovered: DiscoveredSource[] | Array<{ name: string; url: string }>;
   records_collected: number;
   new_collectors_created: number;
   processing_time_ms?: number;
+  discovery_log: unknown[];
+  urls_discovered: string[];
   error_message?: string;
-  discovery_log: any[];
 }
 
 export interface DiscoveredSource {
   id: string;
-  discovered_by_crawler_id?: string;
-  discovered_at: string;
   name: string;
-  description?: string;
   url: string;
-  api_endpoint?: string;
-  documentation_url?: string;
+  description?: string;
+  data_type?: string | 'api' | 'dataset' | 'webpage' | 'pdf' | 'csv';
   inferred_categories: string[];
   inferred_keywords: string[];
-  data_type: 'api' | 'dataset' | 'webpage' | 'pdf' | 'csv';
   quality_score: number;
-  last_validated_at?: string;
-  is_active: boolean;
-  auto_collector_id?: string;
-  collector_generated: boolean;
+  discovered_by_crawler_id?: string;
   review_status: 'pending' | 'approved' | 'rejected' | 'auto_approved';
   reviewed_at?: string;
+  collector_generated: boolean;
+  api_endpoint?: string;
+  documentation_url?: string;
+  auto_collector_id?: string;
+  is_active: boolean;
+  last_validated_at?: string;
+  discovered_at: string;
   created_at: string;
   updated_at: string;
 }
+
+// ============================================================================
+// EXPANSION RULES
+// ============================================================================
 
 export interface ExpansionRule {
   id: string;
   name: string;
   description?: string;
-  rule_type: 'category_gap' | 'geographic_gap' | 'temporal_gap' | 'quality_improvement';
-  trigger_condition: Record<string, any>;
-  expansion_strategy: Record<string, any>;
+  rule_type: 'geographic' | 'temporal' | 'categorical' | 'quality' | 'category_gap' | 'geographic_gap' | 'temporal_gap' | 'quality_improvement';
+  trigger_condition: {
+    min_records?: number;
+    max_records?: number;
+    categories?: string[];
+    regions?: string[];
+    time_range?: { start: string; end: string };
+  };
+  expansion_strategy: {
+    type?: 'add_sources' | 'expand_bbox' | 'add_categories' | 'increase_depth';
+    params?: Record<string, unknown>;
+  };
   target_categories?: string[];
   target_regions?: string[];
+  is_active: boolean;
   priority: number;
   max_records_per_run: number;
-  is_active: boolean;
-  last_triggered_at?: string;
   times_triggered: number;
+  last_triggered_at?: string;
   created_at: string;
   updated_at: string;
 }
 
+// ============================================================================
+// MASTER DATASET STATS
+// ============================================================================
+
 export interface MasterDatasetStats {
   id: string;
-  recorded_at: string;
   total_records: number;
   total_sources: number;
   total_categories: number;
@@ -113,13 +141,12 @@ export interface MasterDatasetStats {
   records_by_source: Record<string, number>;
   avg_quality_score: number;
   records_with_high_quality: number;
-  bounding_box?: [number, number, number, number];
-  geographic_coverage: Record<string, number>;
+  geographic_coverage: Record<string, unknown>;
+  bounding_box?: number[] | [number, number, number, number];
   oldest_record_at?: string;
   newest_record_at?: string;
   records_added_today: number;
   records_added_this_week: number;
   records_added_this_month: number;
+  recorded_at: string;
 }
-
-// NOTE: CRAWLER_TYPES and CRAWLER_SCHEDULES are now exported from @/lib/constants

@@ -1,15 +1,16 @@
-// BASED DATA v6.0 - Central Constants
+// ============================================================================
+// BASED DATA v7.0 - UNIFIED CONSTANTS
 // Single source of truth for all platform constants
+// ============================================================================
 
 // ============================================================================
 // PLATFORM IDENTITY
 // ============================================================================
 
-export const BASED_DATA_VERSION = '6.0';
+export const BASED_DATA_VERSION = '7.0';
 export const BASED_DATA_TAGLINE = 'Every Dataset. On Demand.';
 export const BASED_DATA_DESCRIPTION = 'Self-evolving data platform that generates unlimited datasets on demand. Describe what you need, get unified georeferenced data in seconds.';
 
-// Legacy alias
 export const ENGINE_INFO = {
   version: `BASED DATA v${BASED_DATA_VERSION}`,
   description: BASED_DATA_DESCRIPTION,
@@ -24,10 +25,34 @@ export const ENGINE_INFO = {
     'Query Learning',
     'Dynamic Collector Genesis',
     'Auto-Enrichment',
+    'Knowledge Graph',
   ],
   sourceCount: 70,
   dataTap: true,
-};
+} as const;
+
+// ============================================================================
+// DATA CATEGORIES (single definition)
+// ============================================================================
+
+export const DATA_CATEGORIES = [
+  'WILDLIFE',
+  'WEATHER', 
+  'MARINE',
+  'GEOSPATIAL',
+  'GOVERNMENT',
+  'REGULATIONS',
+  'ECONOMIC',
+  'DEMOGRAPHICS',
+  'TRANSPORTATION',
+  'HEALTH',
+  'ENERGY',
+  'RECREATION',
+  'RESEARCH',
+  'IMAGERY',
+] as const;
+
+export type DataCategory = typeof DATA_CATEGORIES[number];
 
 // ============================================================================
 // SAMPLE PROMPTS
@@ -39,10 +64,10 @@ export const SAMPLE_PROMPTS = [
   { text: 'Federal cybersecurity contractors in Maryland with $10M+ contracts', category: 'Government' },
   { text: 'Solar potential assessment for properties in Phoenix with available incentives', category: 'Energy' },
   { text: 'Salmon fishing hotspots in Puget Sound this weekend with tide charts', category: 'Fishing' },
-];
+] as const;
 
 // ============================================================================
-// CREDIT COSTS
+// CREDIT COSTS (unified pricing)
 // ============================================================================
 
 export const CREDIT_COSTS = {
@@ -51,9 +76,10 @@ export const CREDIT_COSTS = {
   complex: 30,         // 8+ sources
   dynamic_genesis: 10, // When AI generates new collectors
   enrichment: 5,       // Cross-source fusion
-  satellite: 10,       // Additional for imagery
+  satellite: 10,       // Satellite imagery
   pdf_report: 5,       // PDF generation
   historical: 10,      // Historical data (>1 year)
+  nl_query: 2,         // Natural language SQL query
 } as const;
 
 export const SIGNUP_BONUS_CREDITS = 100;
@@ -80,28 +106,28 @@ export const CATEGORY_COLORS: Record<string, string> = {
 };
 
 // ============================================================================
-// ENRICHMENT STRATEGIES (by category)
+// ENRICHMENT STRATEGIES (category cross-references)
 // ============================================================================
 
-export const ENRICHMENT_STRATEGIES: Record<string, string[]> = {
+export const ENRICHMENT_STRATEGIES: Record<DataCategory, DataCategory[]> = {
   WILDLIFE: ['WEATHER', 'REGULATIONS', 'GEOSPATIAL'],
   WEATHER: ['GEOSPATIAL'],
-  GOVERNMENT: ['ECONOMIC', 'DEMOGRAPHICS', 'GEOSPATIAL'],
   MARINE: ['WEATHER', 'REGULATIONS', 'TRANSPORTATION'],
-  TRANSPORTATION: ['GEOSPATIAL', 'WEATHER'],
+  GEOSPATIAL: ['WEATHER', 'DEMOGRAPHICS'],
+  GOVERNMENT: ['ECONOMIC', 'DEMOGRAPHICS', 'GEOSPATIAL'],
+  REGULATIONS: ['GOVERNMENT', 'GEOSPATIAL'],
   ECONOMIC: ['DEMOGRAPHICS', 'GOVERNMENT', 'GEOSPATIAL'],
   DEMOGRAPHICS: ['ECONOMIC', 'GOVERNMENT'],
-  REGULATIONS: ['GOVERNMENT', 'GEOSPATIAL'],
-  GEOSPATIAL: ['WEATHER', 'DEMOGRAPHICS'],
-  ENERGY: ['ECONOMIC', 'REGULATIONS', 'GEOSPATIAL'],
+  TRANSPORTATION: ['GEOSPATIAL', 'WEATHER'],
   HEALTH: ['DEMOGRAPHICS', 'ECONOMIC', 'GEOSPATIAL'],
+  ENERGY: ['ECONOMIC', 'REGULATIONS', 'GEOSPATIAL'],
   RECREATION: ['WEATHER', 'GEOSPATIAL', 'REGULATIONS'],
   RESEARCH: ['ECONOMIC', 'GOVERNMENT', 'DEMOGRAPHICS'],
   IMAGERY: ['GEOSPATIAL', 'WEATHER'],
 };
 
 // ============================================================================
-// RELATIONSHIP PREDICATES (for knowledge graph)
+// RELATIONSHIP PREDICATES (knowledge graph)
 // ============================================================================
 
 export const RELATIONSHIP_PREDICATES = {
@@ -147,3 +173,62 @@ export function getQualityLabel(score: number): { label: string; color: string; 
   if (score >= QUALITY_THRESHOLDS.poor) return { label: 'Poor', color: 'text-orange-500', emoji: '⚠️' };
   return { label: 'Unreliable', color: 'text-red-500', emoji: '❌' };
 }
+
+// ============================================================================
+// PIPELINE STEPS (unified definition for UI)
+// ============================================================================
+
+export const PIPELINE_PHASES = ['analyzing', 'collecting', 'processing', 'insights'] as const;
+export type PipelinePhase = typeof PIPELINE_PHASES[number];
+
+export const PIPELINE_STEPS = {
+  analyzing: [
+    { id: 'parse', label: 'Parsing natural language query', icon: '📝' },
+    { id: 'intent', label: 'Extracting search intent & keywords', icon: '🔍' },
+    { id: 'location', label: 'Geocoding location references', icon: '📍' },
+    { id: 'temporal', label: 'Analyzing temporal context', icon: '📅' },
+    { id: 'categories', label: 'Identifying data categories', icon: '🏷️' },
+  ],
+  collecting: [
+    { id: 'wildlife', label: 'Wildlife observation APIs', icon: '🦅' },
+    { id: 'weather', label: 'Weather & climate services', icon: '⛅' },
+    { id: 'marine', label: 'Marine & tidal data', icon: '🌊' },
+    { id: 'geo', label: 'Geospatial mapping layers', icon: '🗺️' },
+    { id: 'gov', label: 'Government regulations', icon: '📋' },
+    { id: 'recreation', label: 'Recreation & public lands', icon: '🏞️' },
+  ],
+  processing: [
+    { id: 'normalize', label: 'Normalizing data schemas', icon: '🔄' },
+    { id: 'georef', label: 'Georeferencing records', icon: '🎯' },
+    { id: 'dedup', label: 'Deduplicating entries', icon: '🧹' },
+    { id: 'quality', label: 'Scoring data quality', icon: '⭐' },
+    { id: 'enrich', label: 'Enriching with metadata', icon: '✨' },
+  ],
+  insights: [
+    { id: 'analyze_ai', label: 'AI pattern analysis', icon: '🧠' },
+    { id: 'insights', label: 'Generating insights', icon: '💡' },
+    { id: 'finalize', label: 'Preparing visualization', icon: '📊' },
+  ],
+} as const;
+
+// ============================================================================
+// INPUT TYPES (unified query sources)
+// ============================================================================
+
+export const INPUT_TYPES = ['natural_language', 'api', 'scheduled', 'nl_query'] as const;
+export type InputType = typeof INPUT_TYPES[number];
+
+// ============================================================================
+// USER TIERS
+// ============================================================================
+
+export const USER_TIERS = {
+  free: { name: 'Free', creditsPerMonth: 100, rateLimit: 10 },
+  starter: { name: 'Starter', creditsPerMonth: 500, rateLimit: 30 },
+  pro: { name: 'Pro', creditsPerMonth: 2000, rateLimit: 60 },
+  team: { name: 'Team', creditsPerMonth: 10000, rateLimit: 120 },
+  enterprise: { name: 'Enterprise', creditsPerMonth: -1, rateLimit: 300 },
+  api: { name: 'API', creditsPerMonth: -1, rateLimit: 600 },
+} as const;
+
+export type UserTier = keyof typeof USER_TIERS;

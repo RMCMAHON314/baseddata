@@ -108,7 +108,7 @@ export function FeaturePopup({ feature, onClose }: FeaturePopupProps) {
             variant="outline"
             size="sm"
             className="w-full text-xs"
-            onClick={() => window.open(properties.url, '_blank')}
+            onClick={() => window.open(String(properties.url), '_blank')}
           >
             <ExternalLink className="w-3 h-3 mr-1" />
             View Source
