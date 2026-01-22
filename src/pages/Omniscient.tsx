@@ -20,6 +20,7 @@ export default function Omniscient() {
     totalRecords,
     elapsedTime,
     error,
+    currentAction,
     execute,
     reset,
   } = useOmniscient();
@@ -50,6 +51,7 @@ export default function Omniscient() {
       case 'analyzing': return 'analyzing';
       case 'collecting': return 'collecting';
       case 'processing': return 'processing';
+      case 'insights': return 'insights';
       default: return 'analyzing';
     }
   };
@@ -74,6 +76,7 @@ export default function Omniscient() {
             sourcesQueried={response?.collected_data?.map(d => d.source) || []}
             totalRecords={totalRecords}
             elapsedTime={elapsedTime}
+            currentAction={currentAction}
           />
         )}
 
