@@ -2,19 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
-/* OMNISCIENT Design System - Dark Theme Primary */
+/* BASED DATA Design System - Crispy Clean */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 @layer base {
   :root {
-    /* OMNISCIENT Core Palette */
-    --omniscient-emerald: 160 84% 45%;
-    --omniscient-emerald-light: 160 76% 91%;
-    --omniscient-dark: 0 0% 4%;
-    --omniscient-surface: 0 0% 8%;
-    --omniscient-surface-light: 0 0% 12%;
+    /* BASED DATA Core Palette */
+    --based-blue: 220 100% 60%;
+    --based-blue-light: 220 100% 96%;
+    --based-blue-medium: 220 100% 50%;
     
-    /* Grays */
+    /* Grays - Crispy Clean */
     --gray-50: 210 20% 98%;
     --gray-100: 220 14% 96%;
     --gray-200: 220 13% 91%;
@@ -26,77 +24,77 @@
     --gray-800: 215 28% 17%;
     --gray-900: 221 39% 11%;
     
-    /* Light mode tokens (fallback) */
+    /* Light mode tokens (PRIMARY) */
     --background: 0 0% 100%;
     --foreground: var(--gray-900);
-    --card: var(--gray-50);
+    --card: 0 0% 100%;
     --card-foreground: var(--gray-900);
     --popover: 0 0% 100%;
     --popover-foreground: var(--gray-900);
-    --primary: 220 100% 60%;
+    --primary: var(--based-blue);
     --primary-foreground: 0 0% 100%;
     --secondary: var(--gray-100);
     --secondary-foreground: var(--gray-700);
     --muted: var(--gray-100);
     --muted-foreground: var(--gray-500);
-    --accent: 225 100% 96%;
-    --accent-foreground: 220 100% 60%;
+    --accent: var(--based-blue-light);
+    --accent-foreground: var(--based-blue);
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
     --success: 160 84% 39%;
     --success-foreground: 0 0% 100%;
     --border: var(--gray-200);
     --input: var(--gray-100);
-    --ring: 220 100% 60%;
+    --ring: var(--based-blue);
     --radius: 0.5rem;
     
     /* Typography */
-    --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    --font-display: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     
     /* Sidebar */
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: var(--gray-900);
-    --sidebar-primary: 220 100% 60%;
+    --sidebar-primary: var(--based-blue);
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: var(--gray-100);
     --sidebar-accent-foreground: var(--gray-900);
     --sidebar-border: var(--gray-200);
-    --sidebar-ring: 220 100% 60%;
+    --sidebar-ring: var(--based-blue);
   }
   
-  /* OMNISCIENT Dark Theme - Primary */
+  /* Dark Theme (secondary) */
   .dark, [data-theme="dark"] {
-    --background: var(--omniscient-dark);
+    --background: 220 20% 6%;
     --foreground: 0 0% 95%;
-    --card: var(--omniscient-surface);
+    --card: 220 20% 9%;
     --card-foreground: 0 0% 95%;
-    --popover: var(--omniscient-surface);
+    --popover: 220 20% 9%;
     --popover-foreground: 0 0% 95%;
-    --primary: var(--omniscient-emerald);
-    --primary-foreground: 0 0% 0%;
-    --secondary: var(--omniscient-surface-light);
+    --primary: var(--based-blue);
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 15% 15%;
     --secondary-foreground: 0 0% 80%;
-    --muted: var(--omniscient-surface-light);
+    --muted: 220 15% 15%;
     --muted-foreground: 0 0% 60%;
-    --accent: 160 30% 15%;
-    --accent-foreground: var(--omniscient-emerald);
+    --accent: 220 50% 15%;
+    --accent-foreground: 220 100% 70%;
     --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
-    --success: var(--omniscient-emerald);
-    --success-foreground: 0 0% 0%;
-    --border: 0 0% 15%;
-    --input: var(--omniscient-surface-light);
-    --ring: var(--omniscient-emerald);
+    --success: 160 84% 39%;
+    --success-foreground: 0 0% 100%;
+    --border: 220 15% 18%;
+    --input: 220 15% 15%;
+    --ring: var(--based-blue);
     
-    --sidebar-background: var(--omniscient-surface);
+    --sidebar-background: 220 20% 9%;
     --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: var(--omniscient-emerald);
-    --sidebar-primary-foreground: 0 0% 0%;
-    --sidebar-accent: var(--omniscient-surface-light);
+    --sidebar-primary: var(--based-blue);
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 15% 15%;
     --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 0 0% 15%;
-    --sidebar-ring: var(--omniscient-emerald);
+    --sidebar-border: 220 15% 18%;
+    --sidebar-ring: var(--based-blue);
   }
 }
 
@@ -127,9 +125,9 @@
     @apply hover:opacity-90 transition-opacity;
   }
   
-  /* Card Style */
+  /* Card Style - Crispy Clean */
   .card-clean {
-    @apply bg-card rounded-2xl border border-border;
+    @apply bg-card rounded-2xl border border-border shadow-sm;
   }
   
   /* Input Focus Ring */
@@ -137,9 +135,9 @@
     @apply focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary;
   }
   
-  /* OMNISCIENT Glow Effect */
-  .omniscient-glow {
-    box-shadow: 0 0 60px -15px hsl(var(--omniscient-emerald) / 0.3);
+  /* Based Data Glow Effect */
+  .based-glow {
+    box-shadow: 0 0 60px -15px hsl(var(--based-blue) / 0.3);
   }
   
   /* Text Gradient */
@@ -148,6 +146,19 @@
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+  
+  /* Based Blue accent classes */
+  .text-based-blue {
+    color: hsl(var(--based-blue));
+  }
+  
+  .bg-based-blue {
+    background-color: hsl(var(--based-blue));
+  }
+  
+  .border-based-blue {
+    border-color: hsl(var(--based-blue));
   }
 }
 

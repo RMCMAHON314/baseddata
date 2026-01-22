@@ -1,5 +1,5 @@
-// OMNISCIENT - Universal Data Pipeline Page
-// The everything aggregator
+// BASED DATA - Universal Data Pipeline Page
+// The everything aggregator with clean brand identity
 
 import { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
@@ -55,7 +55,7 @@ export default function Omniscient() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A]">
+    <div className="min-h-screen bg-background">
       <AnimatePresence mode="wait">
         {viewState === 'landing' && (
           <OmniscientLanding
