@@ -13,13 +13,15 @@ export const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 const RUNTIME_TOKEN_KEY = 'baseddata_mapbox_token';
 
 export const getRuntimeMapboxToken = (): string => {
-  if (MAPBOX_TOKEN) return MAPBOX_TOKEN;
   try {
     if (typeof window === 'undefined') return '';
     const stored = window.localStorage.getItem(RUNTIME_TOKEN_KEY);
-    return stored || '';
+    // If a user explicitly saved a token in-app, prefer it (persists across refreshes).
+    // This prevents a broken env token from permanently bricking the map.
+    if (stored && stored.trim().length > 10) return stored;
+    return MAPBOX_TOKEN;
   } catch {
-    return '';
+    return MAPBOX_TOKEN;
   }
 };
 
