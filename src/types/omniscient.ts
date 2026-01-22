@@ -188,18 +188,8 @@ export interface KnowledgeEdge {
   evidence: any[];
 }
 
-export interface OmniscientResult {
-  query_id?: string;
-  prompt: string;
-  intent: ParsedIntent;
-  collected_data: CollectedData[];
-  features: GeoJSONFeatureCollection;
-  insights: OmniscientInsights;
-  tabular_data: Record<string, any>[];
-  sources_used: string[];
-  processing_time_ms: number;
-  credits_used: number;
-}
+// DEPRECATED: Use OmniscientResponse instead - keeping for backwards compatibility
+export type OmniscientResult = Omit<OmniscientResponse, 'success' | 'engine_version' | 'data_tap' | 'enrichments'>;
 
 export interface MapLayer {
   id: string;
@@ -312,40 +302,13 @@ export const DATA_SOURCE_REGISTRY: DataSourceInfo[] = [
   { id: 'nps', name: 'National Park Service', api_type: 'REST', base_url: 'https://developer.nps.gov/api/v1', categories: ['RECREATION', 'GEOSPATIAL'], requires_auth: true, is_free: true, reliability: 0.95, description: 'National parks data' },
 ];
 
-// Credit costs for different query types
-export const OMNISCIENT_CREDITS = {
-  simple: 5,           // 1-3 sources
-  medium: 15,          // 4-7 sources
-  complex: 30,         // 8+ sources
-  dynamic_genesis: 10, // When AI generates new collectors
-  enrichment: 5,       // Cross-source fusion
-  satellite: 10,       // Additional for imagery
-  pdf_report: 5,       // PDF generation
-  historical: 10,      // Historical data (>1 year)
-};
+// ============================================================================
+// CONSTANTS - Centralized in @/lib/constants.ts
+// Re-exported here for backwards compatibility
+// ============================================================================
 
-// Relationship predicates for knowledge graph
-export const RELATIONSHIP_PREDICATES = {
-  SPATIAL: ['near', 'within', 'overlaps', 'contains'] as const,
-  FUNCTIONAL: ['affects', 'regulates', 'supports', 'depends_on'] as const,
-  TEMPORAL: ['precedes', 'follows', 'concurrent_with'] as const,
-  SEMANTIC: ['related_to', 'similar_to', 'locatedAt', 'belongsTo'] as const,
-};
-
-// Enrichment strategies by category
-export const ENRICHMENT_STRATEGIES: Record<DataCategory, DataCategory[]> = {
-  WILDLIFE: ['WEATHER', 'REGULATIONS', 'GEOSPATIAL'],
-  WEATHER: ['GEOSPATIAL'],
-  GOVERNMENT: ['ECONOMIC', 'DEMOGRAPHICS', 'GEOSPATIAL'],
-  MARINE: ['WEATHER', 'REGULATIONS', 'TRANSPORTATION'],
-  TRANSPORTATION: ['GEOSPATIAL', 'WEATHER'],
-  ECONOMIC: ['DEMOGRAPHICS', 'GOVERNMENT', 'GEOSPATIAL'],
-  DEMOGRAPHICS: ['ECONOMIC', 'GOVERNMENT'],
-  REGULATIONS: ['GOVERNMENT', 'GEOSPATIAL'],
-  GEOSPATIAL: ['WEATHER', 'DEMOGRAPHICS'],
-  ENERGY: ['ECONOMIC', 'REGULATIONS', 'GEOSPATIAL'],
-  HEALTH: ['DEMOGRAPHICS', 'ECONOMIC', 'GEOSPATIAL'],
-  RECREATION: ['WEATHER', 'GEOSPATIAL', 'REGULATIONS'],
-  RESEARCH: ['ECONOMIC', 'GOVERNMENT', 'DEMOGRAPHICS'],
-  IMAGERY: ['GEOSPATIAL', 'WEATHER'],
-};
+export { 
+  CREDIT_COSTS as OMNISCIENT_CREDITS,
+  ENRICHMENT_STRATEGIES,
+  RELATIONSHIP_PREDICATES,
+} from '@/lib/constants';

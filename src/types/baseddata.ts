@@ -1,8 +1,17 @@
 // BASED DATA v6.0 - Type Definitions
 // The Self-Growing Universal Data Platform
 
-// Re-export all omniscient types with BASED DATA naming
+// Re-export all omniscient types
 export * from './omniscient';
+
+// Re-export constants from central source
+export { 
+  BASED_DATA_VERSION, 
+  BASED_DATA_TAGLINE, 
+  BASED_DATA_DESCRIPTION,
+  CRAWLER_TYPES,
+  CRAWLER_SCHEDULES,
+} from '@/lib/constants';
 
 // Auto-Crawler Types
 export interface AutoCrawler {
@@ -113,39 +122,4 @@ export interface MasterDatasetStats {
   records_added_this_month: number;
 }
 
-// BASED DATA Brand Constants
-export const BASED_DATA_VERSION = '6.0';
-export const BASED_DATA_TAGLINE = 'Every Dataset. On Demand.';
-export const BASED_DATA_DESCRIPTION = 'Self-evolving data platform that generates unlimited datasets on demand. Describe what you need, get unified georeferenced data in seconds.';
-
-// Crawler Type Descriptions
-export const CRAWLER_TYPES = {
-  pattern: {
-    name: 'Pattern Discovery',
-    description: 'Finds APIs matching patterns from your query history',
-    icon: 'Search',
-  },
-  similarity: {
-    name: 'Similarity Discovery',
-    description: 'Discovers sources similar to your best-performing ones',
-    icon: 'GitBranch',
-  },
-  expansion: {
-    name: 'Gap Expansion',
-    description: 'Fills gaps in categorical, geographic, or temporal coverage',
-    icon: 'Expand',
-  },
-  firecrawl: {
-    name: 'Deep Crawl',
-    description: 'Uses Firecrawl to discover APIs from documentation sites',
-    icon: 'Globe',
-  },
-} as const;
-
-// Cron presets for crawlers
-export const CRAWLER_SCHEDULES = [
-  { label: 'Every hour', cron: '0 * * * *', description: 'Aggressive discovery' },
-  { label: 'Every 6 hours', cron: '0 */6 * * *', description: 'Balanced (default)' },
-  { label: 'Daily', cron: '0 0 * * *', description: 'Conservative' },
-  { label: 'Weekly', cron: '0 0 * * 0', description: 'Minimal' },
-] as const;
+// NOTE: CRAWLER_TYPES and CRAWLER_SCHEDULES are now exported from @/lib/constants
