@@ -235,7 +235,7 @@ export function PremiumOmniscientResults({
       </header>
 
       {/* Main Three-Column Layout */}
-      <div className="flex-1 flex min-h-0">
+      <div className="flex-1 flex min-h-0 overflow-hidden">
         {/* Left Sidebar - Layer Panel */}
         <PremiumLayerPanel
           layers={layers}
@@ -246,30 +246,35 @@ export function PremiumOmniscientResults({
           className="hidden lg:flex flex-shrink-0"
         />
 
-        {/* Center - Map */}
-        <div className="flex-1 relative flex flex-col min-w-0">
-          <PremiumMapContainer
-            features={features}
-            layers={layers}
-            layerOpacities={layerOpacities}
-            center={mapCenter}
-            zoom={mapCenter ? 9 : 4}
-            selectedFeature={selectedFeature}
-            hoveredFeature={hoveredFeature}
-            onFeatureClick={handleFeatureClick}
-            onFeatureHover={setHoveredFeature}
-            onCursorMove={setCursorCoords}
-            className="flex-1"
-          />
-
-          {/* Hover Popup */}
-          <AnimatePresence>
-            {hoveredFeature && !showDetailPanel && (
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
-                <PremiumHoverPopup feature={hoveredFeature} />
-              </div>
-            )}
-          </AnimatePresence>
+        {/* Center - Map + Header + Footer */}
+        <div className="flex-1 flex flex-col min-w-0 min-h-0">
+          {/* MAP CONTAINER - CRITICAL: needs flex-1 relative min-h-0 with absolute inset-0 child */}
+          <div className="flex-1 relative min-h-0">
+            <div className="absolute inset-0">
+              <PremiumMapContainer
+                features={features}
+                layers={layers}
+                layerOpacities={layerOpacities}
+                center={mapCenter}
+                zoom={mapCenter ? 9 : 4}
+                selectedFeature={selectedFeature}
+                hoveredFeature={hoveredFeature}
+                onFeatureClick={handleFeatureClick}
+                onFeatureHover={setHoveredFeature}
+                onCursorMove={setCursorCoords}
+                className="w-full h-full"
+              />
+            </div>
+            
+            {/* Hover Popup */}
+            <AnimatePresence>
+              {hoveredFeature && !showDetailPanel && (
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
+                  <PremiumHoverPopup feature={hoveredFeature} />
+                </div>
+              )}
+            </AnimatePresence>
+          </div>
 
           {/* Stats Bar */}
           <PremiumStatsBar
@@ -278,7 +283,6 @@ export function PremiumOmniscientResults({
             successRate={successRate}
             cursorCoords={cursorCoords}
             queryTimeMs={processingTimeMs}
-            className="flex-shrink-0"
           />
         </div>
 

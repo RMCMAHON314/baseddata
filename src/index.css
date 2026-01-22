@@ -376,6 +376,24 @@
   .glow-ring {
     box-shadow: 0 0 20px currentColor, 0 0 40px currentColor;
   }
+  
+  /* CRITICAL: Ensure map container never collapses */
+  .mapboxgl-map,
+  .maplibregl-map {
+    width: 100% !important;
+    height: 100% !important;
+  }
+  
+  .mapboxgl-canvas,
+  .maplibregl-canvas {
+    width: 100% !important;
+    height: 100% !important;
+  }
+  
+  /* Fix flex children collapsing */
+  .min-h-0 {
+    min-height: 0;
+  }
 }
 
 @layer utilities {

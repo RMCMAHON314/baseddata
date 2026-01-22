@@ -1,6 +1,7 @@
 // BASED DATA v8.1 - Premium Stats Bar
 // Bottom bar with live stats, cursor coordinates, timing, premium aesthetic
 
+import React from 'react';
 import { motion } from 'framer-motion';
 import { Database, Zap, CheckCircle, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -15,17 +16,14 @@ interface PremiumStatsBarProps {
   className?: string;
 }
 
-export function PremiumStatsBar({
-  totalRecords,
-  sourcesCount,
-  successRate,
-  cursorCoords,
-  queryTimeMs,
-  renderTimeMs = 0,
-  className,
-}: PremiumStatsBarProps) {
-  return (
-    <motion.footer
+export const PremiumStatsBar = React.forwardRef<HTMLDivElement, PremiumStatsBarProps>(
+  function PremiumStatsBar(
+    { totalRecords, sourcesCount, successRate, cursorCoords, queryTimeMs, renderTimeMs = 0, className },
+    ref
+  ) {
+    return (
+      <motion.footer
+        ref={ref}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3, duration: 0.4 }}
@@ -85,4 +83,7 @@ export function PremiumStatsBar({
       </div>
     </motion.footer>
   );
-}
+  }
+);
+
+PremiumStatsBar.displayName = 'PremiumStatsBar';

@@ -523,8 +523,8 @@ export function PremiumMapContainer({
 
 
   return (
-    <div ref={outerRef} className={cn("relative w-full h-full min-h-[400px]", className)}>
-      <div ref={innerRef} className="absolute inset-0 w-full h-full" />
+    <div ref={outerRef} className={cn("relative w-full h-full", className)} style={{ minHeight: 0 }}>
+      <div ref={innerRef} className="absolute inset-0 w-full h-full" style={{ width: '100%', height: '100%' }} />
 
       {/* Token/basemap overlay (never blocks map) */}
       {showTokenOverlay && (
