@@ -13,7 +13,7 @@ export * from './discovery';
 
 export const BASED_DATA_VERSION = '7.5';
 export const BASED_DATA_TAGLINE = 'Every Dataset. On Demand.';
-export const BASED_DATA_DESCRIPTION = 'Self-evolving data platform that generates unlimited datasets on demand. 30+ categories across 100+ APIs, always growing.';
+export const BASED_DATA_DESCRIPTION = 'Self-evolving data platform that queries 70+ live APIs and generates new collectors on demand.';
 
 export const ENGINE_INFO = {
   version: `BASED DATA v${BASED_DATA_VERSION}`,
@@ -30,10 +30,9 @@ export const ENGINE_INFO = {
     'Dynamic Collector Genesis',
     'Auto-Enrichment',
     'Knowledge Graph',
-    'Infinite Category Expansion',
   ],
-  sourceCount: 100,
-  categoryCount: 30,
+  // These reflect actual built-in collectors + dynamic genesis capability
+  sourceCount: 70,
   dataTap: true,
 } as const;
 
@@ -361,12 +360,12 @@ export const COOKING_MESSAGES = [
   "🎯 Zeroing in on your target...",
   "🧪 Mixing the perfect dataset...",
   "🚀 Launching data collectors...",
-  "💫 Orchestrating 100+ APIs...",
+  "💫 Orchestrating 70+ APIs...",
   "🎨 Crafting your results...",
   "⭐ Polishing the final output...",
 ];
 
-export const COOKING_DISCLAIMER = "This may take 30-60 seconds as we query real-time APIs across 30+ categories";
+export const COOKING_DISCLAIMER = "This may take 30-60 seconds as we query real-time APIs across multiple categories";
 
 // ============================================================================
 // INPUT TYPES (unified query sources)
