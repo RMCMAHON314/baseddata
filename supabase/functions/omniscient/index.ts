@@ -2206,27 +2206,35 @@ async function collectAllData(intent: ParsedIntent, prompt: string, supabase: an
     collectors.push({ name: 'NPS', fn: () => collectNPS(params, bbox) });
   }
   
-  // Execute all built-in collectors in parallel
-  const results = await Promise.allSettled(
-    collectors.map(async (c) => {
-      const start = Date.now();
-      try {
-        const data = await c.fn();
-        return { name: c.name, data, time_ms: Date.now() - start };
-      } catch (e) {
-        return { name: c.name, data: [], time_ms: Date.now() - start, error: String(e) };
-      }
-    })
-  );
+  // Execute collectors in batches to avoid memory exhaustion
+  const BATCH_SIZE = 5; // Process 5 collectors at a time to stay within memory limits
   
-  for (const result of results) {
-    if (result.status === 'fulfilled') {
-      const { name, data, time_ms, error } = result.value;
-      features.push(...data);
-      sources.push({ name, status: error ? 'error' : data.length > 0 ? 'success' : 'empty', count: data.length, time_ms, error });
-    } else {
-      sources.push({ name: 'Unknown', status: 'error', count: 0, time_ms: 0, error: result.reason?.message });
+  for (let i = 0; i < collectors.length; i += BATCH_SIZE) {
+    const batch = collectors.slice(i, i + BATCH_SIZE);
+    const results = await Promise.allSettled(
+      batch.map(async (c) => {
+        const start = Date.now();
+        try {
+          const data = await c.fn();
+          return { name: c.name, data, time_ms: Date.now() - start };
+        } catch (e) {
+          return { name: c.name, data: [], time_ms: Date.now() - start, error: String(e) };
+        }
+      })
+    );
+    
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        const { name, data, time_ms, error } = result.value;
+        features.push(...data);
+        sources.push({ name, status: error ? 'error' : data.length > 0 ? 'success' : 'empty', count: data.length, time_ms, error });
+      } else {
+        sources.push({ name: 'Unknown', status: 'error', count: 0, time_ms: 0, error: result.reason?.message });
+      }
     }
+    
+    // Allow garbage collection between batches
+    await new Promise(r => setTimeout(r, 10));
   }
   
   // ========== DYNAMIC COLLECTOR GENESIS ==========
