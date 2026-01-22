@@ -15,7 +15,7 @@ import {
   setRuntimeMapboxToken,
 } from '@/lib/mapbox';
 import type { GeoJSONFeatureCollection, MapLayer } from '@/types/omniscient';
-import { Globe, ExternalLink, Layers, Database, Map, CheckCircle2, XCircle } from 'lucide-react';
+import { Globe, ExternalLink, Layers, Database, Map, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { motion } from 'framer-motion';
@@ -48,6 +48,54 @@ export function MapContainer({
   const [tokenInput, setTokenInput] = useState('');
   const [tokenError, setTokenError] = useState<string | null>(null);
 
+  const ensureContainerReady = async (): Promise<void> => {
+    const el = innerRef.current;
+    if (!el) return;
+    if (el.clientWidth > 0 && el.clientHeight > 0) return;
+
+    await new Promise<void>((resolve) => {
+      let done = false;
+      let ro: ResizeObserver | null = null;
+      let t: number | null = null;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        ro?.disconnect();
+        if (t !== null) window.clearTimeout(t);
+        resolve();
+      };
+
+      ro = new ResizeObserver(() => {
+        if (!innerRef.current) return;
+        if (innerRef.current.clientWidth > 0 && innerRef.current.clientHeight > 0) finish();
+      });
+
+      // Observe the outer container because it’s the element whose layout changes.
+      if (outerRef.current) ro.observe(outerRef.current);
+      if (innerRef.current) ro.observe(innerRef.current);
+
+      // Safety: don’t hang forever.
+      t = window.setTimeout(() => finish(), 1200);
+
+      // If we became ready between the initial check and observer setup, finish immediately.
+      if (innerRef.current && innerRef.current.clientWidth > 0 && innerRef.current.clientHeight > 0) finish();
+    });
+  };
+
+  const validateToken = async (accessToken: string): Promise<{ ok: boolean; status?: number }> => {
+    // Validate using a lightweight style fetch. This fails fast on invalid/expired tokens.
+    try {
+      const res = await fetch(
+        `https://api.mapbox.com/styles/v1/mapbox/dark-v11?access_token=${encodeURIComponent(accessToken)}`,
+        { method: 'GET' }
+      );
+      return { ok: res.ok, status: res.status };
+    } catch {
+      // Network/blocked requests shouldn’t brick the map. If Mapbox GL can load, it will.
+      return { ok: true };
+    }
+  };
+
   const filteredFeatures = useMemo<GeoJSONFeatureCollection | undefined>(() => {
     if (!features?.features?.length) return features;
     if (!layers?.length) return features;
@@ -79,45 +127,65 @@ export function MapContainer({
     map.current?.remove();
     map.current = null;
 
-    if (!hasMapboxToken()) {
-      setNoToken(true);
-      return;
-    }
-
     const activeToken = token || getRuntimeMapboxToken();
-    if (!activeToken) {
+    if (!hasMapboxToken() || !activeToken) {
       setNoToken(true);
       return;
     }
 
-    setNoToken(false);
-    mapboxgl.accessToken = activeToken;
+    let cancelled = false;
 
-    try {
-      map.current = new mapboxgl.Map({
-        container: innerRef.current,
-        style: MAP_STYLES.dark,
-        center,
-        zoom,
-      });
+    (async () => {
+      // Ensure the map isn’t initialized into a 0x0 container (common in flex/tab layouts).
+      await ensureContainerReady();
+      if (cancelled) return;
 
-      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
-      map.current.addControl(new mapboxgl.ScaleControl(), 'bottom-left');
+      // Fail fast on invalid tokens so users see the token UI instead of a blank map.
+      const check = await validateToken(activeToken);
+      if (cancelled) return;
+      if (check.ok === false || check.status === 401 || check.status === 403) {
+        setTokenError('That token looks invalid (Mapbox returned Unauthorized).');
+        setNoToken(true);
+        return;
+      }
 
-      map.current.on('load', () => setMapLoaded(true));
+      setNoToken(false);
+      mapboxgl.accessToken = activeToken;
 
-      map.current.on('error', (e) => {
-        const message = (e as any)?.error?.message || '';
-        if (message.toLowerCase().includes('unauthorized') || message.toLowerCase().includes('access token')) {
-          setTokenError('That token looks invalid (Mapbox returned Unauthorized).');
-          setNoToken(true);
-        }
-      });
-    } catch {
-      setNoToken(true);
-    }
+      try {
+        map.current = new mapboxgl.Map({
+          container: innerRef.current!,
+          style: MAP_STYLES.dark,
+          center,
+          zoom,
+        });
+
+        map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+        map.current.addControl(new mapboxgl.ScaleControl(), 'bottom-left');
+
+        map.current.on('load', () => {
+          setMapLoaded(true);
+          // Force a resize after load to avoid the “blank map until resize” issue.
+          requestAnimationFrame(() => map.current?.resize());
+        });
+
+        map.current.on('error', (e) => {
+          const message = (e as any)?.error?.message || '';
+          if (message.toLowerCase().includes('unauthorized') || message.toLowerCase().includes('access token')) {
+            setTokenError('That token looks invalid (Mapbox returned Unauthorized).');
+            setNoToken(true);
+          }
+        });
+
+        // Initial resize once constructed (helps when parent is animating).
+        requestAnimationFrame(() => map.current?.resize());
+      } catch {
+        setNoToken(true);
+      }
+    })();
 
     return () => {
+      cancelled = true;
       map.current?.remove();
       map.current = null;
     };
