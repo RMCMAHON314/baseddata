@@ -1,9 +1,12 @@
-// OMNISCIENT Community Voting Hook
+// BASED DATA v6.0 - Community Voting Hook
 // Upvote, downvote, and flag records for crowd-sourced quality
 
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+
+// Re-export quality label helper from central constants
+export { getQualityLabel } from '@/lib/constants';
 
 export type FeedbackType = 'upvote' | 'downvote' | 'flag';
 
@@ -88,11 +91,4 @@ export function useVoting() {
   };
 }
 
-// Quality score display helper
-export function getQualityLabel(score: number): { label: string; color: string; emoji: string } {
-  if (score >= 0.8) return { label: 'Excellent', color: 'text-green-500', emoji: '⭐' };
-  if (score >= 0.6) return { label: 'Good', color: 'text-blue-500', emoji: '👍' };
-  if (score >= 0.4) return { label: 'Fair', color: 'text-yellow-500', emoji: '🤔' };
-  if (score >= 0.2) return { label: 'Poor', color: 'text-orange-500', emoji: '⚠️' };
-  return { label: 'Unreliable', color: 'text-red-500', emoji: '❌' };
-}
+// getQualityLabel is now exported from @/lib/constants
