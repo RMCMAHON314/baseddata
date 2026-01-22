@@ -69,6 +69,8 @@ export function PremiumMapContainer({
   const innerRef = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [initNonce, setInitNonce] = useState(0);
+  const [stuckHint, setStuckHint] = useState(false);
   const [basemap, setBasemap] = useState<'mapbox' | 'osm'>('mapbox');
   const [showTokenOverlay, setShowTokenOverlay] = useState(false);
   const [token, setToken] = useState(() => getRuntimeMapboxToken());
@@ -118,7 +120,9 @@ export function PremiumMapContainer({
       });
       if (outerRef.current) ro.observe(outerRef.current);
       if (innerRef.current) ro.observe(innerRef.current);
-      t = window.setTimeout(() => finish(), 1200);
+      // NOTE: If we init Mapbox GL at 0x0, it can get stuck visually even after layout settles.
+      // Give flex layouts a bit more time to resolve.
+      t = window.setTimeout(() => finish(), 5000);
       if (innerRef.current?.clientWidth && innerRef.current?.clientHeight) finish();
     });
   };
@@ -154,6 +158,12 @@ export function PremiumMapContainer({
     (async () => {
       await ensureContainerReady();
       if (cancelled) return;
+
+      // If we *still* have 0x0, don't attempt init yet.
+      // We'll keep showing the loading overlay and wait for ResizeObserver-driven retries.
+      if (!innerRef.current?.clientWidth || !innerRef.current?.clientHeight) {
+        return;
+      }
 
       // Determine which basemap to use
       let resolvedBasemap: 'mapbox' | 'osm' = basemap;
@@ -237,22 +247,47 @@ export function PremiumMapContainer({
       map.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, is3D, basemap]);
+  }, [token, is3D, basemap, initNonce]);
 
-  // Resize observer
+  // Resize observer (must run even before `mapLoaded` to avoid a 0x0 init getting stuck)
   useEffect(() => {
-    if (!outerRef.current || !map.current) return;
-    const resize = () => map.current?.resize();
+    if (!outerRef.current) return;
+
+    const resize = () => {
+      map.current?.resize();
+
+      // If the map wasn't created because the container was 0x0, retry init as soon as size exists.
+      if (!map.current && innerRef.current?.clientWidth && innerRef.current?.clientHeight) {
+        setInitNonce((n) => n + 1);
+      }
+    };
+
     window.addEventListener('resize', resize);
+
     let ro: ResizeObserver | null = null;
     try {
       ro = new ResizeObserver(resize);
       ro.observe(outerRef.current);
+      if (innerRef.current) ro.observe(innerRef.current);
     } catch {}
+
+    // Trigger once on mount
+    resize();
+
     return () => {
       window.removeEventListener('resize', resize);
       ro?.disconnect();
     };
+  }, []);
+
+  // If map is still not loaded after a while, surface a clear hint (instead of “black nothing”).
+  useEffect(() => {
+    if (mapLoaded) {
+      setStuckHint(false);
+      return;
+    }
+    const t = window.setTimeout(() => setStuckHint(true), 8000);
+    return () => window.clearTimeout(t);
   }, [mapLoaded]);
 
   // Fly to center
@@ -559,6 +594,13 @@ export function PremiumMapContainer({
             <p className="text-muted-foreground text-sm">
               Rendering {(filteredFeatures?.features?.length || 0).toLocaleString()} data points...
             </p>
+
+            {stuckHint && (
+              <p className="mt-3 text-xs text-muted-foreground max-w-sm text-center">
+                If the map is still blank, it usually means the container had 0×0 size during init.
+                Try resizing the window or toggling fullscreen.
+              </p>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
