@@ -1,7 +1,11 @@
 // ============================================================================
 // BASED DATA v7.0 - UNIFIED CONSTANTS
 // Single source of truth for all platform constants
+// Includes: Categories, Credits, Enrichment, Pipelines, Discovery Engine
 // ============================================================================
+
+// Re-export discovery engine constants
+export * from './discovery';
 
 // ============================================================================
 // PLATFORM IDENTITY
