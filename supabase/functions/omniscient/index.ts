@@ -1,6 +1,7 @@
-// 🌍 OMNISCIENT ENGINE v4.0 - SELF-EVOLVING DATA TAP 🌍
-// 70+ built-in sources + DYNAMIC COLLECTOR GENESIS
+// 🌍 BASED DATA ENGINE v6.0 - SELF-EVOLVING DATA TAP 🌍
+// 70+ built-in sources + DYNAMIC COLLECTOR GENESIS + AUTO-ENRICHMENT
 // AI generates new collectors on-the-fly, executes them, archives for future use
+// Minimal queries auto-expand for comprehensive data coverage
 // The data empire grows with every query
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
@@ -2280,6 +2281,74 @@ async function collectAllData(intent: ParsedIntent, prompt: string, supabase: an
 // MAIN HANDLER
 // ============================================================================
 
+// AUTO-ENRICHMENT: Expand minimal queries to get comprehensive data
+async function expandMinimalQuery(prompt: string, intent: ParsedIntent): Promise<{ expandedCategories: string[]; enrichmentTypes: string[] }> {
+  const enrichmentTypes: string[] = [];
+  const expandedCategories = [...intent.categories];
+  
+  // If query is minimal (few words, low keyword count), auto-expand
+  const wordCount = prompt.trim().split(/\s+/).length;
+  const isMinimalQuery = wordCount < 5 || intent.keywords.length < 3;
+  
+  if (isMinimalQuery) {
+    // Always add weather for location-based queries
+    if (intent.location && !expandedCategories.includes('WEATHER')) {
+      expandedCategories.push('WEATHER');
+      enrichmentTypes.push('weather');
+    }
+    
+    // Cross-reference with related categories
+    if (expandedCategories.includes('WILDLIFE')) {
+      if (!expandedCategories.includes('GEOSPATIAL')) {
+        expandedCategories.push('GEOSPATIAL');
+        enrichmentTypes.push('geo_enriched');
+      }
+      if (!expandedCategories.includes('REGULATIONS')) {
+        expandedCategories.push('REGULATIONS');
+        enrichmentTypes.push('government');
+      }
+    }
+    
+    if (expandedCategories.includes('MARINE')) {
+      if (!expandedCategories.includes('WEATHER')) {
+        expandedCategories.push('WEATHER');
+        enrichmentTypes.push('weather');
+      }
+    }
+    
+    if (expandedCategories.includes('RECREATION')) {
+      if (!expandedCategories.includes('WEATHER')) {
+        expandedCategories.push('WEATHER');
+        enrichmentTypes.push('weather');
+      }
+      if (!expandedCategories.includes('GEOSPATIAL')) {
+        expandedCategories.push('GEOSPATIAL');
+        enrichmentTypes.push('geo_enriched');
+      }
+    }
+    
+    // Economic queries get infrastructure
+    if (expandedCategories.includes('ECONOMIC') || expandedCategories.includes('GOVERNMENT')) {
+      if (!expandedCategories.includes('INFRASTRUCTURE')) {
+        expandedCategories.push('INFRASTRUCTURE');
+        enrichmentTypes.push('infrastructure');
+      }
+    }
+    
+    // Add AI expansion marker
+    if (enrichmentTypes.length > 0) {
+      enrichmentTypes.push('ai_expanded');
+    }
+  }
+  
+  // Always try to cross-reference for richer data
+  if (intent.location) {
+    enrichmentTypes.push('cross_referenced');
+  }
+  
+  return { expandedCategories, enrichmentTypes };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
@@ -2289,10 +2358,18 @@ serve(async (req) => {
     const { prompt } = await req.json();
     if (!prompt) return new Response(JSON.stringify({ error: 'Prompt required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
-    console.log('🌍 OMNISCIENT v4.0: 70+ sources + DYNAMIC GENESIS, processing:', prompt);
+    console.log('🌍 BASED DATA v6.0: 70+ sources + AUTO-ENRICHMENT + DYNAMIC GENESIS, processing:', prompt);
     const startTime = Date.now();
 
     const intent = analyzeIntent(prompt);
+    
+    // AUTO-ENRICHMENT: Expand minimal queries
+    const { expandedCategories, enrichmentTypes } = await expandMinimalQuery(prompt, intent);
+    if (expandedCategories.length > intent.categories.length) {
+      console.log('🔥 AUTO-ENRICHMENT: Expanded categories:', expandedCategories.join(', '));
+      intent.categories = expandedCategories;
+    }
+    
     console.log('🧠 Intent:', intent.categories.join(', '), '| Use case:', intent.use_case);
 
     const { features, sources, dynamicGenerated } = await collectAllData(intent, prompt, supabase);
@@ -2319,7 +2396,7 @@ serve(async (req) => {
     console.log(`✅ Complete: ${features.length} features, ${persistResult.persisted} persisted in ${processingTime}ms`);
 
     return new Response(JSON.stringify({
-      success: true, query_id: `omni_${Date.now()}`, prompt, intent,
+      success: true, query_id: `baseddata_${Date.now()}`, prompt, intent,
       features: { type: 'FeatureCollection', features },
       tabular_data: features.slice(0, 100).map(f => ({ name: f.properties.name, category: f.properties.category, source: f.properties.source, description: f.properties.description?.slice(0, 100), ...f.properties.attributes })),
       insights,
@@ -2327,12 +2404,14 @@ serve(async (req) => {
       sources_used: sources.filter(s => s.status === 'success').map(s => s.name),
       processing_time_ms: processingTime,
       credits_used: Math.ceil(sources.filter(s => s.status === 'success').length * 2),
-      engine_version: 'omniscient-v4.1-fusion',
+      engine_version: 'baseddata-v6.0-enriched',
+      enrichments: enrichmentTypes, // NEW: Track what was auto-enriched
       data_tap: { 
         records_persisted: persistResult.persisted, 
         records_deduplicated: persistResult.deduplicated, 
         dynamic_genesis: dynamicGenerated,
         enrichment_queued: persistResult.persisted > 0,
+        auto_expanded: enrichmentTypes.length > 0,
       },
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 

@@ -1,5 +1,5 @@
 // BASED DATA v6.0 - Results View
-// Premium split-view with map + spreadsheet data grid + multi-format export + voting
+// Premium split-view with map + spreadsheet data grid + 15/10 visualizations + multi-format export
 
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -7,7 +7,7 @@ import {
   ArrowLeft, Layers, Table, Lightbulb, Download, 
   FileJson, FileSpreadsheet, Share2, ChevronRight, Clock, Database, 
   CheckCircle2, Zap, Globe, Sparkles, Copy, ExternalLink, Filter,
-  ThumbsUp, ThumbsDown, Flag, FileText
+  ThumbsUp, ThumbsDown, Flag, FileText, BarChart3, PieChart
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -16,6 +16,8 @@ import { MapContainer } from '@/components/map/MapContainer';
 import { LayerControls } from '@/components/map/LayerControls';
 import { FeaturePopup } from '@/components/map/FeaturePopup';
 import { DataGrid } from '@/components/data/DataGrid';
+import { DataVisualization } from '@/components/data/DataVisualization';
+import { EnrichmentBadges } from '@/components/data/EnrichmentBadges';
 import type { GeoJSONFeature, GeoJSONFeatureCollection, CollectedData, OmniscientInsights, MapLayer } from '@/types/omniscient';
 import { CATEGORY_COLORS } from '@/lib/mapbox';
 import { toast } from 'sonner';
@@ -30,6 +32,7 @@ interface OmniscientResultsProps {
   creditsUsed: number;
   processingTimeMs?: number;
   sourcesUsed?: string[];
+  enrichments?: string[]; // NEW: Auto-enrichment types
   onBack: () => void;
 }
 
@@ -41,6 +44,7 @@ export function OmniscientResults({
   creditsUsed,
   processingTimeMs,
   sourcesUsed,
+  enrichments = [],
   onBack 
 }: OmniscientResultsProps) {
   const [selectedFeature, setSelectedFeature] = useState<GeoJSONFeature | null>(null);
@@ -186,6 +190,13 @@ export function OmniscientResults({
             </Button>
           </div>
         </div>
+        
+        {/* Auto-Enrichment Badges */}
+        {enrichments.length > 0 && (
+          <div className="mt-2 px-4">
+            <EnrichmentBadges enrichments={enrichments} />
+          </div>
+        )}
       </header>
 
       {/* Main Content - Split View */}
@@ -249,32 +260,50 @@ export function OmniscientResults({
 
         {/* Data Panel - 40% */}
         <div className="w-2/5 flex flex-col bg-card overflow-hidden">
-          <Tabs defaultValue="insights" className="flex-1 flex flex-col">
+          <Tabs defaultValue="visualize" className="flex-1 flex flex-col">
             <TabsList className="flex-none border-b border-border bg-transparent p-0 h-auto">
               <TabsTrigger 
+                value="visualize"
+                className="data-[state=active]:bg-accent rounded-none border-b-2 border-transparent data-[state=active]:border-primary px-4 py-3.5 gap-2"
+              >
+                <BarChart3 className="w-4 h-4" />
+                <span className="hidden sm:inline">Visualize</span>
+              </TabsTrigger>
+              <TabsTrigger 
                 value="insights"
-                className="data-[state=active]:bg-accent rounded-none border-b-2 border-transparent data-[state=active]:border-primary px-5 py-3.5 gap-2"
+                className="data-[state=active]:bg-accent rounded-none border-b-2 border-transparent data-[state=active]:border-primary px-4 py-3.5 gap-2"
               >
                 <Lightbulb className="w-4 h-4" />
                 <span className="hidden sm:inline">Insights</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="data"
-                className="data-[state=active]:bg-accent rounded-none border-b-2 border-transparent data-[state=active]:border-primary px-5 py-3.5 gap-2"
+                className="data-[state=active]:bg-accent rounded-none border-b-2 border-transparent data-[state=active]:border-primary px-4 py-3.5 gap-2"
               >
                 <Table className="w-4 h-4" />
-                <span className="hidden sm:inline">Data</span>
+                <span className="hidden sm:inline">Grid</span>
                 <span className="text-xs text-muted-foreground">({totalRecords})</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="sources"
-                className="data-[state=active]:bg-accent rounded-none border-b-2 border-transparent data-[state=active]:border-primary px-5 py-3.5 gap-2"
+                className="data-[state=active]:bg-accent rounded-none border-b-2 border-transparent data-[state=active]:border-primary px-4 py-3.5 gap-2"
               >
                 <Layers className="w-4 h-4" />
                 <span className="hidden sm:inline">Sources</span>
-                <span className="text-xs text-muted-foreground">({collectedData.length})</span>
               </TabsTrigger>
             </TabsList>
+
+            {/* Visualize Tab - NEW 15/10 Visualization */}
+            <TabsContent value="visualize" className="flex-1 overflow-y-auto p-4 m-0 scrollbar-hide">
+              {features?.features?.length ? (
+                <DataVisualization features={features.features} />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                  <PieChart className="w-12 h-12 mb-3 opacity-30" />
+                  <p className="font-medium">No data to visualize</p>
+                </div>
+              )}
+            </TabsContent>
 
             {/* Insights Tab */}
             <TabsContent value="insights" className="flex-1 overflow-y-auto p-5 space-y-5 m-0 scrollbar-hide">

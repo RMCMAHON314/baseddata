@@ -1,5 +1,5 @@
-// OMNISCIENT v4.0 Type Definitions
-// Self-Evolving Universal Data Pipeline Types
+// BASED DATA v6.0 Type Definitions
+// Self-Evolving Universal Data Pipeline with Auto-Enrichment
 
 export interface ParsedIntent {
   use_case: string;
@@ -120,7 +120,7 @@ export interface OmniscientQuery {
   timestamp?: string;
 }
 
-// Response from the OMNISCIENT v4.1 edge function
+// Response from the BASED DATA v6.0 edge function
 export interface OmniscientResponse {
   success: boolean;
   query_id: string;
@@ -135,6 +135,7 @@ export interface OmniscientResponse {
   processing_time_ms: number;
   credits_used: number;
   data_tap: DataTapStats;
+  enrichments?: string[]; // NEW: Auto-enrichment types applied
 }
 
 // Data Flywheel Statistics
@@ -143,6 +144,7 @@ export interface DataTapStats {
   records_deduplicated: number;
   dynamic_genesis?: boolean;
   enrichment_queued?: boolean;
+  auto_expanded?: boolean; // NEW: Whether query was auto-expanded
 }
 
 // Enrichment & Fusion Types
