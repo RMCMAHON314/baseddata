@@ -1,16 +1,16 @@
-// BASED DATA v8.0 - Premium Results View
+// BASED DATA v8.1 - Premium Results View
 // Bloomberg Terminal meets Apple Maps meets Palantir
-// Full three-column layout with glass morphism, 3D map, premium UI
+// Full three-column layout with glass morphism, 3D map, premium UI, two-way sync
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  ArrowLeft, Table, Lightbulb, Share2, Clock, Database, 
-  CheckCircle2, Sparkles, Copy, Link2, Search, Download,
-  ChevronRight, Eye
+  ArrowLeft, Table, Lightbulb, Share2, Database, 
+  CheckCircle2, Sparkles, Copy, Search, Download, Eye
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { Logo } from '@/components/Logo';
 import { PremiumMapContainer } from '@/components/map/PremiumMapContainer';
 import { PremiumLayerPanel } from '@/components/map/PremiumLayerPanel';
@@ -18,14 +18,12 @@ import { PremiumStatsBar } from '@/components/map/PremiumStatsBar';
 import { PremiumDetailPanel, PremiumHoverPopup } from '@/components/map/PremiumMapPopup';
 import { PremiumRecordCard } from '@/components/map/PremiumRecordCard';
 import { DataGrid } from '@/components/data/DataGrid';
-import { DataShowcase } from '@/components/data/DataShowcase';
-import { EnrichmentBadges } from '@/components/data/EnrichmentBadges';
-import { SourceCard } from '@/components/data/SourceCard';
 import type { GeoJSONFeature, GeoJSONFeatureCollection, CollectedData, OmniscientInsights, MapLayer } from '@/types/omniscient';
 import { CATEGORY_COLORS } from '@/lib/mapbox';
 import { toast } from 'sonner';
 import { exportData, type ExportFormat } from '@/lib/export';
 import { cn } from '@/lib/utils';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface PremiumOmniscientResultsProps {
   prompt: string;
@@ -57,6 +55,7 @@ export function PremiumOmniscientResults({
   const [showDetailPanel, setShowDetailPanel] = useState(false);
   const [layerOpacities, setLayerOpacities] = useState<Record<string, number>>({});
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const dataScrollRef = useRef<HTMLDivElement>(null);
 
   // Build layers
   const [layers, setLayers] = useState<MapLayer[]>(() => {
@@ -113,7 +112,15 @@ export function PremiumOmniscientResults({
     setShowDetailPanel(true);
     const cat = String(feature.properties?.category || '').toUpperCase();
     if (cat) setSelectedCategory(cat);
-  }, []);
+    // Scroll corresponding card into view in data panel
+    const idx = features?.features?.findIndex(f => f === feature) ?? -1;
+    if (idx >= 0) {
+      setTimeout(() => {
+        const el = document.getElementById(`record-card-${idx}`);
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    }
+  }, [features]);
 
   const handleCopyQuery = () => {
     navigator.clipboard.writeText(prompt);
@@ -143,6 +150,7 @@ export function PremiumOmniscientResults({
   };
 
   return (
+    <TooltipProvider delayDuration={200}>
     <div className="h-screen flex flex-col bg-black text-white overflow-hidden">
       {/* Top Header Bar */}
       <header className="flex-none h-16 bg-black/80 backdrop-blur-xl border-b border-white/10 flex items-center px-6 gap-4 z-40">
@@ -303,25 +311,30 @@ export function PremiumOmniscientResults({
             </TabsList>
 
             {/* Data Tab */}
-            <TabsContent value="data" className="flex-1 overflow-y-auto p-4 m-0 scrollbar-hide">
-              <div className="space-y-3">
-                {features?.features?.slice(0, 30).map((record, i) => (
-                  <PremiumRecordCard
-                    key={i}
-                    record={record}
-                    index={i}
-                    isSelected={selectedFeature === record}
-                    onHover={() => setHoveredFeature(record)}
-                    onClick={() => handleFeatureClick(record)}
-                  />
-                ))}
-                {(!features?.features?.length) && (
-                  <div className="text-center py-12 text-white/50">
-                    <Database className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p>No data available</p>
-                  </div>
-                )}
-              </div>
+            <TabsContent value="data" className="flex-1 overflow-hidden m-0">
+              <ScrollArea className="h-full">
+                <div ref={dataScrollRef} className="p-4 space-y-3">
+                  {features?.features?.slice(0, 50).map((record, i) => (
+                    <PremiumRecordCard
+                      key={i}
+                      id={`record-card-${i}`}
+                      record={record}
+                      index={i}
+                      isSelected={selectedFeature === record}
+                      isHovered={hoveredFeature === record}
+                      onHover={() => setHoveredFeature(record)}
+                      onHoverEnd={() => hoveredFeature === record && setHoveredFeature(null)}
+                      onClick={() => handleFeatureClick(record)}
+                    />
+                  ))}
+                  {(!features?.features?.length) && (
+                    <div className="text-center py-12 text-white/50">
+                      <Database className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                      <p>No data available</p>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
             </TabsContent>
 
             {/* Insights Tab */}
@@ -409,5 +422,6 @@ export function PremiumOmniscientResults({
         )}
       </AnimatePresence>
     </div>
+    </TooltipProvider>
   );
 }

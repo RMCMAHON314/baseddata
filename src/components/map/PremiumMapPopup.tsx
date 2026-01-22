@@ -1,12 +1,13 @@
-// BASED DATA v8.0 - Premium Map Popup
-// Hover and click popups with glass morphism styling
+// BASED DATA v8.1 - Premium Map Popup
+// Hover and click popups with glass morphism styling, polished UI
 
 import { motion } from 'framer-motion';
-import { X, ExternalLink, Clock, MapPin, Copy, Download } from 'lucide-react';
+import { X, ExternalLink, Clock, MapPin, Copy, Download, Sparkles, Database } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { GeoJSONFeature } from '@/types/omniscient';
 import { CATEGORY_COLORS } from '@/lib/mapbox';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 
 interface PremiumMapPopupProps {
@@ -60,41 +61,50 @@ export function PremiumHoverPopup({ feature, className }: PremiumMapPopupProps) 
   const description = String(props.description || '');
   const source = String(props.source || '');
   const timestamp = props.timestamp as string | undefined;
+  const quality = Number(props.confidence || props.quality || 0.5);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 10, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 10, scale: 0.95 }}
+      transition={{ duration: 0.15 }}
       className={cn(
-        "map-popup p-4 min-w-[200px] max-w-[300px]",
+        "map-popup p-4 min-w-[220px] max-w-[320px] shadow-2xl",
         className
       )}
     >
-      <div className="flex items-center gap-2 mb-2">
-        <span
-          className="w-2 h-2 rounded-full"
-          style={{ backgroundColor: color }}
-        />
-        <span className="text-xs text-white/50 uppercase tracking-wide">
-          {category}
-        </span>
+      <div className="flex items-center justify-between gap-3 mb-2">
+        <div className="flex items-center gap-2">
+          <span
+            className="w-2.5 h-2.5 rounded-full ring-2 ring-offset-1 ring-offset-black"
+            style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}` }}
+          />
+          <span className="text-xs font-medium text-white/60 uppercase tracking-wide">
+            {category}
+          </span>
+        </div>
+        {quality > 0 && (
+          <span className="text-[10px] text-emerald-400 font-medium bg-emerald-400/10 px-1.5 py-0.5 rounded">
+            {Math.round(quality * 100)}%
+          </span>
+        )}
       </div>
       
-      <h3 className="text-white font-semibold line-clamp-2">{title}</h3>
+      <h3 className="text-white font-semibold line-clamp-2 leading-snug">{title}</h3>
       
       {description && (
-        <p className="text-white/60 text-sm mt-1 line-clamp-2">
+        <p className="text-white/50 text-sm mt-1.5 line-clamp-2 leading-relaxed">
           {description}
         </p>
       )}
       
       <div className="flex items-center gap-2 mt-3 pt-3 border-t border-white/10">
-        <span className="text-xs text-white/40">{source}</span>
+        <span className="text-xs text-white/30">{source}</span>
         {timestamp && (
           <>
             <span className="text-xs text-white/20">•</span>
-            <span className="text-xs text-white/40">{formatTime(timestamp)}</span>
+            <span className="text-xs text-white/30">{formatTime(timestamp)}</span>
           </>
         )}
       </div>

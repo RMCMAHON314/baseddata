@@ -1,5 +1,5 @@
-// BASED DATA v8.0 - Premium Record Card
-// Right sidebar data card with hover highlight, quality indicator
+// BASED DATA v8.1 - Premium Record Card
+// Right sidebar data card with hover highlight, quality indicator, two-way sync
 
 import { motion } from 'framer-motion';
 import { Clock, MapPin, ExternalLink } from 'lucide-react';
@@ -10,8 +10,11 @@ import { CATEGORY_COLORS } from '@/lib/mapbox';
 interface PremiumRecordCardProps {
   record: GeoJSONFeature;
   index: number;
+  id?: string;
   isSelected?: boolean;
+  isHovered?: boolean;
   onHover?: () => void;
+  onHoverEnd?: () => void;
   onClick?: () => void;
   className?: string;
 }
@@ -42,8 +45,11 @@ function formatCoords(coords: number[]): string {
 export function PremiumRecordCard({
   record,
   index,
+  id,
   isSelected,
+  isHovered,
   onHover,
+  onHoverEnd,
   onClick,
   className,
 }: PremiumRecordCardProps) {
@@ -61,15 +67,18 @@ export function PremiumRecordCard({
 
   return (
     <motion.div
+      id={id}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.02 }}
+      transition={{ delay: Math.min(index * 0.015, 0.3) }}
       className={cn(
-        "record-card group",
+        "record-card group transition-all duration-200",
         isSelected && "ring-2 ring-cyan-500 ring-offset-2 ring-offset-black",
+        isHovered && !isSelected && "bg-white/15 border-cyan-500/50 scale-[1.01]",
         className
       )}
       onMouseEnter={onHover}
+      onMouseLeave={onHoverEnd}
       onClick={onClick}
     >
       {/* Header */}
