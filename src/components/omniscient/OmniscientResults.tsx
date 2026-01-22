@@ -174,18 +174,6 @@ export function OmniscientResults({
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Stats Pills */}
-            <div className="hidden lg:flex items-center gap-2">
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-success/10 text-success text-xs font-medium">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                {totalRecords} records
-              </div>
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium">
-                <Zap className="w-3.5 h-3.5" />
-                {(totalTime / 1000).toFixed(1)}s
-              </div>
-            </div>
-            
             <Button variant="outline" size="sm" className="hidden sm:flex">
               <Share2 className="w-4 h-4 mr-2" />
               Share
@@ -202,9 +190,9 @@ export function OmniscientResults({
       </header>
 
       {/* Main Content - Split View */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Map Panel - 60% */}
-        <div className="w-3/5 relative border-r border-border">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        {/* Map Panel */}
+        <div className="w-full lg:w-3/5 h-[45vh] lg:h-auto relative border-b border-border lg:border-b-0 lg:border-r">
           <MapContainer
             features={features}
             center={mapCenter}
@@ -222,33 +210,6 @@ export function OmniscientResults({
             />
           )}
 
-          {/* Stats Overlay */}
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="absolute bottom-4 left-4 card-glass px-4 py-3 space-y-2"
-          >
-            <div className="flex items-center gap-2 text-sm">
-              <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-              <span className="font-medium text-foreground">{totalRecords}</span>
-              <span className="text-muted-foreground">features loaded</span>
-            </div>
-            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                {(totalTime / 1000).toFixed(1)}s
-              </span>
-              <span className="flex items-center gap-1">
-                <Globe className="w-3 h-3" />
-                {successSources} sources
-              </span>
-              <span className="flex items-center gap-1">
-                <Sparkles className="w-3 h-3" />
-                {creditsUsed} credits
-              </span>
-            </div>
-          </motion.div>
-
           {/* Feature Popup */}
           <AnimatePresence>
             {selectedFeature && (
@@ -260,9 +221,9 @@ export function OmniscientResults({
           </AnimatePresence>
         </div>
 
-        {/* Data Panel - 40% */}
-        <div className="w-2/5 flex flex-col bg-card overflow-hidden">
-          <Tabs defaultValue="visualize" className="flex-1 flex flex-col">
+        {/* Data Panel */}
+        <div className="w-full lg:w-2/5 flex flex-col bg-card overflow-hidden flex-1">
+          <Tabs defaultValue="data" className="flex-1 flex flex-col">
             <TabsList className="flex-none border-b border-border bg-transparent p-0 h-auto">
               <TabsTrigger 
                 value="data"
