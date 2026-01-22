@@ -1,9 +1,10 @@
-// OMNISCIENT Export Utilities
+// BASED DATA Export Utilities
 // Client-side export helpers for multi-format data download
 
 import type { GeoJSONFeature, OmniscientInsights } from '@/types/omniscient';
+import * as XLSX from 'xlsx';
 
-export type ExportFormat = 'csv' | 'geojson' | 'json' | 'pdf';
+export type ExportFormat = 'csv' | 'geojson' | 'json' | 'pdf' | 'xlsx';
 
 interface ExportOptions {
   features: GeoJSONFeature[];
@@ -70,7 +71,7 @@ export function toJSON(features: GeoJSONFeature[], insights?: OmniscientInsights
 }
 
 // Download file utility
-export function downloadFile(content: string, filename: string, mimeType: string) {
+export function downloadFile(content: string | ArrayBuffer, filename: string, mimeType: string) {
   const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -80,6 +81,70 @@ export function downloadFile(content: string, filename: string, mimeType: string
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+// Generate Excel workbook from features
+export function toXLSX(features: GeoJSONFeature[], insights?: OmniscientInsights): ArrayBuffer {
+  // Collect all unique property keys
+  const allKeys = new Set<string>();
+  features.forEach(f => {
+    Object.keys(f.properties || {}).forEach(k => allKeys.add(k));
+  });
+  
+  // Build data rows
+  const headers = ['Name', 'Category', 'Source', 'Latitude', 'Longitude', ...Array.from(allKeys).filter(k => !['name', 'category', 'source'].includes(k))];
+  
+  const rows = features.map(f => {
+    const coords = f.geometry?.coordinates || [0, 0];
+    const lat = f.geometry?.type === 'Point' ? (coords as number[])[1] : 0;
+    const lng = f.geometry?.type === 'Point' ? (coords as number[])[0] : 0;
+    
+    const row: Record<string, any> = {
+      'Name': f.properties?.name || '',
+      'Category': f.properties?.category || '',
+      'Source': f.properties?.source || '',
+      'Latitude': lat,
+      'Longitude': lng,
+    };
+    
+    allKeys.forEach(key => {
+      if (!['name', 'category', 'source'].includes(key)) {
+        let val = f.properties?.[key] ?? '';
+        if (typeof val === 'object') val = JSON.stringify(val);
+        row[key.charAt(0).toUpperCase() + key.slice(1)] = val;
+      }
+    });
+    
+    return row;
+  });
+  
+  // Create workbook with data sheet
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(rows);
+  
+  // Auto-size columns
+  const colWidths = headers.map(h => ({ wch: Math.max(h.length, 15) }));
+  ws['!cols'] = colWidths;
+  
+  XLSX.utils.book_append_sheet(wb, ws, 'Data');
+  
+  // Add insights sheet if available
+  if (insights) {
+    const insightRows = [
+      { Section: 'Summary', Content: insights.summary || '' },
+      { Section: '', Content: '' },
+      { Section: 'Key Findings', Content: '' },
+      ...(insights.key_findings || []).map((f, i) => ({ Section: `  ${i + 1}.`, Content: f })),
+      { Section: '', Content: '' },
+      { Section: 'Recommendations', Content: '' },
+      ...(insights.recommendations || []).map((r, i) => ({ Section: `  ${i + 1}.`, Content: r })),
+    ];
+    const insightWs = XLSX.utils.json_to_sheet(insightRows);
+    insightWs['!cols'] = [{ wch: 20 }, { wch: 80 }];
+    XLSX.utils.book_append_sheet(wb, insightWs, 'Insights');
+  }
+  
+  return XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
 }
 
 // Main export function
@@ -102,6 +167,12 @@ export async function exportData({ features, format, insights, queryInfo }: Expo
     case 'json': {
       const content = toJSON(features, insights);
       downloadFile(content, `omniscient-export-${timestamp}.json`, 'application/json');
+      break;
+    }
+    
+    case 'xlsx': {
+      const content = toXLSX(features, insights);
+      downloadFile(content, `based-data-export-${timestamp}.xlsx`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       break;
     }
     
@@ -140,7 +211,7 @@ export async function exportData({ features, format, insights, queryInfo }: Expo
         console.error('PDF export error:', e);
         // Fallback to JSON export
         const content = toJSON(features, insights);
-        downloadFile(content, `omniscient-export-${timestamp}.json`, 'application/json');
+        downloadFile(content, `based-data-export-${timestamp}.json`, 'application/json');
       }
       break;
     }
@@ -149,7 +220,8 @@ export async function exportData({ features, format, insights, queryInfo }: Expo
 
 // Format icons and labels
 export const EXPORT_FORMATS: { format: ExportFormat; label: string; icon: string; description: string }[] = [
-  { format: 'csv', label: 'CSV', icon: '📊', description: 'Spreadsheet-compatible' },
+  { format: 'xlsx', label: 'Excel (.xlsx)', icon: '📗', description: 'Best for spreadsheets' },
+  { format: 'csv', label: 'CSV', icon: '📊', description: 'Universal format' },
   { format: 'geojson', label: 'GeoJSON', icon: '🗺️', description: 'Map-ready format' },
   { format: 'json', label: 'JSON', icon: '{ }', description: 'Full data + insights' },
   { format: 'pdf', label: 'PDF Report', icon: '📄', description: 'AI-powered summary' },
