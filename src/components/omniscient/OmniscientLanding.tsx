@@ -70,9 +70,7 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
 };
 
 const STATS = [
-  { value: '70+', label: 'Live Data Sources' },
-  { value: '10', label: 'Categories' },
-  { value: '<15s', label: 'Avg Response' },
+  { value: '70+', label: 'Live Data APIs' },
   { value: '∞', label: 'Dynamic Genesis' },
 ];
 
@@ -280,8 +278,8 @@ export function OmniscientLanding({ onSubmit, isLoading }: OmniscientLandingProp
               className="text-center mb-12"
             >
               <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                <span className="text-gradient-omni">10 Data Categories.</span>{' '}
-                <span className="text-muted-foreground">Infinite Possibilities.</span>
+                <span className="text-gradient-omni">Unified Data Categories.</span>{' '}
+                <span className="text-muted-foreground">One Query, Every Source.</span>
               </h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
                 From wildlife tracking to federal contracts, real-time weather to clinical trials — 
@@ -331,8 +329,8 @@ export function OmniscientLanding({ onSubmit, isLoading }: OmniscientLandingProp
             {[
               {
                 icon: Zap,
-                title: 'Instant Results',
-                desc: 'Query 70+ APIs in parallel. Data on map in under 15 seconds.',
+                title: 'Parallel Collection',
+                desc: 'Query 70+ APIs simultaneously. All data unified on a single map.',
                 gradient: 'from-yellow-500 to-orange-500',
               },
               {
