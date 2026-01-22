@@ -246,9 +246,9 @@ export function PremiumOmniscientResults({
           className="hidden lg:flex flex-shrink-0"
         />
 
-        {/* Center - Map + Header + Footer */}
-        <div className="flex-1 flex flex-col min-w-0 min-h-0">
-          {/* MAP CONTAINER - CRITICAL: needs flex-1 relative min-h-0 with absolute inset-0 child */}
+        {/* Center - Compact Map */}
+        <div className="w-[400px] flex flex-col min-h-0 flex-shrink-0">
+          {/* MAP CONTAINER - Compact size */}
           <div className="flex-1 relative min-h-0">
             <div className="absolute inset-0">
               <SimpleMap
@@ -286,8 +286,8 @@ export function PremiumOmniscientResults({
           />
         </div>
 
-        {/* Right Sidebar - Data Explorer */}
-        <aside className="w-[380px] h-full flex flex-col map-panel-glass border-l border-white/10 hidden lg:flex flex-shrink-0">
+        {/* Right Sidebar - Data Explorer (expanded) */}
+        <aside className="flex-1 h-full flex flex-col map-panel-glass border-l border-white/10 hidden lg:flex min-w-0">
           <Tabs defaultValue="data" className="flex-1 flex flex-col">
             <TabsList className="flex-none bg-transparent p-0 h-auto border-b border-white/10">
               <TabsTrigger
