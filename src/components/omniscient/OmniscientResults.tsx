@@ -50,6 +50,7 @@ export function OmniscientResults({
   onBack 
 }: OmniscientResultsProps) {
   const [selectedFeature, setSelectedFeature] = useState<GeoJSONFeature | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const { upvote, downvote, flag, getVoteState, isVoting } = useVoting();
   
@@ -72,6 +73,40 @@ export function OmniscientResults({
       color: CATEGORY_COLORS[cat as keyof typeof CATEGORY_COLORS] || '#3366FF',
     }));
   });
+
+  const getFeatureKey = (feature: GeoJSONFeature | null): string | null => {
+    if (!feature) return null;
+    const props = feature.properties;
+    const explicit = String(props.source_record_id || props.id || '').trim();
+    if (explicit) return explicit;
+
+    const name = String(props.name || props.species || props.title || 'Record');
+    if (feature.geometry?.type === 'Point') {
+      const coords = feature.geometry.coordinates as number[];
+      const lng = Number(coords?.[0] ?? 0);
+      const lat = Number(coords?.[1] ?? 0);
+      return `${name}:${lng.toFixed(5)},${lat.toFixed(5)}`;
+    }
+    return `${name}:${JSON.stringify(feature.geometry?.coordinates ?? '').slice(0, 64)}`;
+  };
+
+  const handleCategoryChange = (category: string | null) => {
+    setSelectedCategory(category);
+
+    // Sync the map layers to the data filters: if a category is chosen, only show that category.
+    // If null (All), show everything.
+    if (!layers.length) return;
+    if (!category) {
+      setLayers((prev) => prev.map((l) => ({ ...l, visible: true })));
+      return;
+    }
+    setLayers((prev) =>
+      prev.map((l) => ({
+        ...l,
+        visible: String(l.category || l.name).toUpperCase() === String(category).toUpperCase(),
+      }))
+    );
+  };
 
   // Compute center from features
   const mapCenter = useMemo((): [number, number] | undefined => {
@@ -199,7 +234,12 @@ export function OmniscientResults({
             center={mapCenter}
             zoom={mapCenter ? 9 : 4}
             selectedFeature={selectedFeature}
-            onFeatureClick={(f) => setSelectedFeature(f as any)}
+            onFeatureClick={(f) => {
+              const feat = f as any as GeoJSONFeature;
+              setSelectedFeature(feat);
+              const cat = String(feat?.properties?.category || '').trim();
+              if (cat) handleCategoryChange(cat);
+            }}
             className="absolute inset-0 w-full h-full"
           />
           
@@ -263,7 +303,14 @@ export function OmniscientResults({
               {features?.features?.length ? (
                 <DataShowcase 
                   features={features.features} 
-                  onFeatureClick={(f) => setSelectedFeature(f)}
+                  onFeatureClick={(f) => {
+                    setSelectedFeature(f);
+                    const cat = String(f?.properties?.category || '').trim();
+                    if (cat) handleCategoryChange(cat);
+                  }}
+                  selectedCategory={selectedCategory}
+                  onSelectedCategoryChange={handleCategoryChange}
+                  selectedFeatureId={getFeatureKey(selectedFeature)}
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
