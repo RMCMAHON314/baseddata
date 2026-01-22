@@ -1,7 +1,7 @@
-// BASED DATA v6.0 - Pipeline Progress
+// BASED DATA v7.0 - Pipeline Progress
 // Premium real-time visualization showing EVERYTHING we're doing
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, forwardRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Check, Loader2, AlertCircle, MapPin, Database, Brain, Sparkles, 
@@ -43,7 +43,8 @@ const PHASE_STEPS: Record<string, string[]> = {
   insights: ['analyze_ai', 'insights', 'finalize'],
 };
 
-export function PipelineProgress({
+// Forward ref wrapper for AnimatePresence compatibility
+const PipelineProgressInner = forwardRef<HTMLDivElement, PipelineProgressProps>(function PipelineProgressInner({
   prompt,
   steps,
   currentPhase,
@@ -51,7 +52,7 @@ export function PipelineProgress({
   totalRecords,
   elapsedTime,
   currentAction = '',
-}: PipelineProgressProps) {
+}, ref) {
   const [displayRecords, setDisplayRecords] = useState(0);
   const currentPhaseIndex = PHASE_INFO.findIndex(p => p.id === currentPhase);
   
@@ -71,7 +72,7 @@ export function PipelineProgress({
   const progressPercent = Math.round((completedSteps / steps.length) * 100);
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col relative overflow-hidden">
+    <div ref={ref} className="min-h-screen bg-background text-foreground flex flex-col relative overflow-hidden">
       {/* Background Effects */}
       <div className="absolute inset-0 bg-grid bg-grid-fade pointer-events-none opacity-50" />
       <div className="absolute inset-0 radial-overlay pointer-events-none" />
@@ -379,4 +380,8 @@ export function PipelineProgress({
       </div>
     </div>
   );
-}
+});
+
+// Export with display name for debugging
+export const PipelineProgress = PipelineProgressInner;
+PipelineProgress.displayName = 'PipelineProgress';

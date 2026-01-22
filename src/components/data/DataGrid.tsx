@@ -1,12 +1,12 @@
-// BASED DATA - Enhanced Spreadsheet-Style Data Grid
-// XLS-like interface for viewing and interacting with data
+// BASED DATA v7.0 - Enhanced Spreadsheet-Style Data Grid
+// XLS-like interface with clickable source links
 
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { 
   ArrowUpDown, ArrowUp, ArrowDown, Filter, Download, 
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
-  Search, X, Columns, FileSpreadsheet
+  Search, X, Columns, FileSpreadsheet, ExternalLink, Globe
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import type { GeoJSONFeature } from '@/types/omniscient';
+import { findSourceInfo } from '@/types/omniscient';
 
 interface DataGridProps {
   features: GeoJSONFeature[];
@@ -74,18 +75,24 @@ export function DataGrid({ features, onExport, onRowClick, className }: DataGrid
     }));
   }, [features]);
   
-  // Build row data with coordinates
+  // Build row data with coordinates and source links
   const rowData = useMemo(() => {
     return features.map((f, idx) => {
       const coords = f.geometry?.coordinates || [0, 0];
       const lat = f.geometry?.type === 'Point' ? (coords as number[])[1] : 0;
       const lng = f.geometry?.type === 'Point' ? (coords as number[])[0] : 0;
       
+      // Get source info for links
+      const sourceInfo = findSourceInfo(f.properties.source || '');
+      const sourceUrl = f.properties.source_url || f.properties.url || sourceInfo?.website_url;
+      
       return {
         _id: idx,
         _feature: f,
         _lat: lat,
         _lng: lng,
+        _sourceUrl: sourceUrl,
+        _sourceInfo: sourceInfo,
         ...f.properties,
       };
     });
@@ -288,6 +295,25 @@ export function DataGrid({ features, onExport, onRowClick, className }: DataGrid
                       <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
                         {col.format?.(row[col.key])}
                       </span>
+                    ) : col.key === 'source' ? (
+                      <div className="flex items-center gap-1.5">
+                        {row._sourceInfo?.logo_emoji && (
+                          <span className="text-sm">{row._sourceInfo.logo_emoji}</span>
+                        )}
+                        <span className="text-sm">{col.format?.(row[col.key])}</span>
+                        {row._sourceUrl && (
+                          <a
+                            href={row._sourceUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-primary hover:text-primary/80 transition-colors"
+                            title="Visit source"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
                     ) : col.key === 'confidence' ? (
                       <div className="flex items-center gap-2">
                         <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden max-w-[60px]">

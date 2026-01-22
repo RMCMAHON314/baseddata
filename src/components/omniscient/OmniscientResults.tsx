@@ -1,5 +1,6 @@
-// BASED DATA v6.0 - Results View
+// BASED DATA v7.0 - Results View
 // Premium split-view with map + spreadsheet data grid + 15/10 visualizations + multi-format export
+// All sources have clickable links to original sites
 
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -7,7 +8,7 @@ import {
   ArrowLeft, Layers, Table, Lightbulb, Download, 
   FileJson, FileSpreadsheet, Share2, ChevronRight, Clock, Database, 
   CheckCircle2, Zap, Globe, Sparkles, Copy, ExternalLink, Filter,
-  ThumbsUp, ThumbsDown, Flag, FileText, BarChart3, PieChart
+  ThumbsUp, ThumbsDown, Flag, FileText, BarChart3, PieChart, Link2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -18,6 +19,7 @@ import { FeaturePopup } from '@/components/map/FeaturePopup';
 import { DataGrid } from '@/components/data/DataGrid';
 import { DataVisualization } from '@/components/data/DataVisualization';
 import { EnrichmentBadges } from '@/components/data/EnrichmentBadges';
+import { SourceCard } from '@/components/data/SourceCard';
 import type { GeoJSONFeature, GeoJSONFeatureCollection, CollectedData, OmniscientInsights, MapLayer } from '@/types/omniscient';
 import { CATEGORY_COLORS } from '@/lib/mapbox';
 import { toast } from 'sonner';
@@ -422,52 +424,36 @@ export function OmniscientResults({
               )}
             </TabsContent>
 
-            {/* Sources Tab */}
+            {/* Sources Tab - Enhanced with clickable links */}
             <TabsContent value="sources" className="flex-1 overflow-y-auto p-4 m-0 scrollbar-hide">
-              <div className="space-y-2">
+              <div className="mb-4">
+                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-1">
+                  <Globe className="w-4 h-4 text-primary" />
+                  Data Sources Queried
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Click on any source to visit their website or explore their API documentation
+                </p>
+              </div>
+              <div className="space-y-3">
                 {collectedData.map((source, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.03 }}
-                    className={`p-4 rounded-xl border transition-all ${
-                      source.status === 'success'
-                        ? 'bg-success/5 border-success/20 hover:border-success/40'
-                        : source.status === 'error'
-                        ? 'bg-destructive/5 border-destructive/20'
-                        : 'bg-accent/50 border-border/50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-semibold text-sm text-foreground">{source.source}</span>
-                      <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                        source.status === 'success' 
-                          ? 'bg-success/10 text-success' 
-                          : source.status === 'error' 
-                            ? 'bg-destructive/10 text-destructive' 
-                            : 'bg-secondary text-muted-foreground'
-                      }`}>
-                        {source.status}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Database className="w-3 h-3" />
-                        {source.record_count} records
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Zap className="w-3 h-3" />
-                        {source.collection_time_ms}ms
-                      </span>
-                    </div>
-                    {source.error && (
-                      <p className="mt-2 text-xs text-destructive bg-destructive/5 rounded-lg p-2">
-                        {source.error}
-                      </p>
-                    )}
-                  </motion.div>
+                  <SourceCard key={i} source={source} index={i} />
                 ))}
+              </div>
+              
+              {/* All Sources Registry Link */}
+              <div className="mt-6 p-4 rounded-xl border border-dashed border-primary/30 bg-primary/5">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Link2 className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-foreground">70+ Data APIs Available</p>
+                    <p className="text-xs text-muted-foreground">
+                      BASED DATA aggregates data from government, scientific, and public sources worldwide
+                    </p>
+                  </div>
+                </div>
               </div>
             </TabsContent>
           </Tabs>
