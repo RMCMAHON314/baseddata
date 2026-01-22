@@ -307,6 +307,75 @@
   .cat-transportation { --cat-color: 45 100% 50%; }
   .cat-energy { --cat-color: 120 100% 45%; }
   .cat-recreation { --cat-color: 330 100% 60%; }
+  
+  /* Premium Map Glass Panels */
+  .map-panel-glass {
+    @apply bg-black/85 backdrop-blur-xl border-white/10;
+  }
+  
+  .map-panel-surface {
+    @apply bg-white/5 hover:bg-white/10 transition-colors;
+  }
+  
+  .map-panel-surface-active {
+    @apply bg-white/10 border border-white/20;
+  }
+  
+  /* Map Layer Card */
+  .layer-card {
+    @apply rounded-xl p-3 transition-all duration-300 cursor-pointer;
+  }
+  
+  .layer-card-active {
+    @apply bg-white/10 border border-white/20;
+  }
+  
+  .layer-card-inactive {
+    @apply bg-white/5 border border-transparent;
+  }
+  
+  .layer-card-inactive:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+  }
+  
+  /* Premium Record Card */
+  .record-card {
+    @apply p-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all cursor-pointer;
+  }
+  
+  /* Hover Popup */
+  .map-popup {
+    @apply bg-black/90 backdrop-blur-xl rounded-xl border border-white/20 shadow-2xl;
+  }
+  
+  /* Stats Bar */
+  .map-stats-bar {
+    @apply bg-black/80 backdrop-blur-xl border-t border-white/10;
+  }
+  
+  /* Premium Animations */
+  .animate-spin-slow {
+    animation: spin-slow 3s linear infinite;
+  }
+  
+  .animate-pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+  
+  @keyframes spin-slow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 20px hsl(var(--omni-cyan) / 0.4); }
+    50% { box-shadow: 0 0 40px hsl(var(--omni-cyan) / 0.8); }
+  }
+  
+  /* Glow Ring for selected markers */
+  .glow-ring {
+    box-shadow: 0 0 20px currentColor, 0 0 40px currentColor;
+  }
 }
 
 @layer utilities {

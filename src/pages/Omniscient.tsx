@@ -1,10 +1,10 @@
-// BASED DATA - Universal Data Pipeline Page
-// The everything aggregator with clean brand identity
+// BASED DATA v8.0 - Premium Universal Data Pipeline
+// Bloomberg Terminal meets Apple Maps meets Palantir
 
 import { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { OmniscientLanding } from '@/components/omniscient/OmniscientLanding';
-import { OmniscientResults } from '@/components/omniscient/OmniscientResults';
+import { PremiumOmniscientResults } from '@/components/omniscient/PremiumOmniscientResults';
 import { PipelineProgress } from '@/components/omniscient/PipelineProgress';
 import { useOmniscient } from '@/hooks/useOmniscient';
 
@@ -81,7 +81,7 @@ export default function Omniscient() {
         )}
 
         {viewState === 'results' && response && (
-          <OmniscientResults
+          <PremiumOmniscientResults
             key="results"
             prompt={currentPrompt}
             features={features || undefined}

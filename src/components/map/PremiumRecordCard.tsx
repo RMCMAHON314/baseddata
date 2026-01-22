@@ -1,0 +1,139 @@
+// BASED DATA v8.0 - Premium Record Card
+// Right sidebar data card with hover highlight, quality indicator
+
+import { motion } from 'framer-motion';
+import { Clock, MapPin, ExternalLink } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import type { GeoJSONFeature } from '@/types/omniscient';
+import { CATEGORY_COLORS } from '@/lib/mapbox';
+
+interface PremiumRecordCardProps {
+  record: GeoJSONFeature;
+  index: number;
+  isSelected?: boolean;
+  onHover?: () => void;
+  onClick?: () => void;
+  className?: string;
+}
+
+function formatRelativeTime(timestamp?: string): string {
+  if (!timestamp) return '';
+  try {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const mins = Math.floor(diff / (1000 * 60));
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  } catch {
+    return '';
+  }
+}
+
+function formatCoords(coords: number[]): string {
+  if (!coords || coords.length < 2) return '';
+  return `${coords[1].toFixed(2)}°, ${coords[0].toFixed(2)}°`;
+}
+
+export function PremiumRecordCard({
+  record,
+  index,
+  isSelected,
+  onHover,
+  onClick,
+  className,
+}: PremiumRecordCardProps) {
+  const props = record.properties;
+  const category = String(props.category || 'OTHER');
+  const color = CATEGORY_COLORS[category] || '#3B82F6';
+  const title = String(props.name || props.title || props.species || 'Unknown');
+  const source = String(props.source || '');
+  const timestamp = props.timestamp as string | undefined;
+  const quality = Number(props.confidence || props.quality || 0.5);
+  const sourceUrl = String(props.source_url || props.source_record_url || '');
+  const coords = record.geometry?.type === 'Point'
+    ? (record.geometry.coordinates as number[])
+    : null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.02 }}
+      className={cn(
+        "record-card group",
+        isSelected && "ring-2 ring-cyan-500 ring-offset-2 ring-offset-black",
+        className
+      )}
+      onMouseEnter={onHover}
+      onClick={onClick}
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span
+            className="w-2 h-2 rounded-full flex-shrink-0"
+            style={{ backgroundColor: color }}
+          />
+          <span className="text-xs font-medium text-white/50 uppercase tracking-wide">
+            {category}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-white/30">{source}</span>
+          {sourceUrl && (
+            <a
+              href={sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="text-white/30 hover:text-cyan-400 transition-colors"
+            >
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          )}
+        </div>
+      </div>
+
+      {/* Title */}
+      <h3 className="text-white font-medium mt-2 group-hover:text-cyan-400 transition-colors line-clamp-2">
+        {title}
+      </h3>
+
+      {/* Metadata */}
+      <div className="flex items-center gap-4 mt-3 text-xs text-white/40">
+        {timestamp && (
+          <span className="flex items-center gap-1">
+            <Clock className="w-3 h-3" />
+            {formatRelativeTime(timestamp)}
+          </span>
+        )}
+        {coords && (
+          <span className="flex items-center gap-1">
+            <MapPin className="w-3 h-3" />
+            {formatCoords(coords)}
+          </span>
+        )}
+      </div>
+
+      {/* Quality Indicator */}
+      <div className="flex items-center gap-2 mt-3">
+        <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
+          <motion.div
+            className="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full"
+            initial={{ width: 0 }}
+            animate={{ width: `${quality * 100}%` }}
+            transition={{ duration: 0.5, delay: index * 0.02 }}
+          />
+        </div>
+        <span className="text-xs text-emerald-400">
+          {Math.round(quality * 100)}%
+        </span>
+      </div>
+    </motion.div>
+  );
+}
