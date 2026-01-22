@@ -1,12 +1,13 @@
-// OMNISCIENT v4.0 - Results View
-// Premium split-view with map + data panel for the ultimate data exploration experience
+// OMNISCIENT v4.1 - Results View
+// Premium split-view with map + data panel + multi-format export + voting
 
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, Layers, Table, Lightbulb, Download, 
   FileJson, FileSpreadsheet, Share2, ChevronRight, Clock, Database, 
-  CheckCircle2, Zap, Globe, Sparkles, Copy, ExternalLink, Filter
+  CheckCircle2, Zap, Globe, Sparkles, Copy, ExternalLink, Filter,
+  ThumbsUp, ThumbsDown, Flag, FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -17,6 +18,8 @@ import { FeaturePopup } from '@/components/map/FeaturePopup';
 import type { GeoJSONFeature, GeoJSONFeatureCollection, CollectedData, OmniscientInsights, MapLayer } from '@/types/omniscient';
 import { CATEGORY_COLORS } from '@/lib/mapbox';
 import { toast } from 'sonner';
+import { exportData, EXPORT_FORMATS, type ExportFormat } from '@/lib/export';
+import { useVoting } from '@/hooks/useVoting';
 
 interface OmniscientResultsProps {
   prompt: string;
@@ -24,6 +27,8 @@ interface OmniscientResultsProps {
   collectedData: CollectedData[];
   insights?: OmniscientInsights;
   creditsUsed: number;
+  processingTimeMs?: number;
+  sourcesUsed?: string[];
   onBack: () => void;
 }
 
@@ -32,11 +37,15 @@ export function OmniscientResults({
   features, 
   collectedData, 
   insights, 
-  creditsUsed, 
+  creditsUsed,
+  processingTimeMs,
+  sourcesUsed,
   onBack 
 }: OmniscientResultsProps) {
   const [selectedFeature, setSelectedFeature] = useState<GeoJSONFeature | null>(null);
   const [searchFilter, setSearchFilter] = useState('');
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const { upvote, downvote, flag, getVoteState, isVoting } = useVoting();
   
   // Build layers from features
   const [layers, setLayers] = useState<MapLayer[]>(() => {
@@ -104,37 +113,38 @@ export function OmniscientResults({
     ));
   };
 
-  const handleExportCSV = () => {
-    if (!tabularData.length) return;
-    const headers = Object.keys(tabularData[0]);
-    const csv = [
-      headers.join(','),
-      ...tabularData.map(row => 
-        headers.map(h => JSON.stringify((row as any)[h] ?? '')).join(',')
-      ),
-    ].join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `omniscient-${Date.now()}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success('CSV exported successfully');
+  // Multi-format export handler
+  const handleExport = async (format: ExportFormat) => {
+    if (!features?.features?.length) {
+      toast.error('No data to export');
+      return;
+    }
+    
+    setShowExportMenu(false);
+    toast.loading(`Exporting as ${format.toUpperCase()}...`);
+    
+    try {
+      await exportData({
+        features: features.features,
+        format,
+        insights,
+        queryInfo: {
+          prompt,
+          sources_used: sourcesUsed || collectedData.filter(d => d.status === 'success').map(d => d.source),
+          processing_time_ms: processingTimeMs || totalTime,
+        },
+      });
+      toast.dismiss();
+      toast.success(`${format.toUpperCase()} exported successfully!`);
+    } catch (e) {
+      toast.dismiss();
+      toast.error('Export failed');
+    }
   };
 
-  const handleExportGeoJSON = () => {
-    if (!features) return;
-    const json = JSON.stringify(features, null, 2);
-    const blob = new Blob([json], { type: 'application/geo+json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `omniscient-${Date.now()}.geojson`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success('GeoJSON exported successfully');
-  };
+  // Legacy handlers for backward compat
+  const handleExportCSV = () => handleExport('csv');
+  const handleExportGeoJSON = () => handleExport('geojson');
 
   const handleCopyQuery = () => {
     navigator.clipboard.writeText(prompt);
@@ -432,16 +442,51 @@ export function OmniscientResults({
                 )}
               </div>
               
-              {/* Export Options */}
-              <div className="flex-none border-t border-border p-3 flex gap-2">
-                <Button variant="outline" size="sm" onClick={handleExportCSV} className="flex-1">
-                  <FileSpreadsheet className="w-4 h-4 mr-2" />
-                  Export CSV
-                </Button>
-                <Button variant="outline" size="sm" onClick={handleExportGeoJSON} className="flex-1">
-                  <FileJson className="w-4 h-4 mr-2" />
-                  Export GeoJSON
-                </Button>
+              {/* Export Options - Multi-Format */}
+              <div className="flex-none border-t border-border p-3 relative">
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setShowExportMenu(!showExportMenu)} 
+                    className="flex-1"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Export Data
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => handleExport('pdf')} className="flex-1">
+                    <FileText className="w-4 h-4 mr-2" />
+                    PDF Report
+                  </Button>
+                </div>
+                
+                {/* Export Menu Dropdown */}
+                <AnimatePresence>
+                  {showExportMenu && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      className="absolute bottom-full left-3 right-3 mb-2 card-glass p-2 border border-border rounded-xl shadow-xl"
+                    >
+                      <div className="grid grid-cols-2 gap-2">
+                        {EXPORT_FORMATS.filter(f => f.format !== 'pdf').map(({ format, label, icon, description }) => (
+                          <button
+                            key={format}
+                            onClick={() => handleExport(format)}
+                            className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent text-left transition-colors"
+                          >
+                            <span className="text-xl">{icon}</span>
+                            <div>
+                              <div className="font-medium text-sm">{label}</div>
+                              <div className="text-xs text-muted-foreground">{description}</div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </TabsContent>
 
