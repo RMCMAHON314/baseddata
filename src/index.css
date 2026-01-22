@@ -2,18 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Based Data Design System - Clean White Theme */
+/* OMNISCIENT Design System - Dark Theme Primary */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 @layer base {
   :root {
-    /* Based Data - Crispy Clean Palette */
-    --based-blue: 220 100% 60%;
-    --based-blue-light: 225 100% 96%;
-    --based-blue-medium: 220 100% 67%;
+    /* OMNISCIENT Core Palette */
+    --omniscient-emerald: 160 84% 45%;
+    --omniscient-emerald-light: 160 76% 91%;
+    --omniscient-dark: 0 0% 4%;
+    --omniscient-surface: 0 0% 8%;
+    --omniscient-surface-light: 0 0% 12%;
     
-    /* Whites & Grays */
-    --white-pure: 0 0% 100%;
+    /* Grays */
     --gray-50: 210 20% 98%;
     --gray-100: 220 14% 96%;
     --gray-200: 220 13% 91%;
@@ -25,57 +26,77 @@
     --gray-800: 215 28% 17%;
     --gray-900: 221 39% 11%;
     
-    /* Success Green */
-    --green-500: 160 84% 39%;
-    --green-100: 152 76% 91%;
-    
-    /* Semantic Tokens */
-    --background: var(--white-pure);
+    /* Light mode tokens (fallback) */
+    --background: 0 0% 100%;
     --foreground: var(--gray-900);
-    
     --card: var(--gray-50);
     --card-foreground: var(--gray-900);
-    
-    --popover: var(--white-pure);
+    --popover: 0 0% 100%;
     --popover-foreground: var(--gray-900);
-    
-    --primary: var(--based-blue);
-    --primary-foreground: var(--white-pure);
-    
+    --primary: 220 100% 60%;
+    --primary-foreground: 0 0% 100%;
     --secondary: var(--gray-100);
     --secondary-foreground: var(--gray-700);
-    
     --muted: var(--gray-100);
     --muted-foreground: var(--gray-500);
-    
-    --accent: var(--based-blue-light);
-    --accent-foreground: var(--based-blue);
-    
+    --accent: 225 100% 96%;
+    --accent-foreground: 220 100% 60%;
     --destructive: 0 84% 60%;
-    --destructive-foreground: var(--white-pure);
-    
-    --success: var(--green-500);
-    --success-foreground: var(--white-pure);
-    
+    --destructive-foreground: 0 0% 100%;
+    --success: 160 84% 39%;
+    --success-foreground: 0 0% 100%;
     --border: var(--gray-200);
     --input: var(--gray-100);
-    --ring: var(--based-blue);
-    
+    --ring: 220 100% 60%;
     --radius: 0.5rem;
     
     /* Typography */
     --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-display: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     
-    /* Sidebar (keeping for compatibility) */
-    --sidebar-background: var(--white-pure);
+    /* Sidebar */
+    --sidebar-background: 0 0% 100%;
     --sidebar-foreground: var(--gray-900);
-    --sidebar-primary: var(--based-blue);
-    --sidebar-primary-foreground: var(--white-pure);
+    --sidebar-primary: 220 100% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: var(--gray-100);
     --sidebar-accent-foreground: var(--gray-900);
     --sidebar-border: var(--gray-200);
-    --sidebar-ring: var(--based-blue);
+    --sidebar-ring: 220 100% 60%;
+  }
+  
+  /* OMNISCIENT Dark Theme - Primary */
+  .dark, [data-theme="dark"] {
+    --background: var(--omniscient-dark);
+    --foreground: 0 0% 95%;
+    --card: var(--omniscient-surface);
+    --card-foreground: 0 0% 95%;
+    --popover: var(--omniscient-surface);
+    --popover-foreground: 0 0% 95%;
+    --primary: var(--omniscient-emerald);
+    --primary-foreground: 0 0% 0%;
+    --secondary: var(--omniscient-surface-light);
+    --secondary-foreground: 0 0% 80%;
+    --muted: var(--omniscient-surface-light);
+    --muted-foreground: 0 0% 60%;
+    --accent: 160 30% 15%;
+    --accent-foreground: var(--omniscient-emerald);
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --success: var(--omniscient-emerald);
+    --success-foreground: 0 0% 0%;
+    --border: 0 0% 15%;
+    --input: var(--omniscient-surface-light);
+    --ring: var(--omniscient-emerald);
+    
+    --sidebar-background: var(--omniscient-surface);
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: var(--omniscient-emerald);
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: var(--omniscient-surface-light);
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 0 0% 15%;
+    --sidebar-ring: var(--omniscient-emerald);
   }
 }
 
@@ -116,22 +137,14 @@
     @apply focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary;
   }
   
-  /* Badge Styles */
-  .badge-primary {
-    @apply px-3 py-1 rounded-full text-xs font-medium;
-    background: hsl(var(--based-blue-light));
-    color: hsl(var(--based-blue));
+  /* OMNISCIENT Glow Effect */
+  .omniscient-glow {
+    box-shadow: 0 0 60px -15px hsl(var(--omniscient-emerald) / 0.3);
   }
   
-  .badge-success {
-    @apply px-3 py-1 rounded-full text-xs font-medium;
-    background: hsl(var(--green-100));
-    color: hsl(var(--green-500));
-  }
-  
-  /* Text Gradient (for special emphasis) */
+  /* Text Gradient */
   .text-gradient {
-    background: linear-gradient(135deg, hsl(var(--based-blue)), hsl(var(--based-blue-medium)));
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.7));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;

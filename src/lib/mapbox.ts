@@ -14,32 +14,7 @@ export const MAP_STYLES = {
 export const DEFAULT_MAP_CENTER: [number, number] = [-98.5795, 39.8283]; // Center of USA
 export const DEFAULT_ZOOM = 4;
 
-export interface GeoJSONFeature {
-  type: 'Feature';
-  geometry: {
-    type: 'Point' | 'Polygon' | 'LineString' | 'MultiPolygon' | 'MultiLineString';
-    coordinates: number[] | number[][] | number[][][] | number[][][][];
-  };
-  properties: {
-    source: string;
-    source_id: string;
-    category: string;
-    subcategory?: string;
-    name: string;
-    description?: string;
-    timestamp?: string;
-    attributes?: Record<string, any>;
-    confidence?: number;
-    [key: string]: any;
-  };
-}
-
-export interface GeoJSONFeatureCollection {
-  type: 'FeatureCollection';
-  features: GeoJSONFeature[];
-}
-
-// Data category colors for map layers
+// Data category colors for map layers (single source of truth)
 export const CATEGORY_COLORS: Record<string, string> = {
   GEOSPATIAL: '#3B82F6',    // Blue
   WILDLIFE: '#10B981',       // Emerald
@@ -73,7 +48,6 @@ export function toBBox(center: [number, number], radiusKm: number): [number, num
 
 // Parse location from text
 export function parseLocation(text: string): { name: string; center?: [number, number]; bbox?: [number, number, number, number] } | null {
-  // Common US locations
   const locations: Record<string, [number, number]> = {
     'long island': [-73.1, 40.8],
     'new york': [-74.006, 40.7128],
@@ -108,7 +82,7 @@ export function parseLocation(text: string): { name: string; center?: [number, n
       return {
         name,
         center: coords,
-        bbox: toBBox(coords, 50), // 50km radius
+        bbox: toBBox(coords, 50),
       };
     }
   }
