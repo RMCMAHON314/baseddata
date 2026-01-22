@@ -154,6 +154,54 @@ export type Database = {
         }
         Relationships: []
       }
+      location_cache: {
+        Row: {
+          admin_level: string | null
+          bbox: Json | null
+          center: Json
+          city: string | null
+          country: string | null
+          county: string | null
+          created_at: string
+          hit_count: number | null
+          id: string
+          last_used_at: string
+          name: string
+          name_normalized: string
+          state: string | null
+        }
+        Insert: {
+          admin_level?: string | null
+          bbox?: Json | null
+          center: Json
+          city?: string | null
+          country?: string | null
+          county?: string | null
+          created_at?: string
+          hit_count?: number | null
+          id?: string
+          last_used_at?: string
+          name: string
+          name_normalized: string
+          state?: string | null
+        }
+        Update: {
+          admin_level?: string | null
+          bbox?: Json | null
+          center?: Json
+          city?: string | null
+          country?: string | null
+          county?: string | null
+          created_at?: string
+          hit_count?: number | null
+          id?: string
+          last_used_at?: string
+          name?: string
+          name_normalized?: string
+          state?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           auto_topoff_amount: number | null
@@ -196,6 +244,131 @@ export type Database = {
         }
         Relationships: []
       }
+      query_patterns: {
+        Row: {
+          avg_processing_time_ms: number | null
+          avg_record_count: number | null
+          categories: string[]
+          created_at: string
+          execution_count: number | null
+          id: string
+          last_used_at: string
+          pattern_hash: string
+          prompt_template: string
+          sources_used: string[]
+          success_rate: number | null
+        }
+        Insert: {
+          avg_processing_time_ms?: number | null
+          avg_record_count?: number | null
+          categories: string[]
+          created_at?: string
+          execution_count?: number | null
+          id?: string
+          last_used_at?: string
+          pattern_hash: string
+          prompt_template: string
+          sources_used: string[]
+          success_rate?: number | null
+        }
+        Update: {
+          avg_processing_time_ms?: number | null
+          avg_record_count?: number | null
+          categories?: string[]
+          created_at?: string
+          execution_count?: number | null
+          id?: string
+          last_used_at?: string
+          pattern_hash?: string
+          prompt_template?: string
+          sources_used?: string[]
+          success_rate?: number | null
+        }
+        Relationships: []
+      }
+      record_feedback: {
+        Row: {
+          correction_data: Json | null
+          created_at: string
+          feedback_type: string
+          id: string
+          record_id: string
+          user_id: string
+        }
+        Insert: {
+          correction_data?: Json | null
+          created_at?: string
+          feedback_type: string
+          id?: string
+          record_id: string
+          user_id: string
+        }
+        Update: {
+          correction_data?: Json | null
+          created_at?: string
+          feedback_type?: string
+          id?: string
+          record_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "record_feedback_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      records: {
+        Row: {
+          category: string
+          collected_at: string
+          description: string | null
+          geometry: Json
+          id: string
+          last_seen_at: string
+          name: string
+          properties: Json
+          quality_score: number | null
+          seen_count: number
+          source_id: string
+          source_record_id: string
+          user_validations: Json | null
+        }
+        Insert: {
+          category: string
+          collected_at?: string
+          description?: string | null
+          geometry: Json
+          id?: string
+          last_seen_at?: string
+          name: string
+          properties?: Json
+          quality_score?: number | null
+          seen_count?: number
+          source_id: string
+          source_record_id: string
+          user_validations?: Json | null
+        }
+        Update: {
+          category?: string
+          collected_at?: string
+          description?: string | null
+          geometry?: Json
+          id?: string
+          last_seen_at?: string
+          name?: string
+          properties?: Json
+          quality_score?: number | null
+          seen_count?: number
+          source_id?: string
+          source_record_id?: string
+          user_validations?: Json | null
+        }
+        Relationships: []
+      }
       schema_registry: {
         Row: {
           auto_generated: boolean | null
@@ -232,6 +405,60 @@ export type Database = {
         }
         Relationships: []
       }
+      source_performance: {
+        Row: {
+          avg_response_time_ms: number | null
+          created_at: string
+          failed_requests: number | null
+          id: string
+          is_active: boolean | null
+          last_error_message: string | null
+          last_failure_at: string | null
+          last_success_at: string | null
+          reliability_score: number | null
+          source_id: string
+          source_name: string
+          successful_requests: number | null
+          total_records_collected: number | null
+          total_requests: number | null
+          updated_at: string
+        }
+        Insert: {
+          avg_response_time_ms?: number | null
+          created_at?: string
+          failed_requests?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_error_message?: string | null
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          reliability_score?: number | null
+          source_id: string
+          source_name: string
+          successful_requests?: number | null
+          total_records_collected?: number | null
+          total_requests?: number | null
+          updated_at?: string
+        }
+        Update: {
+          avg_response_time_ms?: number | null
+          created_at?: string
+          failed_requests?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_error_message?: string | null
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          reliability_score?: number | null
+          source_id?: string
+          source_name?: string
+          successful_requests?: number | null
+          total_records_collected?: number | null
+          total_requests?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -247,6 +474,19 @@ export type Database = {
         }
         Returns: boolean
       }
+      cache_location: {
+        Args: {
+          p_admin_level?: string
+          p_bbox?: Json
+          p_center: Json
+          p_city?: string
+          p_country?: string
+          p_county?: string
+          p_name: string
+          p_state?: string
+        }
+        Returns: string
+      }
       deduct_credits: {
         Args: {
           p_amount: number
@@ -255,6 +495,29 @@ export type Database = {
           p_user_id: string
         }
         Returns: boolean
+      }
+      update_source_performance: {
+        Args: {
+          p_error_message?: string
+          p_records_collected: number
+          p_response_time_ms: number
+          p_source_id: string
+          p_source_name: string
+          p_success: boolean
+        }
+        Returns: undefined
+      }
+      upsert_record: {
+        Args: {
+          p_category: string
+          p_description: string
+          p_geometry: Json
+          p_name: string
+          p_properties: Json
+          p_source_id: string
+          p_source_record_id: string
+        }
+        Returns: string
       }
     }
     Enums: {
