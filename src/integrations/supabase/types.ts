@@ -121,6 +121,125 @@ export type Database = {
           },
         ]
       }
+      auto_crawlers: {
+        Row: {
+          crawler_type: string
+          created_at: string
+          description: string | null
+          expansion_keywords: string[]
+          firecrawl_config: Json | null
+          id: string
+          is_active: boolean
+          last_run_at: string | null
+          name: string
+          next_run_at: string | null
+          schedule_cron: string
+          similarity_config: Json | null
+          success_rate: number | null
+          target_categories: string[]
+          target_patterns: Json
+          total_records_discovered: number
+          total_runs: number
+          total_sources_found: number
+          updated_at: string
+        }
+        Insert: {
+          crawler_type?: string
+          created_at?: string
+          description?: string | null
+          expansion_keywords?: string[]
+          firecrawl_config?: Json | null
+          id?: string
+          is_active?: boolean
+          last_run_at?: string | null
+          name: string
+          next_run_at?: string | null
+          schedule_cron?: string
+          similarity_config?: Json | null
+          success_rate?: number | null
+          target_categories?: string[]
+          target_patterns?: Json
+          total_records_discovered?: number
+          total_runs?: number
+          total_sources_found?: number
+          updated_at?: string
+        }
+        Update: {
+          crawler_type?: string
+          created_at?: string
+          description?: string | null
+          expansion_keywords?: string[]
+          firecrawl_config?: Json | null
+          id?: string
+          is_active?: boolean
+          last_run_at?: string | null
+          name?: string
+          next_run_at?: string | null
+          schedule_cron?: string
+          similarity_config?: Json | null
+          success_rate?: number | null
+          target_categories?: string[]
+          target_patterns?: Json
+          total_records_discovered?: number
+          total_runs?: number
+          total_sources_found?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      crawler_runs: {
+        Row: {
+          completed_at: string | null
+          crawler_id: string | null
+          discovery_log: Json | null
+          error_message: string | null
+          id: string
+          new_collectors_created: number | null
+          processing_time_ms: number | null
+          records_collected: number | null
+          sources_discovered: Json | null
+          started_at: string
+          status: string
+          urls_discovered: string[] | null
+        }
+        Insert: {
+          completed_at?: string | null
+          crawler_id?: string | null
+          discovery_log?: Json | null
+          error_message?: string | null
+          id?: string
+          new_collectors_created?: number | null
+          processing_time_ms?: number | null
+          records_collected?: number | null
+          sources_discovered?: Json | null
+          started_at?: string
+          status?: string
+          urls_discovered?: string[] | null
+        }
+        Update: {
+          completed_at?: string | null
+          crawler_id?: string | null
+          discovery_log?: Json | null
+          error_message?: string | null
+          id?: string
+          new_collectors_created?: number | null
+          processing_time_ms?: number | null
+          records_collected?: number | null
+          sources_discovered?: Json | null
+          started_at?: string
+          status?: string
+          urls_discovered?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crawler_runs_crawler_id_fkey"
+            columns: ["crawler_id"]
+            isOneToOne: false
+            referencedRelation: "auto_crawlers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credit_transactions: {
         Row: {
           amount: number
@@ -260,6 +379,90 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      discovered_sources: {
+        Row: {
+          api_endpoint: string | null
+          auto_collector_id: string | null
+          collector_generated: boolean | null
+          created_at: string
+          data_type: string | null
+          description: string | null
+          discovered_at: string
+          discovered_by_crawler_id: string | null
+          documentation_url: string | null
+          id: string
+          inferred_categories: string[]
+          inferred_keywords: string[]
+          is_active: boolean | null
+          last_validated_at: string | null
+          name: string
+          quality_score: number | null
+          review_status: string | null
+          reviewed_at: string | null
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          api_endpoint?: string | null
+          auto_collector_id?: string | null
+          collector_generated?: boolean | null
+          created_at?: string
+          data_type?: string | null
+          description?: string | null
+          discovered_at?: string
+          discovered_by_crawler_id?: string | null
+          documentation_url?: string | null
+          id?: string
+          inferred_categories?: string[]
+          inferred_keywords?: string[]
+          is_active?: boolean | null
+          last_validated_at?: string | null
+          name: string
+          quality_score?: number | null
+          review_status?: string | null
+          reviewed_at?: string | null
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          api_endpoint?: string | null
+          auto_collector_id?: string | null
+          collector_generated?: boolean | null
+          created_at?: string
+          data_type?: string | null
+          description?: string | null
+          discovered_at?: string
+          discovered_by_crawler_id?: string | null
+          documentation_url?: string | null
+          id?: string
+          inferred_categories?: string[]
+          inferred_keywords?: string[]
+          is_active?: boolean | null
+          last_validated_at?: string | null
+          name?: string
+          quality_score?: number | null
+          review_status?: string | null
+          reviewed_at?: string | null
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discovered_sources_auto_collector_id_fkey"
+            columns: ["auto_collector_id"]
+            isOneToOne: false
+            referencedRelation: "dynamic_collectors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "discovered_sources_discovered_by_crawler_id_fkey"
+            columns: ["discovered_by_crawler_id"]
+            isOneToOne: false
+            referencedRelation: "auto_crawlers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       dynamic_collectors: {
         Row: {
@@ -404,6 +607,60 @@ export type Database = {
         }
         Relationships: []
       }
+      expansion_rules: {
+        Row: {
+          created_at: string
+          description: string | null
+          expansion_strategy: Json
+          id: string
+          is_active: boolean | null
+          last_triggered_at: string | null
+          max_records_per_run: number | null
+          name: string
+          priority: number | null
+          rule_type: string
+          target_categories: string[] | null
+          target_regions: string[] | null
+          times_triggered: number | null
+          trigger_condition: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          expansion_strategy: Json
+          id?: string
+          is_active?: boolean | null
+          last_triggered_at?: string | null
+          max_records_per_run?: number | null
+          name: string
+          priority?: number | null
+          rule_type: string
+          target_categories?: string[] | null
+          target_regions?: string[] | null
+          times_triggered?: number | null
+          trigger_condition: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          expansion_strategy?: Json
+          id?: string
+          is_active?: boolean | null
+          last_triggered_at?: string | null
+          max_records_per_run?: number | null
+          name?: string
+          priority?: number | null
+          rule_type?: string
+          target_categories?: string[] | null
+          target_regions?: string[] | null
+          times_triggered?: number | null
+          trigger_condition?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       fused_records: {
         Row: {
           base_record_id: string
@@ -529,6 +786,63 @@ export type Database = {
           name?: string
           name_normalized?: string
           state?: string | null
+        }
+        Relationships: []
+      }
+      master_dataset_stats: {
+        Row: {
+          avg_quality_score: number | null
+          bounding_box: Json | null
+          geographic_coverage: Json | null
+          id: string
+          newest_record_at: string | null
+          oldest_record_at: string | null
+          recorded_at: string
+          records_added_this_month: number | null
+          records_added_this_week: number | null
+          records_added_today: number | null
+          records_by_category: Json | null
+          records_by_source: Json | null
+          records_with_high_quality: number | null
+          total_categories: number
+          total_records: number
+          total_sources: number
+        }
+        Insert: {
+          avg_quality_score?: number | null
+          bounding_box?: Json | null
+          geographic_coverage?: Json | null
+          id?: string
+          newest_record_at?: string | null
+          oldest_record_at?: string | null
+          recorded_at?: string
+          records_added_this_month?: number | null
+          records_added_this_week?: number | null
+          records_added_today?: number | null
+          records_by_category?: Json | null
+          records_by_source?: Json | null
+          records_with_high_quality?: number | null
+          total_categories?: number
+          total_records?: number
+          total_sources?: number
+        }
+        Update: {
+          avg_quality_score?: number | null
+          bounding_box?: Json | null
+          geographic_coverage?: Json | null
+          id?: string
+          newest_record_at?: string | null
+          oldest_record_at?: string | null
+          recorded_at?: string
+          records_added_this_month?: number | null
+          records_added_this_week?: number | null
+          records_added_today?: number | null
+          records_by_category?: Json | null
+          records_by_source?: Json | null
+          records_with_high_quality?: number | null
+          total_categories?: number
+          total_records?: number
+          total_sources?: number
         }
         Relationships: []
       }
@@ -681,10 +995,13 @@ export type Database = {
           categories: string[]
           created_at: string
           execution_count: number | null
+          expansion_priority: number | null
           id: string
+          last_expansion_at: string | null
           last_used_at: string
           pattern_hash: string
           prompt_template: string
+          should_auto_expand: boolean | null
           sources_used: string[]
           success_rate: number | null
         }
@@ -694,10 +1011,13 @@ export type Database = {
           categories: string[]
           created_at?: string
           execution_count?: number | null
+          expansion_priority?: number | null
           id?: string
+          last_expansion_at?: string | null
           last_used_at?: string
           pattern_hash: string
           prompt_template: string
+          should_auto_expand?: boolean | null
           sources_used: string[]
           success_rate?: number | null
         }
@@ -707,10 +1027,13 @@ export type Database = {
           categories?: string[]
           created_at?: string
           execution_count?: number | null
+          expansion_priority?: number | null
           id?: string
+          last_expansion_at?: string | null
           last_used_at?: string
           pattern_hash?: string
           prompt_template?: string
+          should_auto_expand?: boolean | null
           sources_used?: string[]
           success_rate?: number | null
         }
@@ -1028,6 +1351,10 @@ export type Database = {
         }
         Returns: string
       }
+      calculate_crawler_next_run: {
+        Args: { p_crawler_id: string }
+        Returns: string
+      }
       calculate_next_run: {
         Args: { p_cron: string; p_from?: string }
         Returns: string
@@ -1053,6 +1380,7 @@ export type Database = {
         Returns: boolean
       }
       execute_nl_query: { Args: { p_sql: string }; Returns: Json }
+      record_master_dataset_stats: { Args: never; Returns: string }
       update_source_performance: {
         Args: {
           p_error_message?: string
