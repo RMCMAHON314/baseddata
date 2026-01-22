@@ -14,7 +14,7 @@ import {
   hasMapboxToken,
   setRuntimeMapboxToken,
 } from '@/lib/mapbox';
-import type { GeoJSONFeatureCollection, MapLayer } from '@/types/omniscient';
+import type { GeoJSONFeature, GeoJSONFeatureCollection, MapLayer } from '@/types/omniscient';
 import { Globe, ExternalLink, Layers, Database, Map, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +25,7 @@ interface MapContainerProps {
   layers?: MapLayer[];
   center?: [number, number];
   zoom?: number;
+  selectedFeature?: GeoJSONFeature | null;
   onFeatureClick?: (feature: any) => void;
   className?: string;
 }
@@ -34,6 +35,7 @@ export function MapContainer({
   layers,
   center = DEFAULT_MAP_CENTER,
   zoom = DEFAULT_ZOOM,
+  selectedFeature,
   onFeatureClick,
   className = '',
 }: MapContainerProps) {
@@ -296,6 +298,99 @@ export function MapContainer({
     map.current.on('mouseleave', 'omniscient-points', () => { if (map.current) map.current.getCanvas().style.cursor = ''; });
 
   }, [filteredFeatures, mapLoaded, onFeatureClick]);
+
+  // ------------------------------------
+  // Selected feature highlight + pan
+  // ------------------------------------
+  useEffect(() => {
+    if (!map.current || !mapLoaded) return;
+
+    const sourceId = 'selected-feature';
+    const ringLayerId = 'selected-feature-ring';
+    const dotLayerId = 'selected-feature-dot';
+
+    const cleanup = () => {
+      if (!map.current) return;
+      if (map.current.getLayer(dotLayerId)) map.current.removeLayer(dotLayerId);
+      if (map.current.getLayer(ringLayerId)) map.current.removeLayer(ringLayerId);
+      if (map.current.getSource(sourceId)) map.current.removeSource(sourceId);
+    };
+
+    if (!selectedFeature) {
+      cleanup();
+      return;
+    }
+
+    if (selectedFeature.geometry?.type !== 'Point') {
+      // We only highlight point features for now.
+      cleanup();
+      return;
+    }
+
+    const coords = selectedFeature.geometry.coordinates as number[];
+    const lngLat: [number, number] = [coords[0], coords[1]];
+
+    // Pan/zoom to the selected record so the relationship is obvious.
+    map.current.flyTo({ center: lngLat, zoom: Math.max(map.current.getZoom(), 11), duration: 900 });
+
+    const category = String(selectedFeature.properties?.category || '').toUpperCase();
+    const color = (CATEGORY_COLORS as Record<string, string>)[category] || CATEGORY_COLORS.GEOSPATIAL || '#3B82F6';
+
+    // Upsert source
+    const data: GeoJSONFeatureCollection = {
+      type: 'FeatureCollection',
+      features: [selectedFeature],
+    };
+
+    const existing = map.current.getSource(sourceId) as mapboxgl.GeoJSONSource | undefined;
+    if (existing) {
+      existing.setData(data as any);
+    } else {
+      map.current.addSource(sourceId, {
+        type: 'geojson',
+        data: data as any,
+      });
+    }
+
+    // Ensure layers exist (and keep their styling in sync with the selected record)
+    if (!map.current.getLayer(ringLayerId)) {
+      map.current.addLayer({
+        id: ringLayerId,
+        type: 'circle',
+        source: sourceId,
+        paint: {
+          'circle-radius': 18,
+          'circle-color': 'transparent',
+          'circle-stroke-width': 4,
+          'circle-stroke-color': color,
+          'circle-stroke-opacity': 0.9,
+        },
+      });
+    } else {
+      map.current.setPaintProperty(ringLayerId, 'circle-stroke-color', color);
+    }
+
+    if (!map.current.getLayer(dotLayerId)) {
+      map.current.addLayer({
+        id: dotLayerId,
+        type: 'circle',
+        source: sourceId,
+        paint: {
+          'circle-radius': 10,
+          'circle-color': color,
+          'circle-stroke-width': 2,
+          'circle-stroke-color': 'hsl(0 0% 100%)',
+        },
+      });
+    } else {
+      map.current.setPaintProperty(dotLayerId, 'circle-color', color);
+    }
+
+    return () => {
+      // If component unmounts while selected, clean up.
+      cleanup();
+    };
+  }, [selectedFeature, mapLoaded]);
 
   // ------------------------------------
   // Token input handlers
