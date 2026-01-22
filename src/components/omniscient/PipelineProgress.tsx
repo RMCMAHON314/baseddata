@@ -165,8 +165,8 @@ export function PipelineProgress({
                         ? 'bg-success/10 border border-success/30' 
                         : 'bg-secondary/50 text-muted-foreground border border-transparent'
                   }`}
-                  animate={isActive ? { scale: [1, 1.02, 1] } : {}}
-                  transition={{ repeat: Infinity, duration: 2 }}
+                  animate={isActive ? { scale: [1, 1.02, 1] } : { scale: 1 }}
+                  transition={isActive ? { repeat: Infinity, duration: 2 } : { duration: 0 }}
                 >
                   {/* Pulse ring for active phase */}
                   {isActive && (

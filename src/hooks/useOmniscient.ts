@@ -98,7 +98,7 @@ export function useOmniscient(): UseOmniscientReturn {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [currentAction, setCurrentAction] = useState<string>('');
-  const actionIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const actionIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const updateStep = useCallback((id: string, updates: Partial<PipelineStep>) => {
     setSteps(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
