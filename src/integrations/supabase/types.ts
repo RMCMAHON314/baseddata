@@ -954,9 +954,14 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           credits_balance: number
+          credits_used: number | null
+          default_location: Json | null
           full_name: string | null
           id: string
+          last_query_at: string | null
+          preferences: Json | null
           stripe_customer_id: string | null
+          tier: string | null
           updated_at: string
           user_id: string
         }
@@ -967,9 +972,14 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           credits_balance?: number
+          credits_used?: number | null
+          default_location?: Json | null
           full_name?: string | null
           id?: string
+          last_query_at?: string | null
+          preferences?: Json | null
           stripe_customer_id?: string | null
+          tier?: string | null
           updated_at?: string
           user_id: string
         }
@@ -980,13 +990,89 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           credits_balance?: number
+          credits_used?: number | null
+          default_location?: Json | null
           full_name?: string | null
           id?: string
+          last_query_at?: string | null
+          preferences?: Json | null
           stripe_customer_id?: string | null
+          tier?: string | null
           updated_at?: string
           user_id?: string
         }
         Relationships: []
+      }
+      queries: {
+        Row: {
+          api_key_id: string | null
+          cache_hit: boolean | null
+          categories_matched: string[] | null
+          completed_at: string | null
+          created_at: string | null
+          credits_used: number | null
+          engine_version: string | null
+          features: Json | null
+          id: string
+          input_type: string
+          insights: Json | null
+          parsed_intent: Json | null
+          processing_time_ms: number | null
+          prompt: string
+          result_count: number | null
+          sources_queried: string[] | null
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          api_key_id?: string | null
+          cache_hit?: boolean | null
+          categories_matched?: string[] | null
+          completed_at?: string | null
+          created_at?: string | null
+          credits_used?: number | null
+          engine_version?: string | null
+          features?: Json | null
+          id?: string
+          input_type?: string
+          insights?: Json | null
+          parsed_intent?: Json | null
+          processing_time_ms?: number | null
+          prompt: string
+          result_count?: number | null
+          sources_queried?: string[] | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          api_key_id?: string | null
+          cache_hit?: boolean | null
+          categories_matched?: string[] | null
+          completed_at?: string | null
+          created_at?: string | null
+          credits_used?: number | null
+          engine_version?: string | null
+          features?: Json | null
+          id?: string
+          input_type?: string
+          insights?: Json | null
+          parsed_intent?: Json | null
+          processing_time_ms?: number | null
+          prompt?: string
+          result_count?: number | null
+          sources_queried?: string[] | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "queries_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       query_patterns: {
         Row: {
@@ -1359,6 +1445,19 @@ export type Database = {
         Args: { p_cron: string; p_from?: string }
         Returns: string
       }
+      complete_query: {
+        Args: {
+          p_categories_matched: string[]
+          p_credits_used?: number
+          p_features: Json
+          p_insights: Json
+          p_processing_time_ms: number
+          p_query_id: string
+          p_result_count: number
+          p_sources_queried: string[]
+        }
+        Returns: undefined
+      }
       create_record_relationship: {
         Args: {
           p_confidence?: number
@@ -1380,6 +1479,15 @@ export type Database = {
         Returns: boolean
       }
       execute_nl_query: { Args: { p_sql: string }; Returns: Json }
+      log_query: {
+        Args: {
+          p_api_key_id?: string
+          p_input_type?: string
+          p_prompt: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       record_master_dataset_stats: { Args: never; Returns: string }
       update_source_performance: {
         Args: {

@@ -120,7 +120,7 @@ export function useMasterDataset() {
     
     const features: GeoJSONFeature[] = records.map(record => ({
       type: 'Feature',
-      geometry: record.geometry as GeoJSONFeature['geometry'],
+      geometry: record.geometry as unknown as GeoJSONFeature['geometry'],
       properties: {
         source: record.source_id,
         source_id: record.source_record_id,
