@@ -515,8 +515,8 @@ export function PremiumMapContainer({
 
 
   return (
-    <div ref={outerRef} className={cn("relative", className)}>
-      <div ref={innerRef} className="absolute inset-0" />
+    <div ref={outerRef} className={cn("relative w-full h-full min-h-[400px]", className)}>
+      <div ref={innerRef} className="absolute inset-0 w-full h-full" />
 
       {/* Token/basemap overlay (never blocks map) */}
       {showTokenOverlay && (
