@@ -71,9 +71,12 @@ export function PremiumMapContainer({
   const [mapLoaded, setMapLoaded] = useState(false);
   const [initNonce, setInitNonce] = useState(0);
   const [stuckHint, setStuckHint] = useState(false);
-  const [basemap, setBasemap] = useState<'mapbox' | 'osm'>('mapbox');
-  const [showTokenOverlay, setShowTokenOverlay] = useState(false);
+  // Default to OSM if no token is available — don't pester user for one
   const [token, setToken] = useState(() => getRuntimeMapboxToken());
+  const [basemap, setBasemap] = useState<'mapbox' | 'osm'>(() => 
+    getRuntimeMapboxToken() && getRuntimeMapboxToken().length > 10 ? 'mapbox' : 'osm'
+  );
+  const [showTokenOverlay, setShowTokenOverlay] = useState(false);
   const [tokenInput, setTokenInput] = useState('');
   const [tokenError, setTokenError] = useState<string | null>(null);
   const [is3D, setIs3D] = useState(true);
