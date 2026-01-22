@@ -6,6 +6,7 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import {
   MAP_STYLES,
+  OSM_RASTER_STYLE,
   DEFAULT_MAP_CENTER,
   DEFAULT_ZOOM,
   CATEGORY_COLORS,
@@ -13,6 +14,7 @@ import {
   hasMapboxToken,
   setRuntimeMapboxToken,
 } from '@/lib/mapbox';
+import { MapTokenOverlay } from '@/components/map/MapTokenOverlay';
 import type { GeoJSONFeature, GeoJSONFeatureCollection, MapLayer } from '@/types/omniscient';
 import { Globe, ExternalLink, Map, Maximize2, Compass, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -67,7 +69,8 @@ export function PremiumMapContainer({
   const innerRef = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
-  const [noToken, setNoToken] = useState(false);
+  const [basemap, setBasemap] = useState<'mapbox' | 'osm'>('mapbox');
+  const [showTokenOverlay, setShowTokenOverlay] = useState(false);
   const [token, setToken] = useState(() => getRuntimeMapboxToken());
   const [tokenInput, setTokenInput] = useState('');
   const [tokenError, setTokenError] = useState<string | null>(null);
@@ -132,7 +135,7 @@ export function PremiumMapContainer({
     }
   };
 
-  // Initialize map
+  // Initialize map - ALWAYS renders a real map (OSM fallback when no valid Mapbox token)
   useEffect(() => {
     if (!innerRef.current) return;
 
@@ -142,10 +145,8 @@ export function PremiumMapContainer({
     map.current = null;
 
     const activeToken = token || getRuntimeMapboxToken();
-    if (!hasMapboxToken() || !activeToken) {
-      setNoToken(true);
-      return;
-    }
+    const hasAnyToken = Boolean((activeToken || '').trim());
+    setShowTokenOverlay(!hasAnyToken);
 
     let cancelled = false;
     renderStartTime.current = Date.now();
@@ -154,25 +155,33 @@ export function PremiumMapContainer({
       await ensureContainerReady();
       if (cancelled) return;
 
-      const check = await validateToken(activeToken);
-      if (cancelled) return;
-      if (!check.ok) {
-        setTokenError('Invalid token');
-        setNoToken(true);
-        return;
+      // Determine which basemap to use
+      let resolvedBasemap: 'mapbox' | 'osm' = basemap;
+      if (resolvedBasemap === 'mapbox') {
+        if (!activeToken || !hasMapboxToken()) {
+          resolvedBasemap = 'osm';
+        } else {
+          const check = await validateToken(activeToken);
+          if (cancelled) return;
+          if (!check.ok) {
+            setTokenError('Invalid Mapbox token — showing free basemap.');
+            setShowTokenOverlay(true);
+            resolvedBasemap = 'osm';
+          }
+        }
       }
 
-      setNoToken(false);
-      mapboxgl.accessToken = activeToken;
+      // Mapbox GL needs some token string to boot; harmless placeholder when missing
+      mapboxgl.accessToken = activeToken || `pk.${'0'.repeat(32)}`;
 
       try {
         map.current = new mapboxgl.Map({
           container: innerRef.current!,
-          style: MAP_STYLES.dark,
+          style: resolvedBasemap === 'mapbox' ? MAP_STYLES.dark : (OSM_RASTER_STYLE as any),
           center,
           zoom,
-          pitch: is3D ? 45 : 0,
-          bearing: is3D ? -10 : 0,
+          pitch: resolvedBasemap === 'mapbox' && is3D ? 45 : 0,
+          bearing: resolvedBasemap === 'mapbox' && is3D ? -10 : 0,
           antialias: true,
           attributionControl: false,
         });
@@ -202,14 +211,15 @@ export function PremiumMapContainer({
         map.current.on('error', (e) => {
           const msg = (e as any)?.error?.message || '';
           if (msg.toLowerCase().includes('unauthorized')) {
-            setTokenError('Invalid token');
-            setNoToken(true);
+            setTokenError('Invalid Mapbox token — showing free basemap.');
+            setShowTokenOverlay(true);
+            setBasemap('osm');
           }
         });
 
         requestAnimationFrame(() => map.current?.resize());
       } catch {
-        setNoToken(true);
+        setShowTokenOverlay(true);
       }
     })();
 
@@ -219,7 +229,7 @@ export function PremiumMapContainer({
       map.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, is3D]);
+  }, [token, is3D, basemap]);
 
   // Resize observer
   useEffect(() => {
@@ -488,7 +498,8 @@ export function PremiumMapContainer({
     setToken(cleaned);
     setTokenInput('');
     setTokenError(null);
-    setNoToken(false);
+    setShowTokenOverlay(false);
+    setBasemap('mapbox');
   };
 
   const toggle3D = useCallback(() => {
@@ -502,63 +513,24 @@ export function PremiumMapContainer({
     });
   }, [is3D]);
 
-  // No token fallback
-  if (noToken) {
-    const featureCount = filteredFeatures?.features?.length || features?.features?.length || 0;
-
-    return (
-      <div className={cn("relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex flex-col items-center justify-center", className)}>
-        <div className="absolute inset-0 bg-grid bg-grid-fade opacity-10 pointer-events-none" />
-
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center p-6 relative z-10 max-w-sm"
-        >
-          <Globe className="w-12 h-12 mx-auto text-cyan-500/50 mb-4" />
-          <h3 className="text-lg font-bold text-white mb-2">Map Visualization</h3>
-          <p className="text-sm text-white/50 mb-4">
-            Add a Mapbox token to enable interactive maps
-          </p>
-
-          {featureCount > 0 && (
-            <div className="bg-white/5 rounded-lg border border-white/10 p-3 mb-4">
-              <p className="text-sm text-white/70">
-                <span className="text-cyan-400 font-bold">{featureCount}</span> features ready to display
-              </p>
-            </div>
-          )}
-
-          <div className="space-y-2 mb-3">
-            <div className="flex gap-2">
-              <Input
-                value={tokenInput}
-                onChange={(e) => setTokenInput(e.target.value)}
-                placeholder='Paste token (pk.xxx...)'
-                className="h-9 bg-white/5 border-white/10 text-white"
-              />
-              <Button size="sm" className="h-9 bg-cyan-500 hover:bg-cyan-400 text-black" onClick={handleSaveToken}>
-                Save
-              </Button>
-            </div>
-            {tokenError && <p className="text-xs text-red-400">{tokenError}</p>}
-          </div>
-
-          <a href="https://account.mapbox.com/access-tokens/" target="_blank" rel="noopener noreferrer">
-            <Button variant="outline" size="sm" className="gap-2 border-white/20 text-white hover:bg-white/10">
-              <Map className="w-4 h-4" />
-              Get Token
-              <ExternalLink className="w-3 h-3" />
-            </Button>
-          </a>
-        </motion.div>
-      </div>
-    );
-  }
 
   return (
     <div ref={outerRef} className={cn("relative", className)}>
       <div ref={innerRef} className="absolute inset-0" />
+
+      {/* Token/basemap overlay (never blocks map) */}
+      {showTokenOverlay && (
+        <MapTokenOverlay
+          basemap={basemap}
+          tokenInput={tokenInput}
+          onTokenInputChange={setTokenInput}
+          tokenError={tokenError}
+          onSaveToken={handleSaveToken}
+          onUseOsm={() => setBasemap('osm')}
+          onUseMapbox={() => setBasemap('mapbox')}
+          className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-[min(520px,calc(100%-2rem))]"
+        />
+      )}
 
       {/* Loading */}
       <AnimatePresence>
@@ -566,17 +538,17 @@ export function PremiumMapContainer({
           <motion.div
             initial={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center z-10"
+            className="absolute inset-0 bg-background/90 flex flex-col items-center justify-center z-10"
           >
             <div className="w-20 h-20 relative mb-6">
-              <div className="absolute inset-0 rounded-full border-2 border-cyan-500/30 animate-ping" />
-              <div className="absolute inset-2 rounded-full border-2 border-cyan-500/50 animate-pulse" />
-              <div className="absolute inset-4 rounded-full bg-cyan-500/20 flex items-center justify-center">
-                <Globe className="w-8 h-8 text-cyan-400 animate-spin-slow" />
+              <div className="absolute inset-0 rounded-full border-2 border-primary/30 animate-ping" />
+              <div className="absolute inset-2 rounded-full border-2 border-primary/50 animate-pulse" />
+              <div className="absolute inset-4 rounded-full bg-primary/20 flex items-center justify-center">
+                <Globe className="w-8 h-8 text-primary animate-spin-slow" />
               </div>
             </div>
-            <h3 className="text-white font-semibold mb-2">Loading Map</h3>
-            <p className="text-white/50 text-sm">
+            <h3 className="text-foreground font-semibold mb-2">Loading Map</h3>
+            <p className="text-muted-foreground text-sm">
               Rendering {(filteredFeatures?.features?.length || 0).toLocaleString()} data points...
             </p>
           </motion.div>
@@ -589,8 +561,8 @@ export function PremiumMapContainer({
           size="icon"
           variant="outline"
           className={cn(
-            "w-9 h-9 backdrop-blur-sm border-white/20",
-            is3D ? "bg-cyan-500/20 text-cyan-400" : "bg-black/50 text-white/70"
+            "w-9 h-9 backdrop-blur-sm",
+            is3D ? "bg-primary/20 text-primary border-primary/30" : "bg-card/50 text-muted-foreground border-border"
           )}
           onClick={toggle3D}
           title={is3D ? "Switch to 2D" : "Switch to 3D"}
@@ -601,7 +573,7 @@ export function PremiumMapContainer({
         <Button
           size="icon"
           variant="outline"
-          className="w-9 h-9 bg-black/50 backdrop-blur-sm border-white/20 text-white/70 hover:text-white"
+          className="w-9 h-9 bg-card/50 backdrop-blur-sm border-border text-muted-foreground hover:text-foreground"
           onClick={() => {
             if (outerRef.current?.requestFullscreen) {
               outerRef.current.requestFullscreen();

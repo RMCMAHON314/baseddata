@@ -422,7 +422,8 @@ export function MapContainer({
     setToken(cleaned);
     setTokenInput('');
     setTokenError(null);
-    setNoToken(false);
+    setShowTokenOverlay(false);
+    setBasemap('mapbox');
   };
 
   // ------------------------------------
