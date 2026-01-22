@@ -85,6 +85,9 @@ export default function Omniscient() {
             collectedData={response.collected_data}
             insights={response.insights}
             creditsUsed={response.credits_used}
+            processingTimeMs={response.processing_time_ms}
+            sourcesUsed={response.sources_used}
+            enrichments={response.enrichments || []}
             onBack={handleBack}
           />
         )}
