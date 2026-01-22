@@ -26,6 +26,10 @@ export const CATEGORY_COLORS: Record<string, string> = {
   IMAGERY: '#6366F1',        // Indigo
   GOVERNMENT: '#0EA5E9',     // Sky
   MARINE: '#06B6D4',         // Cyan
+  ENERGY: '#FACC15',         // Yellow
+  HEALTH: '#F43F5E',         // Rose
+  RECREATION: '#22C55E',     // Green
+  RESEARCH: '#A855F7',       // Purple-bright
 };
 
 // Convert lat/lng to bounding box

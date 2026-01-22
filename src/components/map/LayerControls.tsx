@@ -23,6 +23,10 @@ const CATEGORY_ICONS: Record<DataCategory, string> = {
   IMAGERY: '🛰️',
   GOVERNMENT: '🏛️',
   MARINE: '⚓',
+  ENERGY: '⚡',
+  HEALTH: '🏥',
+  RECREATION: '🏕️',
+  RESEARCH: '🔬',
 };
 
 export function LayerControls({ layers, onToggle, className = '' }: LayerControlsProps) {
