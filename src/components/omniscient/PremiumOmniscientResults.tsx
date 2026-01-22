@@ -9,7 +9,7 @@ import {
   CheckCircle2, Sparkles, Copy, Search, Download, Eye
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Logo } from '@/components/Logo';
 import { SimpleMap } from '@/components/map/SimpleMap';
@@ -286,118 +286,112 @@ export function PremiumOmniscientResults({
           />
         </div>
 
-        {/* Right Sidebar - Data Explorer (expanded) */}
-        <aside className="flex-1 h-full flex flex-col map-panel-glass border-l border-white/10 hidden lg:flex min-w-0">
-          <Tabs defaultValue="data" className="flex-1 flex flex-col">
-            <TabsList className="flex-none bg-transparent p-0 h-auto border-b border-white/10">
-              <TabsTrigger
-                value="data"
-                className="data-[state=active]:bg-white/10 rounded-none border-b-2 border-transparent data-[state=active]:border-cyan-400 px-4 py-3.5 gap-2 text-white/70 data-[state=active]:text-white"
-              >
-                <Eye className="w-4 h-4" />
-                Data
+        {/* Data Panels - All visible at once */}
+        <div className="flex-1 h-full flex min-w-0 border-l border-white/10">
+          {/* Data Cards Column */}
+          <div className="w-[280px] flex-shrink-0 flex flex-col map-panel-glass border-r border-white/10">
+            <div className="flex-none px-4 py-3 border-b border-white/10">
+              <div className="flex items-center gap-2">
+                <Eye className="w-4 h-4 text-cyan-400" />
+                <span className="text-sm font-medium text-white">Data</span>
                 <span className="text-xs text-white/50">({totalRecords})</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="insights"
-                className="data-[state=active]:bg-white/10 rounded-none border-b-2 border-transparent data-[state=active]:border-cyan-400 px-4 py-3.5 gap-2 text-white/70 data-[state=active]:text-white"
-              >
-                <Lightbulb className="w-4 h-4" />
-                Insights
-              </TabsTrigger>
-              <TabsTrigger
-                value="grid"
-                className="data-[state=active]:bg-white/10 rounded-none border-b-2 border-transparent data-[state=active]:border-cyan-400 px-4 py-3.5 gap-2 text-white/70 data-[state=active]:text-white"
-              >
-                <Table className="w-4 h-4" />
-                Grid
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Data Tab */}
-            <TabsContent value="data" className="flex-1 overflow-hidden m-0">
-              <ScrollArea className="h-full">
-                <div ref={dataScrollRef} className="p-4 space-y-3">
-                  {features?.features?.slice(0, 50).map((record, i) => (
-                    <PremiumRecordCard
-                      key={i}
-                      id={`record-card-${i}`}
-                      record={record}
-                      index={i}
-                      isSelected={selectedFeature === record}
-                      isHovered={hoveredFeature === record}
-                      onHover={() => setHoveredFeature(record)}
-                      onHoverEnd={() => hoveredFeature === record && setHoveredFeature(null)}
-                      onClick={() => handleFeatureClick(record)}
-                    />
-                  ))}
-                  {(!features?.features?.length) && (
-                    <div className="text-center py-12 text-white/50">
-                      <Database className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                      <p>No data available</p>
-                    </div>
-                  )}
-                </div>
-              </ScrollArea>
-            </TabsContent>
-
-            {/* Insights Tab */}
-            <TabsContent value="insights" className="flex-1 overflow-y-auto p-5 space-y-5 m-0 scrollbar-hide">
-              {insights ? (
-                <>
-                  {/* AI Summary */}
-                  <div className="p-4 rounded-xl bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Sparkles className="w-4 h-4 text-cyan-400" />
-                      <span className="text-sm font-medium text-cyan-400">AI Summary</span>
-                    </div>
-                    <p className="text-white/80 text-sm leading-relaxed">{insights.summary}</p>
+              </div>
+            </div>
+            <ScrollArea className="flex-1">
+              <div ref={dataScrollRef} className="p-3 space-y-2">
+                {features?.features?.slice(0, 50).map((record, i) => (
+                  <PremiumRecordCard
+                    key={i}
+                    id={`record-card-${i}`}
+                    record={record}
+                    index={i}
+                    isSelected={selectedFeature === record}
+                    isHovered={hoveredFeature === record}
+                    onHover={() => setHoveredFeature(record)}
+                    onHoverEnd={() => hoveredFeature === record && setHoveredFeature(null)}
+                    onClick={() => handleFeatureClick(record)}
+                  />
+                ))}
+                {(!features?.features?.length) && (
+                  <div className="text-center py-8 text-white/50">
+                    <Database className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                    <p className="text-sm">No data</p>
                   </div>
+                )}
+              </div>
+            </ScrollArea>
+          </div>
 
-                  {/* Key Findings */}
-                  {insights.key_findings?.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="text-white/50 text-xs font-medium uppercase tracking-wide">
-                        Key Findings
-                      </h4>
-                      {insights.key_findings.map((finding, i) => (
-                        <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-white/5">
-                          <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                          </div>
-                          <p className="text-white/70 text-sm">{finding}</p>
-                        </div>
-                      ))}
+          {/* Insights Column */}
+          <div className="w-[260px] flex-shrink-0 flex flex-col map-panel-glass border-r border-white/10">
+            <div className="flex-none px-4 py-3 border-b border-white/10">
+              <div className="flex items-center gap-2">
+                <Lightbulb className="w-4 h-4 text-amber-400" />
+                <span className="text-sm font-medium text-white">Insights</span>
+              </div>
+            </div>
+            <ScrollArea className="flex-1">
+              <div className="p-3 space-y-3">
+                {insights ? (
+                  <>
+                    {/* AI Summary */}
+                    <div className="p-3 rounded-lg bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Sparkles className="w-3 h-3 text-cyan-400" />
+                        <span className="text-xs font-medium text-cyan-400">AI Summary</span>
+                      </div>
+                      <p className="text-white/80 text-xs leading-relaxed">{insights.summary}</p>
                     </div>
-                  )}
 
-                  {/* Recommendations */}
-                  {insights.recommendations?.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="text-white/50 text-xs font-medium uppercase tracking-wide">
-                        Recommendations
-                      </h4>
-                      {insights.recommendations.map((rec, i) => (
-                        <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-white/5">
-                          <div className="w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                            <Lightbulb className="w-3 h-3 text-amber-400" />
+                    {/* Key Findings */}
+                    {insights.key_findings?.length > 0 && (
+                      <div className="space-y-1.5">
+                        <h4 className="text-white/50 text-[10px] font-medium uppercase tracking-wide">
+                          Key Findings
+                        </h4>
+                        {insights.key_findings.map((finding, i) => (
+                          <div key={i} className="flex items-start gap-2 p-2 rounded-md bg-white/5">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-400 mt-0.5 flex-shrink-0" />
+                            <p className="text-white/70 text-xs">{finding}</p>
                           </div>
-                          <p className="text-white/70 text-sm">{rec}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="text-center py-12 text-white/50">
-                  <Lightbulb className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                  <p>No AI insights generated</p>
-                </div>
-              )}
-            </TabsContent>
+                        ))}
+                      </div>
+                    )}
 
-            {/* Grid Tab */}
-            <TabsContent value="grid" className="flex-1 overflow-hidden m-0">
+                    {/* Recommendations */}
+                    {insights.recommendations?.length > 0 && (
+                      <div className="space-y-1.5">
+                        <h4 className="text-white/50 text-[10px] font-medium uppercase tracking-wide">
+                          Recommendations
+                        </h4>
+                        {insights.recommendations.map((rec, i) => (
+                          <div key={i} className="flex items-start gap-2 p-2 rounded-md bg-white/5">
+                            <Lightbulb className="w-3 h-3 text-amber-400 mt-0.5 flex-shrink-0" />
+                            <p className="text-white/70 text-xs">{rec}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="text-center py-8 text-white/50">
+                    <Lightbulb className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                    <p className="text-sm">No insights</p>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+
+          {/* Grid Column - Expands */}
+          <div className="flex-1 flex flex-col min-w-0">
+            <div className="flex-none px-4 py-3 border-b border-white/10">
+              <div className="flex items-center gap-2">
+                <Table className="w-4 h-4 text-blue-400" />
+                <span className="text-sm font-medium text-white">Grid</span>
+              </div>
+            </div>
+            <div className="flex-1 overflow-hidden">
               {features?.features?.length ? (
                 <DataGrid
                   features={features.features}
@@ -407,13 +401,13 @@ export function PremiumOmniscientResults({
                 />
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-white/50">
-                  <Database className="w-12 h-12 mb-3 opacity-30" />
-                  <p>No data</p>
+                  <Database className="w-10 h-10 mb-2 opacity-30" />
+                  <p className="text-sm">No data</p>
                 </div>
               )}
-            </TabsContent>
-          </Tabs>
-        </aside>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Detail Panel (slides in from right) */}
