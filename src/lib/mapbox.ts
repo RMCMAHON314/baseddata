@@ -7,9 +7,39 @@
 
 export const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
+// Runtime token support:
+// - If VITE_MAPBOX_TOKEN is not set, users can paste a public token in-app.
+// - Stored in localStorage so the map works immediately in preview/prod.
+const RUNTIME_TOKEN_KEY = 'baseddata_mapbox_token';
+
+export const getRuntimeMapboxToken = (): string => {
+  if (MAPBOX_TOKEN) return MAPBOX_TOKEN;
+  try {
+    if (typeof window === 'undefined') return '';
+    const stored = window.localStorage.getItem(RUNTIME_TOKEN_KEY);
+    return stored || '';
+  } catch {
+    return '';
+  }
+};
+
+export const setRuntimeMapboxToken = (token: string) => {
+  try {
+    if (typeof window === 'undefined') return;
+    if (!token) {
+      window.localStorage.removeItem(RUNTIME_TOKEN_KEY);
+      return;
+    }
+    window.localStorage.setItem(RUNTIME_TOKEN_KEY, token);
+  } catch {
+    // ignore
+  }
+};
+
 // Check if token is available
 export const hasMapboxToken = (): boolean => {
-  return Boolean(MAPBOX_TOKEN && MAPBOX_TOKEN.length > 10);
+  const token = getRuntimeMapboxToken();
+  return Boolean(token && token.length > 10);
 };
 
 export const MAP_STYLES = {

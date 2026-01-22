@@ -36,9 +36,9 @@ export function LayerControls({ layers, onToggle, className = '' }: LayerControl
     <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
-      className={`bg-gray-900/95 backdrop-blur-sm rounded-xl border border-white/10 p-4 ${className}`}
+      className={`bg-card/90 backdrop-blur-sm rounded-xl border border-border/60 p-4 ${className}`}
     >
-      <div className="flex items-center gap-2 mb-3 text-white/80">
+      <div className="flex items-center gap-2 mb-3 text-muted-foreground">
         <Layers className="w-4 h-4" />
         <span className="text-sm font-medium">Data Layers</span>
       </div>
@@ -50,8 +50,8 @@ export function LayerControls({ layers, onToggle, className = '' }: LayerControl
             onClick={() => onToggle(layer.id)}
             className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all ${
               layer.visible
-                ? 'bg-white/10 text-white'
-                : 'bg-transparent text-white/50 hover:bg-white/5'
+                ? 'bg-secondary/60 text-foreground'
+                : 'bg-transparent text-muted-foreground hover:bg-secondary/40'
             }`}
           >
             <div
@@ -61,13 +61,13 @@ export function LayerControls({ layers, onToggle, className = '' }: LayerControl
             <span className="text-sm">
               {CATEGORY_ICONS[layer.category]} {layer.name}
             </span>
-            <span className="ml-auto text-xs text-white/40">
+            <span className="ml-auto text-xs text-muted-foreground">
               {layer.features.length}
             </span>
             {layer.visible ? (
-              <Eye className="w-4 h-4 text-white/60" />
+              <Eye className="w-4 h-4 text-muted-foreground" />
             ) : (
-              <EyeOff className="w-4 h-4 text-white/40" />
+              <EyeOff className="w-4 h-4 text-muted-foreground" />
             )}
           </button>
         ))}
