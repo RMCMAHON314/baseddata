@@ -1,9 +1,13 @@
-// OMNISCIENT - Data Service Layer
-// Clean, typed API for data operations
+// OMNISCIENT v1.1 - Data Service Layer
+// Clean, typed API for core data operations
 
 import { supabase } from "@/integrations/supabase/client";
 
-export async function getUserCredits(userId: string) {
+// ============================================================================
+// USER OPERATIONS
+// ============================================================================
+
+export async function getUserCredits(userId: string): Promise<number> {
   const { data, error } = await supabase
     .from("profiles")
     .select("credits_balance")
@@ -12,17 +16,6 @@ export async function getUserCredits(userId: string) {
 
   if (error) throw error;
   return data.credits_balance;
-}
-
-export async function getCreditTransactions(userId: string) {
-  const { data, error } = await supabase
-    .from("credit_transactions")
-    .select("*")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
-
-  if (error) throw error;
-  return data;
 }
 
 export async function getUserDatasets(userId: string) {
@@ -48,21 +41,13 @@ export async function getDataset(datasetId: string) {
   return data;
 }
 
-// Get schema registry entries
-export async function getSchemaRegistry() {
-  const { data, error } = await supabase
-    .from("schema_registry")
-    .select("*")
-    .order("row_count", { ascending: false });
+// ============================================================================
+// DATA TAP OPERATIONS
+// ============================================================================
 
-  if (error) throw error;
-  return data;
-}
-
-// Get data sources
-export async function getDataSources() {
+export async function getSourcePerformance() {
   const { data, error } = await supabase
-    .from("data_sources")
+    .from("source_performance")
     .select("*")
     .order("reliability_score", { ascending: false });
 
@@ -70,40 +55,60 @@ export async function getDataSources() {
   return data;
 }
 
-// Get platform stats
-export async function getPlatformStats() {
-  const { data: datasets, error: datasetsError } = await supabase
-    .from("datasets")
-    .select("row_count, credits_used, created_at")
-    .eq("status", "complete");
+export async function getRecordCount(): Promise<number> {
+  const { count, error } = await supabase
+    .from("records")
+    .select("*", { count: "exact", head: true });
 
-  if (datasetsError) throw datasetsError;
+  if (error) throw error;
+  return count || 0;
+}
 
-  const { data: schemas, error: schemasError } = await supabase
-    .from("schema_registry")
-    .select("table_name, row_count");
+export async function getQueryPatterns() {
+  const { data, error } = await supabase
+    .from("query_patterns")
+    .select("*")
+    .order("execution_count", { ascending: false })
+    .limit(20);
 
-  if (schemasError) throw schemasError;
+  if (error) throw error;
+  return data;
+}
 
-  const { data: sources, error: sourcesError } = await supabase
-    .from("data_sources")
-    .select("domain, reliability_score");
+export async function getLocationCache() {
+  const { data, error } = await supabase
+    .from("location_cache")
+    .select("*")
+    .order("hit_count", { ascending: false })
+    .limit(50);
 
-  if (sourcesError) throw sourcesError;
+  if (error) throw error;
+  return data;
+}
 
-  const totalRows = datasets?.reduce((acc, d) => acc + (d.row_count || 0), 0) || 0;
-  const totalDatasets = datasets?.length || 0;
-  const totalSchemas = schemas?.length || 0;
-  const totalSources = sources?.length || 0;
-  const avgReliability = sources?.length 
-    ? sources.reduce((acc, s) => acc + (s.reliability_score || 0), 0) / sources.length 
+// ============================================================================
+// DATA TAP STATS
+// ============================================================================
+
+export async function getDataTapStats() {
+  const [recordCount, sources, patterns, locations] = await Promise.all([
+    getRecordCount(),
+    getSourcePerformance(),
+    getQueryPatterns(),
+    getLocationCache(),
+  ]);
+
+  const activeSources = sources?.filter(s => s.is_active) || [];
+  const avgReliability = activeSources.length
+    ? activeSources.reduce((acc, s) => acc + (s.reliability_score || 0), 0) / activeSources.length
     : 0;
 
   return {
-    totalRows,
-    totalDatasets,
-    totalSchemas,
-    totalSources,
+    totalRecords: recordCount,
+    totalSources: sources?.length || 0,
+    activeSources: activeSources.length,
     avgReliability: Math.round(avgReliability * 100),
+    queryPatterns: patterns?.length || 0,
+    cachedLocations: locations?.length || 0,
   };
 }
