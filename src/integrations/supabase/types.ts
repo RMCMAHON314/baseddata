@@ -214,6 +214,169 @@ export type Database = {
         }
         Relationships: []
       }
+      enrichment_queue: {
+        Row: {
+          attempts: number | null
+          completed_at: string | null
+          created_at: string
+          enrichment_type: string
+          error_message: string | null
+          id: string
+          last_attempt_at: string | null
+          priority: number | null
+          record_id: string
+          result: Json | null
+          status: string | null
+        }
+        Insert: {
+          attempts?: number | null
+          completed_at?: string | null
+          created_at?: string
+          enrichment_type: string
+          error_message?: string | null
+          id?: string
+          last_attempt_at?: string | null
+          priority?: number | null
+          record_id: string
+          result?: Json | null
+          status?: string | null
+        }
+        Update: {
+          attempts?: number | null
+          completed_at?: string | null
+          created_at?: string
+          enrichment_type?: string
+          error_message?: string | null
+          id?: string
+          last_attempt_at?: string | null
+          priority?: number | null
+          record_id?: string
+          result?: Json | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enrichment_queue_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enrichment_stats: {
+        Row: {
+          avg_enrichment_time_ms: number | null
+          category: string
+          created_at: string
+          date: string
+          fusion_operations: number | null
+          id: string
+          records_enriched: number | null
+          relationships_created: number | null
+        }
+        Insert: {
+          avg_enrichment_time_ms?: number | null
+          category: string
+          created_at?: string
+          date?: string
+          fusion_operations?: number | null
+          id?: string
+          records_enriched?: number | null
+          relationships_created?: number | null
+        }
+        Update: {
+          avg_enrichment_time_ms?: number | null
+          category?: string
+          created_at?: string
+          date?: string
+          fusion_operations?: number | null
+          id?: string
+          records_enriched?: number | null
+          relationships_created?: number | null
+        }
+        Relationships: []
+      }
+      fused_records: {
+        Row: {
+          base_record_id: string
+          created_at: string
+          enrichment_count: number | null
+          enrichment_sources: string[]
+          fused_properties: Json
+          fusion_score: number | null
+          id: string
+          last_enriched_at: string
+        }
+        Insert: {
+          base_record_id: string
+          created_at?: string
+          enrichment_count?: number | null
+          enrichment_sources?: string[]
+          fused_properties?: Json
+          fusion_score?: number | null
+          id?: string
+          last_enriched_at?: string
+        }
+        Update: {
+          base_record_id?: string
+          created_at?: string
+          enrichment_count?: number | null
+          enrichment_sources?: string[]
+          fused_properties?: Json
+          fusion_score?: number | null
+          id?: string
+          last_enriched_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fused_records_base_record_id_fkey"
+            columns: ["base_record_id"]
+            isOneToOne: true
+            referencedRelation: "records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      knowledge_edges: {
+        Row: {
+          created_at: string
+          evidence: Json | null
+          id: string
+          object_id: string
+          object_type: string
+          predicate: string
+          subject_id: string
+          subject_type: string
+          updated_at: string
+          weight: number | null
+        }
+        Insert: {
+          created_at?: string
+          evidence?: Json | null
+          id?: string
+          object_id: string
+          object_type: string
+          predicate: string
+          subject_id: string
+          subject_type: string
+          updated_at?: string
+          weight?: number | null
+        }
+        Update: {
+          created_at?: string
+          evidence?: Json | null
+          id?: string
+          object_id?: string
+          object_type?: string
+          predicate?: string
+          subject_id?: string
+          subject_type?: string
+          updated_at?: string
+          weight?: number | null
+        }
+        Relationships: []
+      }
       location_cache: {
         Row: {
           admin_level: string | null
@@ -381,6 +544,54 @@ export type Database = {
           },
         ]
       }
+      record_relationships: {
+        Row: {
+          confidence_score: number | null
+          created_at: string
+          distance_meters: number | null
+          id: string
+          metadata: Json | null
+          relationship_type: string
+          source_record_id: string
+          target_record_id: string
+        }
+        Insert: {
+          confidence_score?: number | null
+          created_at?: string
+          distance_meters?: number | null
+          id?: string
+          metadata?: Json | null
+          relationship_type: string
+          source_record_id: string
+          target_record_id: string
+        }
+        Update: {
+          confidence_score?: number | null
+          created_at?: string
+          distance_meters?: number | null
+          id?: string
+          metadata?: Json | null
+          relationship_type?: string
+          source_record_id?: string
+          target_record_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "record_relationships_source_record_id_fkey"
+            columns: ["source_record_id"]
+            isOneToOne: false
+            referencedRelation: "records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "record_relationships_target_record_id_fkey"
+            columns: ["target_record_id"]
+            isOneToOne: false
+            referencedRelation: "records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       records: {
         Row: {
           category: string
@@ -534,6 +745,18 @@ export type Database = {
         }
         Returns: boolean
       }
+      add_knowledge_edge: {
+        Args: {
+          p_evidence?: Json
+          p_object_id: string
+          p_object_type: string
+          p_predicate: string
+          p_subject_id: string
+          p_subject_type: string
+          p_weight?: number
+        }
+        Returns: string
+      }
       cache_location: {
         Args: {
           p_admin_level?: string
@@ -544,6 +767,17 @@ export type Database = {
           p_county?: string
           p_name: string
           p_state?: string
+        }
+        Returns: string
+      }
+      create_record_relationship: {
+        Args: {
+          p_confidence?: number
+          p_distance?: number
+          p_metadata?: Json
+          p_relationship_type: string
+          p_source_id: string
+          p_target_id: string
         }
         Returns: string
       }
@@ -566,6 +800,14 @@ export type Database = {
           p_success: boolean
         }
         Returns: undefined
+      }
+      upsert_fused_record: {
+        Args: {
+          p_base_record_id: string
+          p_properties: Json
+          p_sources: string[]
+        }
+        Returns: string
       }
       upsert_record: {
         Args: {

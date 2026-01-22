@@ -120,7 +120,7 @@ export interface OmniscientQuery {
   timestamp?: string;
 }
 
-// Response from the OMNISCIENT v4.0 edge function
+// Response from the OMNISCIENT v4.1 edge function
 export interface OmniscientResponse {
   success: boolean;
   query_id: string;
@@ -134,11 +134,56 @@ export interface OmniscientResponse {
   sources_used: string[];
   processing_time_ms: number;
   credits_used: number;
-  data_tap: {
-    records_persisted: number;
-    records_deduplicated: number;
-    dynamic_genesis?: boolean;
-  };
+  data_tap: DataTapStats;
+}
+
+// Data Flywheel Statistics
+export interface DataTapStats {
+  records_persisted: number;
+  records_deduplicated: number;
+  dynamic_genesis?: boolean;
+  enrichment_queued?: boolean;
+}
+
+// Enrichment & Fusion Types
+export interface EnrichmentResult {
+  enrichedCount: number;
+  relationshipsCreated: number;
+  knowledgeEdges: number;
+  fusedRecords: number;
+  aiInsight?: string;
+  processingTimeMs: number;
+}
+
+export interface FusedRecord {
+  id: string;
+  base_record_id: string;
+  enrichment_sources: string[];
+  fused_properties: Record<string, any>;
+  fusion_score: number;
+  enrichment_count: number;
+  last_enriched_at: string;
+}
+
+export interface RecordRelationship {
+  id: string;
+  source_record_id: string;
+  target_record_id: string;
+  relationship_type: 'near' | 'affects' | 'regulates' | 'contains' | 'overlaps';
+  confidence_score: number;
+  distance_meters?: number;
+  metadata: Record<string, any>;
+}
+
+export interface KnowledgeEdge {
+  id: string;
+  subject_type: 'record' | 'category' | 'location' | 'source';
+  subject_id: string;
+  predicate: string;
+  object_type: string;
+  object_id: string;
+  weight: number;
+  evidence: any[];
 }
 
 export interface OmniscientResult {
@@ -271,7 +316,34 @@ export const OMNISCIENT_CREDITS = {
   medium: 15,          // 4-7 sources
   complex: 30,         // 8+ sources
   dynamic_genesis: 10, // When AI generates new collectors
+  enrichment: 5,       // Cross-source fusion
   satellite: 10,       // Additional for imagery
   pdf_report: 5,       // PDF generation
   historical: 10,      // Historical data (>1 year)
+};
+
+// Relationship predicates for knowledge graph
+export const RELATIONSHIP_PREDICATES = {
+  SPATIAL: ['near', 'within', 'overlaps', 'contains'] as const,
+  FUNCTIONAL: ['affects', 'regulates', 'supports', 'depends_on'] as const,
+  TEMPORAL: ['precedes', 'follows', 'concurrent_with'] as const,
+  SEMANTIC: ['related_to', 'similar_to', 'locatedAt', 'belongsTo'] as const,
+};
+
+// Enrichment strategies by category
+export const ENRICHMENT_STRATEGIES: Record<DataCategory, DataCategory[]> = {
+  WILDLIFE: ['WEATHER', 'REGULATIONS', 'GEOSPATIAL'],
+  WEATHER: ['GEOSPATIAL'],
+  GOVERNMENT: ['ECONOMIC', 'DEMOGRAPHICS', 'GEOSPATIAL'],
+  MARINE: ['WEATHER', 'REGULATIONS', 'TRANSPORTATION'],
+  TRANSPORTATION: ['GEOSPATIAL', 'WEATHER'],
+  ECONOMIC: ['DEMOGRAPHICS', 'GOVERNMENT', 'GEOSPATIAL'],
+  DEMOGRAPHICS: ['ECONOMIC', 'GOVERNMENT'],
+  REGULATIONS: ['GOVERNMENT', 'GEOSPATIAL'],
+  GEOSPATIAL: ['WEATHER', 'DEMOGRAPHICS'],
+  ENERGY: ['ECONOMIC', 'REGULATIONS', 'GEOSPATIAL'],
+  HEALTH: ['DEMOGRAPHICS', 'ECONOMIC', 'GEOSPATIAL'],
+  RECREATION: ['WEATHER', 'GEOSPATIAL', 'REGULATIONS'],
+  RESEARCH: ['ECONOMIC', 'GOVERNMENT', 'DEMOGRAPHICS'],
+  IMAGERY: ['GEOSPATIAL', 'WEATHER'],
 };

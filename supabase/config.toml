@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.omniscient]
 verify_jwt = false
+
+[functions.enrich]
+verify_jwt = false
