@@ -835,6 +835,138 @@ function generateInsights(features: GeoJSONFeature[], intent: ParsedIntent): {
 }
 
 // ============================================================================
+// PERSISTENT DATA TAP - Every query grows the dataset
+// ============================================================================
+
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+async function persistRecords(
+  supabase: any, 
+  features: GeoJSONFeature[]
+): Promise<{ persisted: number; deduplicated: number }> {
+  let persisted = 0;
+  let deduplicated = 0;
+  
+  for (const feature of features) {
+    try {
+      const { data, error } = await supabase.rpc('upsert_record', {
+        p_source_id: feature.properties.source,
+        p_source_record_id: feature.properties.source_id,
+        p_category: feature.properties.category,
+        p_name: feature.properties.name,
+        p_description: feature.properties.description || null,
+        p_geometry: feature.geometry,
+        p_properties: feature.properties,
+      });
+      
+      if (!error && data) {
+        persisted++;
+      } else if (error?.code === '23505') {
+        deduplicated++;
+      }
+    } catch (e) {
+      console.error('Record persist error:', e);
+    }
+  }
+  
+  return { persisted, deduplicated };
+}
+
+async function trackSourcePerformance(
+  supabase: any,
+  sources: Array<{ name: string; status: string; count: number; time_ms: number; error?: string }>
+): Promise<void> {
+  const sourceIdMap: Record<string, string> = {
+    'eBird': 'ebird',
+    'iNaturalist': 'inaturalist',
+    'GBIF': 'gbif',
+    'NOAA Weather': 'noaa_weather',
+    'NOAA Tides': 'noaa_tides',
+    'OpenStreetMap': 'osm',
+    'USGS': 'usgs',
+    'USASpending': 'usaspending',
+    'Hunting Regulations': 'regulations_hunting',
+  };
+  
+  for (const source of sources) {
+    const sourceId = sourceIdMap[source.name] || source.name.toLowerCase().replace(/\s+/g, '_');
+    
+    try {
+      await supabase.rpc('update_source_performance', {
+        p_source_id: sourceId,
+        p_source_name: source.name,
+        p_success: source.status === 'success' || source.status === 'empty',
+        p_records_collected: source.count,
+        p_response_time_ms: source.time_ms,
+        p_error_message: source.error || null,
+      });
+    } catch (e) {
+      console.error('Source performance tracking error:', e);
+    }
+  }
+}
+
+async function cacheLocation(
+  supabase: any,
+  location: { name: string; center?: [number, number]; bbox?: [number, number, number, number] } | null
+): Promise<void> {
+  if (!location?.name || !location.center) return;
+  
+  try {
+    await supabase.rpc('cache_location', {
+      p_name: location.name,
+      p_center: { type: 'Point', coordinates: location.center },
+      p_bbox: location.bbox ? { 
+        type: 'Polygon', 
+        coordinates: [[
+          [location.bbox[0], location.bbox[1]],
+          [location.bbox[2], location.bbox[1]],
+          [location.bbox[2], location.bbox[3]],
+          [location.bbox[0], location.bbox[3]],
+          [location.bbox[0], location.bbox[1]],
+        ]] 
+      } : null,
+    });
+  } catch (e) {
+    console.error('Location cache error:', e);
+  }
+}
+
+async function trackQueryPattern(
+  supabase: any,
+  prompt: string,
+  intent: ParsedIntent,
+  sources: Array<{ name: string; status: string; count: number; time_ms: number }>,
+  processingTime: number,
+  featureCount: number
+): Promise<void> {
+  const patternKey = [...intent.categories.sort(), ...intent.keywords.slice(0, 3).sort()].join('|');
+  const patternHash = btoa(patternKey).slice(0, 32);
+  
+  const promptTemplate = prompt
+    .replace(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b/g, '[LOCATION]')
+    .replace(/\d{4}/g, '[YEAR]')
+    .slice(0, 200);
+  
+  try {
+    await supabase
+      .from('query_patterns')
+      .upsert({
+        pattern_hash: patternHash,
+        prompt_template: promptTemplate,
+        categories: intent.categories,
+        sources_used: sources.filter(s => s.status === 'success').map(s => s.name),
+        avg_record_count: featureCount,
+        avg_processing_time_ms: processingTime,
+        last_used_at: new Date().toISOString(),
+      }, { onConflict: 'pattern_hash' });
+  } catch (e) {
+    console.error('Query pattern tracking error:', e);
+  }
+}
+
+// ============================================================================
 // MAIN DATA COLLECTION PIPELINE
 // ============================================================================
 
@@ -852,7 +984,6 @@ async function collectAllData(intent: ParsedIntent): Promise<{
     limit: 50,
   };
   
-  // Define collectors based on categories
   const collectors: Array<{ name: string; fn: () => Promise<GeoJSONFeature[]> }> = [];
   
   if (intent.categories.includes('WILDLIFE')) {
@@ -882,7 +1013,6 @@ async function collectAllData(intent: ParsedIntent): Promise<{
     collectors.push({ name: 'Hunting Regulations', fn: () => collectHuntingRegulations(params, bbox) });
   }
   
-  // Execute all collectors in parallel
   const results = await Promise.allSettled(
     collectors.map(async (c) => {
       const start = Date.now();
@@ -921,13 +1051,15 @@ async function collectAllData(intent: ParsedIntent): Promise<{
 }
 
 // ============================================================================
-// MAIN HANDLER
+// MAIN HANDLER - THE ULTIMATE DATA TAP
 // ============================================================================
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
     const { prompt, userId } = await req.json();
@@ -939,7 +1071,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('🌍 OMNISCIENT: Processing query:', prompt);
+    console.log('🌍 OMNISCIENT v1.1: Processing query:', prompt);
     const startTime = Date.now();
 
     // Phase 1: Analyze intent
@@ -956,7 +1088,13 @@ serve(async (req) => {
     console.log('💡 Phase 3: Insight Generation...');
     const insights = generateInsights(features, intent);
 
-    // Phase 4: Format tabular data
+    // Phase 4: PERSIST TO DATA TAP (parallel)
+    console.log('💾 Phase 4: Persisting to Data Tap...');
+    const persistPromise = persistRecords(supabase, features);
+    const sourceTrackPromise = trackSourcePerformance(supabase, sources);
+    const locationCachePromise = cacheLocation(supabase, intent.location);
+    
+    // Phase 5: Format tabular data
     const tabularData = features.slice(0, 100).map(f => ({
       name: f.properties.name,
       category: f.properties.category,
@@ -967,7 +1105,19 @@ serve(async (req) => {
     }));
 
     const processingTime = Date.now() - startTime;
-    console.log(`✅ OMNISCIENT complete: ${features.length} features in ${processingTime}ms`);
+    
+    // Track query pattern
+    const patternTrackPromise = trackQueryPattern(supabase, prompt, intent, sources, processingTime, features.length);
+    
+    // Wait for all persistence operations
+    const [persistResult] = await Promise.all([
+      persistPromise,
+      sourceTrackPromise,
+      locationCachePromise,
+      patternTrackPromise,
+    ]);
+
+    console.log(`✅ OMNISCIENT v1.1: ${features.length} features, ${persistResult.persisted} persisted, ${persistResult.deduplicated} deduped in ${processingTime}ms`);
 
     return new Response(
       JSON.stringify({
@@ -991,7 +1141,11 @@ serve(async (req) => {
         sources_used: sources.filter(s => s.status === 'success').map(s => s.name),
         processing_time_ms: processingTime,
         credits_used: Math.ceil(sources.filter(s => s.status === 'success').length * 2),
-        engine_version: 'omniscient-v1.0',
+        engine_version: 'omniscient-v1.1',
+        data_tap: {
+          records_persisted: persistResult.persisted,
+          records_deduplicated: persistResult.deduplicated,
+        },
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
