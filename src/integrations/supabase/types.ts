@@ -154,6 +154,66 @@ export type Database = {
         }
         Relationships: []
       }
+      dynamic_collectors: {
+        Row: {
+          api_method: string
+          api_url: string
+          categories: string[]
+          created_at: string
+          created_by_prompt: string | null
+          description: string | null
+          failure_count: number | null
+          headers: Json | null
+          id: string
+          is_active: boolean | null
+          keywords: string[]
+          last_used_at: string | null
+          name: string
+          params_template: Json | null
+          response_mapping: Json
+          success_count: number | null
+          updated_at: string
+        }
+        Insert: {
+          api_method?: string
+          api_url: string
+          categories: string[]
+          created_at?: string
+          created_by_prompt?: string | null
+          description?: string | null
+          failure_count?: number | null
+          headers?: Json | null
+          id?: string
+          is_active?: boolean | null
+          keywords?: string[]
+          last_used_at?: string | null
+          name: string
+          params_template?: Json | null
+          response_mapping: Json
+          success_count?: number | null
+          updated_at?: string
+        }
+        Update: {
+          api_method?: string
+          api_url?: string
+          categories?: string[]
+          created_at?: string
+          created_by_prompt?: string | null
+          description?: string | null
+          failure_count?: number | null
+          headers?: Json | null
+          id?: string
+          is_active?: boolean | null
+          keywords?: string[]
+          last_used_at?: string | null
+          name?: string
+          params_template?: Json | null
+          response_mapping?: Json
+          success_count?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       location_cache: {
         Row: {
           admin_level: string | null

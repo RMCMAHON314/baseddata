@@ -1,6 +1,7 @@
-// 🌍 OMNISCIENT ENGINE v3.0 - THE ULTIMATE DATA TAP 🌍
-// 100+ live data sources, parallel collection, AI-powered insights, self-evolving PRECIOUS
-// Categories: Wildlife, Weather, Marine, Government, Economic, Demographics, Transportation, Energy, Health, Research
+// 🌍 OMNISCIENT ENGINE v4.0 - SELF-EVOLVING DATA TAP 🌍
+// 70+ built-in sources + DYNAMIC COLLECTOR GENESIS
+// AI generates new collectors on-the-fly, executes them, archives for future use
+// The data empire grows with every query
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -10,7 +11,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const USER_AGENT = 'OMNISCIENT/3.0 (baseddata.io)';
+const USER_AGENT = 'OMNISCIENT/4.0 (baseddata.io)';
+const LOVABLE_AI_URL = 'https://api-prod.lovable.dev/ai/generate';
+const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY') || '';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -36,6 +39,26 @@ interface ParsedIntent {
   categories: string[];
   keywords: string[];
   confidence: number;
+}
+
+interface DynamicCollector {
+  id?: string;
+  name: string;
+  description: string;
+  api_url: string;
+  api_method: string;
+  headers: Record<string, string>;
+  params_template: Record<string, string>;
+  response_mapping: {
+    features_path: string;
+    lat_path: string;
+    lng_path: string;
+    name_path: string;
+    description_path?: string;
+    id_path?: string;
+  };
+  categories: string[];
+  keywords: string[];
 }
 
 // ============================================================================
@@ -1782,10 +1805,230 @@ async function cacheLocation(supabase: any, location: { name: string; center?: [
 }
 
 // ============================================================================
-// MAIN COLLECTION PIPELINE - 70+ SOURCES
+// DYNAMIC COLLECTOR GENESIS - AI CREATES NEW COLLECTORS ON-THE-FLY
 // ============================================================================
 
-async function collectAllData(intent: ParsedIntent): Promise<{ features: GeoJSONFeature[]; sources: Array<{ name: string; status: string; count: number; time_ms: number; error?: string }> }> {
+async function findMatchingDynamicCollectors(supabase: any, intent: ParsedIntent): Promise<DynamicCollector[]> {
+  try {
+    // Find previously generated collectors that match current keywords/categories
+    const { data, error } = await supabase
+      .from('dynamic_collectors')
+      .select('*')
+      .eq('is_active', true)
+      .overlaps('keywords', intent.keywords)
+      .limit(10);
+    
+    if (error || !data) return [];
+    return data as DynamicCollector[];
+  } catch (e) {
+    console.error('Error fetching dynamic collectors:', e);
+    return [];
+  }
+}
+
+async function generateNewCollector(prompt: string, intent: ParsedIntent): Promise<DynamicCollector | null> {
+  try {
+    console.log('🧬 GENESIS: Generating new collector for:', prompt);
+    
+    const systemPrompt = `You are an expert API researcher. Given a user query, identify a PUBLIC API that can provide the requested data.
+Return a JSON object with:
+- name: short name for this data source
+- description: what data it provides
+- api_url: the actual API endpoint URL (must be a real, working public API)
+- api_method: GET or POST
+- headers: any required headers (as object)
+- params_template: URL params with placeholders like {lat}, {lng}, {bbox}, {keyword}
+- response_mapping: how to extract data:
+  - features_path: JSONPath to array of results (e.g., "results", "data.items")
+  - lat_path: path to latitude within each item
+  - lng_path: path to longitude within each item  
+  - name_path: path to name/title
+  - description_path: path to description (optional)
+  - id_path: path to unique ID (optional)
+- categories: array of categories this covers
+- keywords: array of keywords this matches
+
+Focus on FREE, no-auth-required APIs. Examples:
+- Wikipedia/Wikidata APIs
+- OpenStreetMap Nominatim/Overpass
+- Government open data portals
+- Academic/research APIs
+- International organization APIs (UN, WHO, World Bank)
+
+Return ONLY valid JSON, no explanation.`;
+
+    const response = await fetch(LOVABLE_AI_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Query: "${prompt}"\nLocation: ${intent.location?.name || 'unspecified'}\nCategories needed: ${intent.categories.join(', ')}\nKeywords: ${intent.keywords.join(', ')}` }
+        ],
+        temperature: 0.3,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('Genesis AI call failed:', response.status);
+      return null;
+    }
+
+    const aiData = await response.json();
+    const content = aiData.choices?.[0]?.message?.content || '';
+    
+    // Parse JSON from response
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.error('Genesis: No valid JSON in response');
+      return null;
+    }
+    
+    const collector = JSON.parse(jsonMatch[0]) as DynamicCollector;
+    console.log('🧬 GENESIS: Created new collector:', collector.name);
+    return collector;
+    
+  } catch (e) {
+    console.error('Genesis error:', e);
+    return null;
+  }
+}
+
+async function executeDynamicCollector(collector: DynamicCollector, params: CollectionParams, bbox?: number[]): Promise<GeoJSONFeature[]> {
+  const features: GeoJSONFeature[] = [];
+  try {
+    let url = collector.api_url;
+    
+    // Replace template placeholders
+    if (params.location?.center) {
+      url = url.replace('{lat}', String(params.location.center[1]));
+      url = url.replace('{lng}', String(params.location.center[0]));
+    }
+    if (bbox) {
+      url = url.replace('{bbox}', bbox.join(','));
+      url = url.replace('{minlat}', String(bbox[1]));
+      url = url.replace('{minlng}', String(bbox[0]));
+      url = url.replace('{maxlat}', String(bbox[3]));
+      url = url.replace('{maxlng}', String(bbox[2]));
+    }
+    if (params.keywords.length > 0) {
+      url = url.replace('{keyword}', encodeURIComponent(params.keywords[0]));
+      url = url.replace('{query}', encodeURIComponent(params.keywords.join(' ')));
+    }
+    url = url.replace('{location}', encodeURIComponent(params.location?.name || ''));
+    
+    console.log('🔌 Executing dynamic collector:', collector.name, url);
+    
+    const response = await fetch(url, {
+      method: collector.api_method,
+      headers: { 'User-Agent': USER_AGENT, ...collector.headers },
+    });
+    
+    if (!response.ok) {
+      console.error(`Dynamic collector ${collector.name} failed:`, response.status);
+      return features;
+    }
+    
+    const data = await response.json();
+    
+    // Extract features using response_mapping
+    const getNestedValue = (obj: any, path: string): any => {
+      return path.split('.').reduce((o, k) => o?.[k], obj);
+    };
+    
+    let items = getNestedValue(data, collector.response_mapping.features_path);
+    if (!Array.isArray(items)) items = [data]; // Single result
+    
+    for (const item of items.slice(0, 100)) {
+      const lat = getNestedValue(item, collector.response_mapping.lat_path);
+      const lng = getNestedValue(item, collector.response_mapping.lng_path);
+      const name = getNestedValue(item, collector.response_mapping.name_path);
+      const description = collector.response_mapping.description_path 
+        ? getNestedValue(item, collector.response_mapping.description_path) 
+        : '';
+      const sourceId = collector.response_mapping.id_path
+        ? String(getNestedValue(item, collector.response_mapping.id_path))
+        : `${collector.name}_${Math.random().toString(36).slice(2)}`;
+      
+      if (lat && lng && name) {
+        features.push({
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] },
+          properties: {
+            source: `dynamic_${collector.name.toLowerCase().replace(/\s+/g, '_')}`,
+            source_id: sourceId,
+            category: collector.categories[0] || 'OTHER',
+            subcategory: 'dynamic_collector',
+            name: String(name),
+            description: String(description || ''),
+            attributes: { raw: item, collector_name: collector.name },
+            confidence: 0.7,
+          },
+        });
+      }
+    }
+    
+    console.log(`🔌 Dynamic collector ${collector.name} returned ${features.length} features`);
+    
+  } catch (e) {
+    console.error(`Dynamic collector ${collector.name} error:`, e);
+  }
+  return features;
+}
+
+async function archiveDynamicCollector(supabase: any, collector: DynamicCollector, prompt: string, success: boolean): Promise<void> {
+  try {
+    // Check if similar collector exists
+    const { data: existing } = await supabase
+      .from('dynamic_collectors')
+      .select('id, success_count, failure_count')
+      .eq('api_url', collector.api_url)
+      .single();
+    
+    if (existing) {
+      // Update existing
+      await supabase
+        .from('dynamic_collectors')
+        .update({
+          success_count: existing.success_count + (success ? 1 : 0),
+          failure_count: existing.failure_count + (success ? 0 : 1),
+          last_used_at: new Date().toISOString(),
+          is_active: success || existing.failure_count < 3, // Deactivate after 3 failures
+        })
+        .eq('id', existing.id);
+    } else if (success) {
+      // Only archive if it worked
+      await supabase.from('dynamic_collectors').insert({
+        name: collector.name,
+        description: collector.description,
+        api_url: collector.api_url,
+        api_method: collector.api_method,
+        headers: collector.headers,
+        params_template: collector.params_template,
+        response_mapping: collector.response_mapping,
+        categories: collector.categories,
+        keywords: collector.keywords,
+        success_count: 1,
+        failure_count: 0,
+        last_used_at: new Date().toISOString(),
+        created_by_prompt: prompt,
+      });
+      console.log('🗃️ ARCHIVED new collector:', collector.name);
+    }
+  } catch (e) {
+    console.error('Archive error:', e);
+  }
+}
+
+// ============================================================================
+// MAIN COLLECTION PIPELINE - 70+ SOURCES + DYNAMIC GENESIS
+// ============================================================================
+
+async function collectAllData(intent: ParsedIntent, prompt: string, supabase: any): Promise<{ features: GeoJSONFeature[]; sources: Array<{ name: string; status: string; count: number; time_ms: number; error?: string }>; dynamicGenerated: boolean }> {
   const features: GeoJSONFeature[] = [];
   const sources: Array<{ name: string; status: string; count: number; time_ms: number; error?: string }> = [];
   const bbox = intent.location?.bbox;
@@ -1881,13 +2124,13 @@ async function collectAllData(intent: ParsedIntent): Promise<{ features: GeoJSON
     collectors.push({ name: 'Hunting Regulations', fn: () => collectHuntingRegulations(params, bbox) });
   }
   
-  // RECREATION (3 collectors)
+  // RECREATION (2 collectors)
   if (intent.categories.includes('RECREATION') || intent.categories.includes('GEOSPATIAL')) {
     collectors.push({ name: 'Recreation.gov', fn: () => collectRecreationGov(params, bbox) });
     collectors.push({ name: 'NPS', fn: () => collectNPS(params, bbox) });
   }
   
-  // Execute all in parallel
+  // Execute all built-in collectors in parallel
   const results = await Promise.allSettled(
     collectors.map(async (c) => {
       const start = Date.now();
@@ -1910,7 +2153,52 @@ async function collectAllData(intent: ParsedIntent): Promise<{ features: GeoJSON
     }
   }
   
-  return { features, sources };
+  // ========== DYNAMIC COLLECTOR GENESIS ==========
+  // If results are sparse OR query seems to need something special, try dynamic collectors
+  let dynamicGenerated = false;
+  const totalFeatures = features.length;
+  const shouldTryDynamic = totalFeatures < 10 || intent.confidence < 0.5;
+  
+  if (shouldTryDynamic) {
+    console.log('🧬 GENESIS: Low results or low confidence, activating dynamic collector search...');
+    
+    // 1. First try existing archived dynamic collectors
+    const existingDynamic = await findMatchingDynamicCollectors(supabase, intent);
+    for (const dc of existingDynamic) {
+      const start = Date.now();
+      const dynamicFeatures = await executeDynamicCollector(dc, params, bbox);
+      const success = dynamicFeatures.length > 0;
+      features.push(...dynamicFeatures);
+      sources.push({
+        name: `⚡ ${dc.name}`,
+        status: success ? 'success' : 'empty',
+        count: dynamicFeatures.length,
+        time_ms: Date.now() - start,
+      });
+      await archiveDynamicCollector(supabase, dc, prompt, success);
+    }
+    
+    // 2. If still sparse, generate a brand new collector
+    if (features.length < 20 && LOVABLE_API_KEY) {
+      const newCollector = await generateNewCollector(prompt, intent);
+      if (newCollector) {
+        dynamicGenerated = true;
+        const start = Date.now();
+        const dynamicFeatures = await executeDynamicCollector(newCollector, params, bbox);
+        const success = dynamicFeatures.length > 0;
+        features.push(...dynamicFeatures);
+        sources.push({
+          name: `🧬 ${newCollector.name} (NEW)`,
+          status: success ? 'success' : 'empty',
+          count: dynamicFeatures.length,
+          time_ms: Date.now() - start,
+        });
+        await archiveDynamicCollector(supabase, newCollector, prompt, success);
+      }
+    }
+  }
+  
+  return { features, sources, dynamicGenerated };
 }
 
 // ============================================================================
@@ -1926,14 +2214,14 @@ serve(async (req) => {
     const { prompt } = await req.json();
     if (!prompt) return new Response(JSON.stringify({ error: 'Prompt required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
-    console.log('🌍 OMNISCIENT v3.0: 70+ sources with AI insights, processing:', prompt);
+    console.log('🌍 OMNISCIENT v4.0: 70+ sources + DYNAMIC GENESIS, processing:', prompt);
     const startTime = Date.now();
 
     const intent = analyzeIntent(prompt);
     console.log('🧠 Intent:', intent.categories.join(', '), '| Use case:', intent.use_case);
 
-    const { features, sources } = await collectAllData(intent);
-    console.log(`📡 Collected ${features.length} features from ${sources.length} sources`);
+    const { features, sources, dynamicGenerated } = await collectAllData(intent, prompt, supabase);
+    console.log(`📡 Collected ${features.length} features from ${sources.length} sources${dynamicGenerated ? ' (+ dynamic genesis)' : ''}`);
 
     // Generate AI-powered insights
     const insights = await generateAIInsights(features, intent, prompt);
@@ -1957,8 +2245,8 @@ serve(async (req) => {
       sources_used: sources.filter(s => s.status === 'success').map(s => s.name),
       processing_time_ms: processingTime,
       credits_used: Math.ceil(sources.filter(s => s.status === 'success').length * 2),
-      engine_version: 'omniscient-v3.0',
-      data_tap: { records_persisted: persistResult.persisted, records_deduplicated: persistResult.deduplicated },
+      engine_version: 'omniscient-v4.0',
+      data_tap: { records_persisted: persistResult.persisted, records_deduplicated: persistResult.deduplicated, dynamic_genesis: dynamicGenerated },
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (error) {
