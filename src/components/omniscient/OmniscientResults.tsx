@@ -1,47 +1,87 @@
 // OMNISCIENT Results View
 // Map + Data Panel split view
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Globe, ArrowLeft, Layers, Table, Lightbulb, Download, 
-  FileJson, FileSpreadsheet, Share2, AlertTriangle, CheckCircle2,
-  ChevronRight, MapPin, Clock, Database
+  FileJson, FileSpreadsheet, Share2, ChevronRight, Clock, Database, CheckCircle2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MapContainer } from '@/components/map/MapContainer';
 import { LayerControls } from '@/components/map/LayerControls';
 import { FeaturePopup } from '@/components/map/FeaturePopup';
-import { DataTable } from '@/components/DataTable';
-import type { OmniscientResult, GeoJSONFeature, MapLayer } from '@/types/omniscient';
+import type { GeoJSONFeature, GeoJSONFeatureCollection, CollectedData, OmniscientInsights, MapLayer } from '@/types/omniscient';
 import { CATEGORY_COLORS } from '@/lib/mapbox';
 
 interface OmniscientResultsProps {
-  result: OmniscientResult;
+  prompt: string;
+  features?: GeoJSONFeatureCollection;
+  collectedData: CollectedData[];
+  insights?: OmniscientInsights;
+  creditsUsed: number;
   onBack: () => void;
-  onNewQuery: () => void;
 }
 
-export function OmniscientResults({ result, onBack, onNewQuery }: OmniscientResultsProps) {
+export function OmniscientResults({ 
+  prompt, 
+  features, 
+  collectedData, 
+  insights, 
+  creditsUsed, 
+  onBack 
+}: OmniscientResultsProps) {
   const [selectedFeature, setSelectedFeature] = useState<GeoJSONFeature | null>(null);
+  
+  // Build layers from features
   const [layers, setLayers] = useState<MapLayer[]>(() => {
-    // Group features by category
+    if (!features?.features?.length) return [];
+    
     const byCategory: Record<string, GeoJSONFeature[]> = {};
-    for (const f of result.features.features) {
-      const cat = f.properties.category;
+    for (const f of features.features) {
+      const cat = f.properties.category || 'UNKNOWN';
       if (!byCategory[cat]) byCategory[cat] = [];
       byCategory[cat].push(f);
     }
-    return Object.entries(byCategory).map(([cat, features]) => ({
+    return Object.entries(byCategory).map(([cat, feats]) => ({
       id: cat.toLowerCase(),
       name: cat.replace('_', ' '),
       category: cat as any,
       visible: true,
-      features,
-      color: CATEGORY_COLORS[cat] || '#3B82F6',
+      features: feats,
+      color: CATEGORY_COLORS[cat as keyof typeof CATEGORY_COLORS] || '#3B82F6',
     }));
   });
+
+  // Compute center from features
+  const mapCenter = useMemo((): [number, number] | undefined => {
+    if (!features?.features?.length) return undefined;
+    let sumLng = 0, sumLat = 0, count = 0;
+    for (const f of features.features) {
+      if (f.geometry.type === 'Point') {
+        const coords = f.geometry.coordinates as number[];
+        sumLng += coords[0];
+        sumLat += coords[1];
+        count++;
+      }
+    }
+    if (count === 0) return undefined;
+    return [sumLng / count, sumLat / count];
+  }, [features]);
+
+  // Build tabular data from features
+  const tabularData = useMemo(() => {
+    if (!features?.features?.length) return [];
+    return features.features.map(f => ({
+      source: f.properties.source,
+      category: f.properties.category,
+      name: f.properties.name,
+      description: f.properties.description || '',
+      timestamp: f.properties.timestamp || '',
+      confidence: f.properties.confidence || 0,
+    }));
+  }, [features]);
 
   const handleLayerToggle = (layerId: string) => {
     setLayers(prev => prev.map(l => 
@@ -50,12 +90,12 @@ export function OmniscientResults({ result, onBack, onNewQuery }: OmniscientResu
   };
 
   const handleExportCSV = () => {
-    if (!result.tabular_data.length) return;
-    const headers = Object.keys(result.tabular_data[0]);
+    if (!tabularData.length) return;
+    const headers = Object.keys(tabularData[0]);
     const csv = [
       headers.join(','),
-      ...result.tabular_data.map(row => 
-        headers.map(h => JSON.stringify(row[h] ?? '')).join(',')
+      ...tabularData.map(row => 
+        headers.map(h => JSON.stringify((row as any)[h] ?? '')).join(',')
       ),
     ].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -68,7 +108,8 @@ export function OmniscientResults({ result, onBack, onNewQuery }: OmniscientResu
   };
 
   const handleExportGeoJSON = () => {
-    const json = JSON.stringify(result.features, null, 2);
+    if (!features) return;
+    const json = JSON.stringify(features, null, 2);
     const blob = new Blob([json], { type: 'application/geo+json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -77,6 +118,9 @@ export function OmniscientResults({ result, onBack, onNewQuery }: OmniscientResu
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  const totalRecords = features?.features?.length || 0;
+  const totalTime = collectedData.reduce((sum, d) => sum + d.collection_time_ms, 0);
 
   return (
     <div className="h-screen flex flex-col bg-[#0A0A0A] text-white overflow-hidden">
@@ -95,14 +139,12 @@ export function OmniscientResults({ result, onBack, onNewQuery }: OmniscientResu
           
           <div className="flex-1 max-w-2xl mx-4">
             <div className="bg-white/5 rounded-lg px-4 py-2 text-sm text-white/70 truncate">
-              {result.prompt}
+              {prompt}
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={onNewQuery}>
-              New Query
-            </Button>
+            <span className="text-xs text-white/50">{creditsUsed} credits</span>
             <Button size="sm" className="bg-emerald-500 hover:bg-emerald-600 text-black">
               <Share2 className="w-4 h-4 mr-1" />
               Share
@@ -116,9 +158,9 @@ export function OmniscientResults({ result, onBack, onNewQuery }: OmniscientResu
         {/* Map Panel - 60% */}
         <div className="w-3/5 relative border-r border-white/10">
           <MapContainer
-            features={result.features}
-            center={result.intent.location?.center}
-            zoom={result.intent.location ? 9 : 4}
+            features={features}
+            center={mapCenter}
+            zoom={mapCenter ? 9 : 4}
             onFeatureClick={(f) => setSelectedFeature(f as any)}
             className="absolute inset-0"
           />
@@ -136,15 +178,15 @@ export function OmniscientResults({ result, onBack, onNewQuery }: OmniscientResu
           <div className="absolute bottom-4 left-4 bg-black/80 backdrop-blur-sm rounded-lg px-3 py-2 text-xs space-y-1">
             <div className="flex items-center gap-2 text-emerald-400">
               <CheckCircle2 className="w-3 h-3" />
-              <span>{result.features.features.length} features loaded</span>
+              <span>{totalRecords} features loaded</span>
             </div>
             <div className="flex items-center gap-2 text-white/50">
               <Clock className="w-3 h-3" />
-              <span>{result.processing_time_ms}ms</span>
+              <span>{(totalTime / 1000).toFixed(1)}s total</span>
             </div>
             <div className="flex items-center gap-2 text-white/50">
               <Database className="w-3 h-3" />
-              <span>{result.sources_used.length} sources</span>
+              <span>{collectedData.length} sources</span>
             </div>
           </div>
 
@@ -188,70 +230,106 @@ export function OmniscientResults({ result, onBack, onNewQuery }: OmniscientResu
 
             {/* Insights Tab */}
             <TabsContent value="insights" className="flex-1 overflow-y-auto p-4 space-y-4 m-0">
-              {/* Summary */}
-              <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
-                <p className="text-sm text-white/90">{result.insights.summary}</p>
-              </div>
-
-              {/* Key Findings */}
-              <div>
-                <h3 className="text-sm font-medium text-white/60 mb-3">Key Findings</h3>
-                <div className="space-y-2">
-                  {result.insights.key_findings.map((finding, i) => (
-                    <div key={i} className="flex gap-2 text-sm">
-                      <ChevronRight className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-                      <span className="text-white/80">{finding}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Recommendations */}
-              <div>
-                <h3 className="text-sm font-medium text-white/60 mb-3">Recommendations</h3>
-                <div className="space-y-2">
-                  {result.insights.recommendations.map((rec, i) => (
-                    <div key={i} className="bg-white/5 rounded-lg p-3 text-sm text-white/70">
-                      {rec}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Warnings */}
-              {result.insights.warnings.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-medium text-amber-400/80 mb-3">⚠️ Warnings</h3>
-                  <div className="space-y-2">
-                    {result.insights.warnings.map((warning, i) => (
-                      <div key={i} className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-sm text-amber-200/80">
-                        {warning}
-                      </div>
-                    ))}
+              {insights ? (
+                <>
+                  {/* Summary */}
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
+                    <p className="text-sm text-white/90">{insights.summary}</p>
                   </div>
+
+                  {/* Key Findings */}
+                  {insights.key_findings?.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-medium text-white/60 mb-3">Key Findings</h3>
+                      <div className="space-y-2">
+                        {insights.key_findings.map((finding, i) => (
+                          <div key={i} className="flex gap-2 text-sm">
+                            <ChevronRight className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                            <span className="text-white/80">{finding}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Recommendations */}
+                  {insights.recommendations?.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-medium text-white/60 mb-3">Recommendations</h3>
+                      <div className="space-y-2">
+                        {insights.recommendations.map((rec, i) => (
+                          <div key={i} className="bg-white/5 rounded-lg p-3 text-sm text-white/70">
+                            {rec}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Warnings */}
+                  {insights.warnings?.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-medium text-amber-400/80 mb-3">⚠️ Warnings</h3>
+                      <div className="space-y-2">
+                        {insights.warnings.map((warning, i) => (
+                          <div key={i} className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 text-sm text-amber-200/80">
+                            {warning}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Related Queries */}
+                  {insights.related_queries?.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-medium text-white/60 mb-3">Related Queries</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {insights.related_queries.map((q, i) => (
+                          <button
+                            key={i}
+                            className="px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 text-xs text-white/70 transition-colors"
+                          >
+                            {q}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-8 text-white/40">
+                  <Lightbulb className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p>No AI insights generated</p>
                 </div>
               )}
-
-              {/* Related Queries */}
-              <div>
-                <h3 className="text-sm font-medium text-white/60 mb-3">Related Queries</h3>
-                <div className="flex flex-wrap gap-2">
-                  {result.insights.related_queries.map((q, i) => (
-                    <button
-                      key={i}
-                      className="px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 text-xs text-white/70 transition-colors"
-                    >
-                      {q}
-                    </button>
-                  ))}
-                </div>
-              </div>
             </TabsContent>
 
             {/* Data Tab */}
             <TabsContent value="data" className="flex-1 overflow-hidden m-0 flex flex-col">
               <div className="flex-1 overflow-auto">
-                <DataTable data={result.tabular_data} />
+                {tabularData.length > 0 ? (
+                  <table className="w-full text-xs">
+                    <thead className="bg-white/5 sticky top-0">
+                      <tr>
+                        <th className="text-left p-2 font-medium text-white/60">Source</th>
+                        <th className="text-left p-2 font-medium text-white/60">Name</th>
+                        <th className="text-left p-2 font-medium text-white/60">Category</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tabularData.slice(0, 100).map((row, i) => (
+                        <tr key={i} className="border-b border-white/5 hover:bg-white/5">
+                          <td className="p-2 text-white/70">{row.source}</td>
+                          <td className="p-2 text-white/90">{row.name}</td>
+                          <td className="p-2 text-white/50">{row.category}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div className="text-center py-8 text-white/40">No data</div>
+                )}
               </div>
               
               {/* Export Options */}
@@ -274,7 +352,7 @@ export function OmniscientResults({ result, onBack, onNewQuery }: OmniscientResu
             {/* Sources Tab */}
             <TabsContent value="sources" className="flex-1 overflow-y-auto p-4 m-0">
               <div className="space-y-3">
-                {result.collected_data.map((source, i) => (
+                {collectedData.map((source, i) => (
                   <div
                     key={i}
                     className={`p-3 rounded-lg border ${
