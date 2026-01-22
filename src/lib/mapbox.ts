@@ -52,6 +52,29 @@ export const MAP_STYLES = {
   navigation: 'mapbox://styles/mapbox/navigation-night-v1',
 };
 
+// Free fallback basemap (no Mapbox token required): OpenStreetMap raster tiles.
+// Note: this is a minimal style (raster only). Data layers render above it.
+export const OSM_RASTER_STYLE: any = {
+  version: 8,
+  sources: {
+    osm: {
+      type: 'raster',
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      attribution: '© OpenStreetMap contributors',
+    },
+  },
+  layers: [
+    {
+      id: 'osm-raster',
+      type: 'raster',
+      source: 'osm',
+      minzoom: 0,
+      maxzoom: 19,
+    },
+  ],
+};
+
 export const DEFAULT_MAP_CENTER: [number, number] = [-98.5795, 39.8283]; // Center of USA
 export const DEFAULT_ZOOM = 4;
 
