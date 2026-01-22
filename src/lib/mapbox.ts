@@ -59,9 +59,13 @@ export const OSM_RASTER_STYLE: any = {
   sources: {
     osm: {
       type: 'raster',
-      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      // IMPORTANT: Mapbox GL renders raster tiles via WebGL textures which require CORS.
+      // tile.openstreetmap.org does NOT provide CORS headers, which can cause a black basemap
+      // even though the network requests return 200.
+      // Use a free, CORS-enabled raster provider instead.
+      tiles: ['https://basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png'],
       tileSize: 256,
-      attribution: '© OpenStreetMap contributors',
+      attribution: '© OpenStreetMap contributors © CARTO',
     },
   },
   layers: [

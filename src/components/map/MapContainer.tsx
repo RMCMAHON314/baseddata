@@ -160,8 +160,13 @@ export function MapContainer({
         }
       }
 
-      // Mapbox GL may require *some* token string to boot; keep a harmless placeholder when missing.
-      mapboxgl.accessToken = activeToken || `pk.${'0'.repeat(32)}`;
+      // In OSM mode we must use an empty token; a placeholder/invalid token can still interfere.
+      // In Mapbox mode, use the real token (or a harmless placeholder as a last resort).
+      if (resolvedBasemap === 'osm') {
+        mapboxgl.accessToken = '';
+      } else {
+        mapboxgl.accessToken = activeToken || `pk.${'0'.repeat(32)}`;
+      }
 
       try {
         map.current = new mapboxgl.Map({
