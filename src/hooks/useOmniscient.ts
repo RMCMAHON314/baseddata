@@ -1,5 +1,5 @@
-// OMNISCIENT Query Hook
-// Manages the full data pipeline: query → collect → visualize
+// OMNISCIENT v1.1 Query Hook
+// Manages the full data pipeline: query → collect → persist → visualize
 
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';

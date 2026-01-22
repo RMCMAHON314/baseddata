@@ -1,5 +1,5 @@
-// OMNISCIENT - Configuration Constants
-// Unified configuration for the entire platform
+// OMNISCIENT v1.1 - Configuration Constants
+// Unified configuration for the data tap platform
 
 // Sample prompts for landing page
 export const SAMPLE_PROMPTS = [
@@ -20,28 +20,23 @@ export const CREDIT_COSTS = {
   historical: 10, // Historical data (>1 year)
 };
 
-// Credit packages
-export const CREDIT_PACKAGES = [
-  { name: 'starter', credits: 100, price: 9, perCredit: 0.09 },
-  { name: 'professional', credits: 500, price: 39, perCredit: 0.078 },
-  { name: 'team', credits: 2000, price: 129, perCredit: 0.065 },
-  { name: 'business', credits: 10000, price: 499, perCredit: 0.05 },
-];
-
 // Free signup bonus
 export const SIGNUP_BONUS_CREDITS = 100;
 
-// Auto top-off defaults
-export const AUTO_TOPOFF_DEFAULTS = {
-  threshold: 10,
-  amount: 100,
-  enabled: false,
-};
-
 // Engine metadata
 export const ENGINE_INFO = {
-  version: 'OMNISCIENT v1.0',
-  description: 'Universal On-Demand Data Pipeline',
-  algorithms: ['Intent Analysis', 'Parallel Collection', 'GeoJSON Normalization', 'Insight Generation'],
+  version: 'OMNISCIENT v1.1',
+  description: 'Universal Data Tap - Every query grows the dataset',
+  capabilities: [
+    'Intent Analysis',
+    'Parallel Collection',
+    'GeoJSON Normalization',
+    'Insight Generation',
+    'Record Persistence',
+    'Source Intelligence',
+    'Location Caching',
+    'Query Learning',
+  ],
   sourceCount: 20,
+  dataTap: true,
 };

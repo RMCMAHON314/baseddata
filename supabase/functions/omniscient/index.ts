@@ -1,7 +1,7 @@
-// 🌍 OMNISCIENT ENGINE v1.0 - UNIVERSAL DATA PIPELINE 🌍
-// Every dataset. Every location. Every use case. On demand.
-// 50+ government and public data sources, parallel collection, AI-powered insights
-// ZERO external AI credits - uses Lovable AI for intent analysis
+// 🌍 OMNISCIENT ENGINE v1.1 - THE ULTIMATE DATA TAP 🌍
+// Universal data pipeline: query → collect → persist → grow
+// 50+ government & public APIs, parallel collection, persistent data tap
+// Every query grows the dataset. Source intelligence. Location caching.
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
