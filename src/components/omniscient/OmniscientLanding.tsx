@@ -1,5 +1,5 @@
-// OMNISCIENT v4.0 - Ultimate Data Tap Landing
-// Premium showcase interface for the self-evolving data engine
+// BASED DATA v10.0 - The Bloomberg Terminal of Public Data
+// Premium intelligence platform for government, business, and research professionals
 
 import { useState, useEffect, forwardRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button';
 import { 
   Sparkles, Database, MapPin, Zap, ChevronRight, Search, 
   Globe, Shield, Cpu, Layers, ArrowRight, ExternalLink,
-  Bird, Cloud, Anchor, Building2, TrendingUp, Map, HeartPulse, Plane, Leaf, Tent
+  Building2, TrendingUp, HeartPulse, Plane, FileText, Users,
+  Briefcase, Scale, DollarSign
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { DATA_SOURCE_REGISTRY } from '@/types/omniscient';
@@ -17,60 +18,64 @@ interface OmniscientLandingProps {
   isLoading?: boolean;
 }
 
+// Intelligence platform showcase queries - aligned with $100M vision
 const SHOWCASE_QUERIES = [
   {
-    text: "Goose hunting conditions Long Island December - weather, tides, regulations, public lands",
-    category: "Hunting",
-    icon: Bird,
-    color: "text-emerald-500",
-  },
-  {
-    text: "Federal cybersecurity contractors in Virginia with $10M+ awards",
+    text: "Top IT contractors in Virginia with $10M+ federal contracts",
     category: "Government",
     icon: Building2,
     color: "text-purple-500",
   },
   {
-    text: "Salmon fishing Puget Sound this weekend - tides, water temp, boat ramps",
-    category: "Fishing",
-    icon: Anchor,
+    text: "Hospitals in Maryland with quality ratings and CMS payments",
+    category: "Healthcare",
+    icon: HeartPulse,
+    color: "text-pink-500",
+  },
+  {
+    text: "8(a) set-aside cybersecurity contracts expiring in 6 months",
+    category: "Opportunities",
+    icon: Shield,
+    color: "text-emerald-500",
+  },
+  {
+    text: "EPA violations and environmental permits in Ohio",
+    category: "Compliance",
+    icon: FileText,
+    color: "text-amber-500",
+  },
+  {
+    text: "Compare federal healthcare spending by agency in Texas",
+    category: "Analysis",
+    icon: TrendingUp,
     color: "text-cyan-500",
   },
   {
-    text: "Solar potential assessment Phoenix with available incentives and installers",
-    category: "Energy",
-    icon: Leaf,
-    color: "text-yellow-500",
-  },
-  {
-    text: "Wildfire risk Boulder CO with evacuation routes and shelter locations",
-    category: "Safety",
-    icon: Shield,
-    color: "text-red-500",
-  },
-  {
-    text: "Clinical trials for immunotherapy recruiting in Boston area",
-    category: "Health",
-    icon: HeartPulse,
-    color: "text-pink-500",
+    text: "Banks and credit unions in California with FDIC data",
+    category: "Financial",
+    icon: DollarSign,
+    color: "text-blue-500",
   },
 ];
 
 const CATEGORY_ICONS: Record<string, React.ElementType> = {
-  'WILDLIFE': Bird,
-  'WEATHER': Cloud,
-  'MARINE': Anchor,
+  'WILDLIFE': Globe,
+  'WEATHER': Globe,
+  'MARINE': Globe,
   'GOVERNMENT': Building2,
   'ECONOMIC': TrendingUp,
-  'GEOSPATIAL': Map,
+  'GEOSPATIAL': MapPin,
   'HEALTH': HeartPulse,
   'TRANSPORTATION': Plane,
-  'ENERGY': Leaf,
-  'RECREATION': Tent,
+  'ENERGY': Zap,
+  'RECREATION': Globe,
 };
 
+// Platform stats - emphasizing value proposition
 const STATS = [
-  { value: '70+', label: 'Live Data APIs' },
+  { value: '70+', label: 'Live APIs' },
+  { value: '50+', label: 'Data Categories' },
+  { value: '<10s', label: 'Query Speed' },
   { value: '∞', label: 'Dynamic Genesis' },
 ];
 
@@ -141,19 +146,19 @@ export const OmniscientLanding = forwardRef<HTMLDivElement, OmniscientLandingPro
               className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/20 text-sm font-medium text-primary mb-6"
             >
               <Sparkles className="w-4 h-4" />
-              OMNISCIENT v4.0 — Self-Evolving Data Engine
-              <span className="px-2 py-0.5 rounded-full bg-primary/10 text-xs">NEW</span>
+              BASED DATA — Public Data Intelligence Platform
+              <span className="px-2 py-0.5 rounded-full bg-primary/10 text-xs">v10</span>
             </motion.div>
 
             <h1 className="text-5xl md:text-7xl font-black mb-6 tracking-tight">
-              <span className="text-gradient-hero">Every Dataset.</span>
+              <span className="text-gradient-hero">The Bloomberg Terminal</span>
               <br />
-              <span className="text-gradient-omni">On Demand.</span>
+              <span className="text-gradient-omni">for Public Data.</span>
             </h1>
             
             <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed text-balance">
-              Describe what you need in plain English. We query {DATA_SOURCE_REGISTRY.length}+ live sources, 
-              generate custom collectors on-the-fly, and deliver unified georeferenced data in seconds.
+              Ask in plain English. Get instant answers from {DATA_SOURCE_REGISTRY.length}+ government APIs — 
+              federal contracts, healthcare payments, environmental data, and more.
             </p>
           </motion.div>
 
@@ -278,14 +283,14 @@ export const OmniscientLanding = forwardRef<HTMLDivElement, OmniscientLandingPro
               viewport={{ once: true }}
               className="text-center mb-12"
             >
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                <span className="text-gradient-omni">Unified Data Categories.</span>{' '}
-                <span className="text-muted-foreground">One Query, Every Source.</span>
-              </h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                From wildlife tracking to federal contracts, real-time weather to clinical trials — 
-                OMNISCIENT covers every domain with continuously-evolving collectors.
-              </p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              <span className="text-gradient-omni">Every Federal Database.</span>{' '}
+              <span className="text-muted-foreground">One Unified Interface.</span>
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              USASpending, CMS Open Payments, NPI Registry, EPA ECHO, FDIC Banks, FDA Drugs — 
+              all your government data in one query, one map, one export.
+            </p>
             </motion.div>
 
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -324,27 +329,45 @@ export const OmniscientLanding = forwardRef<HTMLDivElement, OmniscientLandingPro
           </div>
         </section>
 
-        {/* Features Grid */}
+        {/* Value Proposition Grid */}
         <section className="max-w-7xl mx-auto px-6 py-16">
           <div className="grid md:grid-cols-3 gap-6">
             {[
               {
-                icon: Zap,
-                title: 'Parallel Collection',
-                desc: 'Query 70+ APIs simultaneously. All data unified on a single map.',
-                gradient: 'from-yellow-500 to-orange-500',
+                icon: Building2,
+                title: 'Contractor Intelligence',
+                desc: 'Track federal contracts, SAM.gov registrations, and compliance status in one view.',
+                gradient: 'from-purple-500 to-indigo-500',
+              },
+              {
+                icon: HeartPulse,
+                title: 'Healthcare Analytics',
+                desc: 'CMS payments, NPI providers, FDA drugs, and hospital quality data unified.',
+                gradient: 'from-pink-500 to-rose-500',
+              },
+              {
+                icon: Shield,
+                title: 'Compliance Monitoring',
+                desc: 'EPA violations, OSHA inspections, exclusions, and regulatory changes.',
+                gradient: 'from-emerald-500 to-teal-500',
+              },
+              {
+                icon: TrendingUp,
+                title: 'Market Analysis',
+                desc: 'Spending trends, competitor tracking, and opportunity identification.',
+                gradient: 'from-amber-500 to-orange-500',
+              },
+              {
+                icon: MapPin,
+                title: 'Geographic Intelligence',
+                desc: 'Every record mapped. Filter by state, county, or custom region.',
+                gradient: 'from-cyan-500 to-blue-500',
               },
               {
                 icon: Cpu,
-                title: 'Dynamic Genesis',
-                desc: "Can't find what you need? AI generates new collectors on-the-fly.",
-                gradient: 'from-purple-500 to-pink-500',
-              },
-              {
-                icon: Database,
-                title: 'Self-Evolving',
-                desc: 'Every query makes the system smarter. Collectors archived for future use.',
-                gradient: 'from-cyan-500 to-blue-500',
+                title: 'AI-Powered Insights',
+                desc: 'Automatic anomaly detection, trend analysis, and recommendations.',
+                gradient: 'from-violet-500 to-purple-500',
               },
             ].map((f, i) => (
               <motion.div
@@ -352,17 +375,48 @@ export const OmniscientLanding = forwardRef<HTMLDivElement, OmniscientLandingPro
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className="card-premium p-8 text-center group hover:border-primary/30 transition-colors"
+                transition={{ delay: i * 0.05 }}
+                className="card-premium p-6 group hover:border-primary/30 transition-colors"
               >
-                <div className={`inline-flex p-4 rounded-2xl bg-gradient-to-br ${f.gradient} text-white mb-6 group-hover:scale-110 transition-transform`}>
-                  <f.icon className="w-7 h-7" />
+                <div className={`inline-flex p-3 rounded-xl bg-gradient-to-br ${f.gradient} text-white mb-4 group-hover:scale-110 transition-transform`}>
+                  <f.icon className="w-6 h-6" />
                 </div>
-                <h3 className="text-xl font-bold mb-2">{f.title}</h3>
-                <p className="text-muted-foreground">{f.desc}</p>
+                <h3 className="text-lg font-bold mb-2">{f.title}</h3>
+                <p className="text-muted-foreground text-sm">{f.desc}</p>
               </motion.div>
             ))}
           </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="max-w-7xl mx-auto px-6 py-16">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center card-premium p-12 relative overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-accent/5" />
+            <div className="relative">
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                Replace 50+ Niche Data Tools
+              </h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto mb-8">
+                GovWin, Bloomberg Government, D&B — all in one platform at a fraction of the cost.
+                Start free with 100 credits.
+              </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <Button size="lg" className="btn-omni min-w-[180px]">
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Start Free
+                </Button>
+                <Button size="lg" variant="outline" className="min-w-[180px]">
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  View Pricing
+                </Button>
+              </div>
+            </div>
+          </motion.div>
         </section>
 
         {/* Footer */}
@@ -372,14 +426,14 @@ export const OmniscientLanding = forwardRef<HTMLDivElement, OmniscientLandingPro
               <div className="flex items-center gap-4">
                 <Logo variant="compact" />
                 <span className="text-sm text-muted-foreground">
-                  OMNISCIENT v4.0 — The Ultimate Data Tap
+                  Based Data — Public Data Intelligence Platform
                 </span>
               </div>
               <div className="flex items-center gap-6 text-sm text-muted-foreground">
                 <a href="#" className="hover:text-foreground transition-colors">API</a>
                 <a href="#" className="hover:text-foreground transition-colors">Docs</a>
                 <a href="#" className="hover:text-foreground transition-colors">Pricing</a>
-                <a href="#" className="hover:text-foreground transition-colors">Contact</a>
+                <a href="#" className="hover:text-foreground transition-colors">Enterprise</a>
               </div>
             </div>
           </div>

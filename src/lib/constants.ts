@@ -11,29 +11,30 @@ export * from './discovery';
 // PLATFORM IDENTITY
 // ============================================================================
 
-export const BASED_DATA_VERSION = '9.0';
-export const BASED_DATA_TAGLINE = 'Every Dataset. On Demand.';
-export const BASED_DATA_DESCRIPTION = 'Self-evolving data platform that queries 70+ live APIs and generates new collectors on demand.';
+export const BASED_DATA_VERSION = '10.0';
+export const BASED_DATA_TAGLINE = 'The Bloomberg Terminal for Public Data';
+export const BASED_DATA_DESCRIPTION = 'Public data intelligence platform that unifies 70+ government APIs — federal contracts, healthcare payments, environmental compliance, and more.';
 
 export const ENGINE_INFO = {
   version: `BASED DATA v${BASED_DATA_VERSION}`,
   description: BASED_DATA_DESCRIPTION,
+  tagline: BASED_DATA_TAGLINE,
   capabilities: [
-    'Intent Analysis',
-    'Parallel Collection',
-    'GeoJSON Normalization',
-    'Insight Generation',
-    'Record Persistence',
-    'Source Intelligence',
-    'Location Caching',
-    'Query Learning',
+    'Federal Contract Intelligence',
+    'Healthcare Analytics',
+    'Environmental Compliance',
+    'Financial Data',
+    'Geospatial Mapping',
+    'AI-Powered Insights',
+    'Real-time API Aggregation',
     'Dynamic Collector Genesis',
-    'Auto-Enrichment',
     'Knowledge Graph',
+    'Export to Excel/PDF',
   ],
   // These reflect actual built-in collectors + dynamic genesis capability
   sourceCount: 70,
   dataTap: true,
+  targetMarket: 'Government contractors, Healthcare analysts, Compliance officers, Researchers',
 } as const;
 
 // ============================================================================
@@ -133,14 +134,14 @@ export const CATEGORY_META: Record<string, { icon: string; status: 'live' | 'bui
 // ============================================================================
 
 export const SAMPLE_PROMPTS = [
-  { text: 'My friend hunts geese on a small island off Long Island. Give me everything for planning a hunt in December.', category: 'Outdoor' },
-  { text: 'Best hiking trails in Yellowstone with current trail conditions and weather', category: 'Recreation' },
-  { text: 'Federal cybersecurity contractors in Maryland with $10M+ contracts', category: 'Government' },
-  { text: 'Solar potential assessment for properties in Phoenix with available incentives', category: 'Energy' },
-  { text: 'Salmon fishing hotspots in Puget Sound this weekend with tide charts', category: 'Marine' },
-  { text: 'Air quality and environmental hazards near schools in Los Angeles', category: 'Environment' },
-  { text: 'Bridge infrastructure ratings along I-95 corridor in Connecticut', category: 'Infrastructure' },
-  { text: 'Real-time flight delays and weather at JFK airport', category: 'Aviation' },
+  { text: 'Top IT contractors in Virginia with $10M+ federal contracts', category: 'Government' },
+  { text: 'Hospitals in Maryland with CMS quality ratings and payment data', category: 'Healthcare' },
+  { text: '8(a) set-aside cybersecurity contracts expiring in 6 months', category: 'Opportunities' },
+  { text: 'EPA violations and environmental permits near Philadelphia', category: 'Compliance' },
+  { text: 'Compare federal healthcare spending by agency in Texas', category: 'Analysis' },
+  { text: 'Banks and credit unions in California with FDIC data', category: 'Financial' },
+  { text: 'NPI-registered doctors in New York accepting Medicare', category: 'Healthcare' },
+  { text: 'Federal grants for renewable energy research in 2024', category: 'Research' },
 ] as const;
 
 // ============================================================================
