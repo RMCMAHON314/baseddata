@@ -1,5 +1,6 @@
 // BASED DATA v10.0 - Premium Results View
 // Light theme matching landing page - Bloomberg Terminal meets Apple Maps
+// With integrated History Sidebar and Smart Stats
 
 import { useState, useMemo, useCallback, useRef, forwardRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -7,7 +8,8 @@ import {
   ArrowLeft, Table, Lightbulb, Share2, Database, 
   CheckCircle2, Sparkles, Copy, Search, Download, Eye,
   Filter, Layers, MapPin, ChevronDown, X, FileText,
-  TrendingUp, Shield, DollarSign, Users, Target, List
+  TrendingUp, Shield, DollarSign, Users, Target, List,
+  Clock, PanelLeftClose, PanelLeft
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -17,6 +19,9 @@ import { DataGrid } from '@/components/data/DataGrid';
 import { ResultsDataTable } from '@/components/data/ResultsDataTable';
 import { RecordDossier } from '@/components/dossier/RecordDossier';
 import { EntityProfile } from '@/components/entity/EntityProfile';
+import { HistorySidebar } from '@/components/history/HistorySidebar';
+import { InsightsPanel } from '@/components/insights/InsightsPanel';
+import { SmartStatsBar } from '@/components/stats/SmartStatsBar';
 import type { GeoJSONFeature, GeoJSONFeatureCollection, CollectedData, OmniscientInsights, MapLayer } from '@/types/omniscient';
 import { CATEGORY_COLORS } from '@/lib/mapbox';
 import { toast } from 'sonner';
@@ -76,9 +81,11 @@ export function PremiumOmniscientResults({
   const [cursorCoords, setCursorCoords] = useState<{ lng: number; lat: number } | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [viewMode, setViewMode] = useState<'cards' | 'table' | 'grid'>('table');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [filterSidebarOpen, setFilterSidebarOpen] = useState(true);
+  const [historySidebarOpen, setHistorySidebarOpen] = useState(false);
   const [dossierRecord, setDossierRecord] = useState<EnrichedRecord | null>(null);
   const [entityProfileFeature, setEntityProfileFeature] = useState<GeoJSONFeature | null>(null);
+  const [showInsightsPanel, setShowInsightsPanel] = useState(false);
   const dataScrollRef = useRef<HTMLDivElement>(null);
 
   // Process and deduplicate data
@@ -271,53 +278,118 @@ export function PremiumOmniscientResults({
         </div>
       </header>
 
-      {/* Insights Summary Card */}
+      {/* Smart Stats Dashboard - Category-specific intelligence */}
       <div className="flex-none px-6 py-4 bg-white border-b border-slate-200">
-        <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-5 border border-blue-100">
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-xl font-bold text-slate-900 mb-1">
-                {totalRecords} Results Found
-              </h2>
-              <p className="text-slate-600">
-                Aggregated from {successSources} sources across {dataStats.categories} categories
-                {dataStats.totalDuplicatesRemoved > 0 && (
-                  <span className="text-slate-400"> • {dataStats.totalDuplicatesRemoved} duplicates removed</span>
-                )}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
-                ✓ Deduplicated
-              </span>
-              <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-                {dataStats.geoPercent}% Georeferenced
-              </span>
-            </div>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">
+              {totalRecords} Results Found
+            </h2>
+            <p className="text-slate-500 text-sm">
+              Aggregated from {successSources} sources across {dataStats.categories} categories
+              {dataStats.totalDuplicatesRemoved > 0 && (
+                <span className="text-slate-400"> • {dataStats.totalDuplicatesRemoved} duplicates removed</span>
+              )}
+            </p>
           </div>
-          
-          {/* Quick Stats */}
-          <div className="grid grid-cols-4 gap-4 mt-4 pt-4 border-t border-blue-200/50">
-            <QuickStat label="Categories" value={dataStats.categories} />
-            <QuickStat label="With Coordinates" value={`${dataStats.geoPercent}%`} />
-            <QuickStat label="High Confidence" value={dataStats.highConfidenceCount} />
-            <QuickStat label="Query Time" value={`${(processingTimeMs / 1000).toFixed(1)}s`} />
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowInsightsPanel(!showInsightsPanel)}
+              className={cn(
+                "border-slate-200",
+                showInsightsPanel && "bg-amber-50 border-amber-200 text-amber-700"
+              )}
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              Insights
+            </Button>
+            <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
+              ✓ Deduplicated
+            </span>
+            <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+              {dataStats.geoPercent}% Geo
+            </span>
           </div>
         </div>
+        
+        {/* Smart Stats - adapts to data type */}
+        <SmartStatsBar
+          records={processedRecords}
+          queryTimeMs={processingTimeMs}
+          sourcesCount={successSources}
+        />
+        
+        {/* Collapsible Insights Panel */}
+        <AnimatePresence>
+          {showInsightsPanel && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <InsightsPanel
+                  insights={insights}
+                  records={processedRecords}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 flex min-h-0 overflow-hidden">
+        {/* History Sidebar (Vision: Left panel with search history) */}
+        <AnimatePresence>
+          {historySidebarOpen && (
+            <motion.div
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 280, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <HistorySidebar
+                isCollapsed={false}
+                onToggleCollapse={() => setHistorySidebarOpen(false)}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* History Toggle (when collapsed) */}
+        {!historySidebarOpen && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setHistorySidebarOpen(true)}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-30 bg-white border border-slate-200 shadow-md hover:bg-slate-50"
+          >
+            <Clock className="w-4 h-4" />
+          </Button>
+        )}
+
         {/* Filter Sidebar */}
         <aside className={cn(
           "w-64 bg-white border-r border-slate-200 flex flex-col transition-all duration-300",
-          !sidebarOpen && "-ml-64"
+          !filterSidebarOpen && "-ml-64"
         )}>
-          <div className="p-4 border-b border-slate-200">
+          <div className="p-4 border-b border-slate-200 flex items-center justify-between">
             <h3 className="font-semibold text-slate-900 flex items-center gap-2">
               <Filter className="w-4 h-4 text-blue-500" />
               Filters
             </h3>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setFilterSidebarOpen(false)}
+              className="h-6 w-6"
+            >
+              <PanelLeftClose className="w-4 h-4" />
+            </Button>
           </div>
           
           <ScrollArea className="flex-1">
@@ -379,9 +451,32 @@ export function PremiumOmniscientResults({
                   ))}
                 </div>
               </div>
+
+              {/* Insights Panel (in sidebar when not table view) */}
+              {viewMode !== 'table' && (
+                <div className="pt-4 border-t border-slate-200">
+                  <InsightsPanel
+                    insights={insights}
+                    records={processedRecords}
+                    compact={true}
+                  />
+                </div>
+              )}
             </div>
           </ScrollArea>
         </aside>
+
+        {/* Filter Toggle (when collapsed) */}
+        {!filterSidebarOpen && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setFilterSidebarOpen(true)}
+            className="absolute left-2 top-20 z-30 bg-white border border-slate-200 shadow-md hover:bg-slate-50"
+          >
+            <PanelLeft className="w-4 h-4" />
+          </Button>
+        )}
 
         {/* Map & Data Panel */}
         <div className="flex-1 flex flex-col lg:flex-row min-w-0">
