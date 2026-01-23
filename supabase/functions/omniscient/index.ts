@@ -1418,6 +1418,100 @@ function generateInsights(features: GeoJSONFeature[], intent: ParsedIntent): { s
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// STEP 8: SNAPSHOT GENERATION FOR HISTORY
+// ═══════════════════════════════════════════════════════════════════════════
+
+function generateSnapshot(
+  features: GeoJSONFeature[],
+  intent: ParsedIntent,
+  sources: SourceResult[],
+  processingTimeMs: number
+) {
+  const uniqueRecords = features.filter(f => !f.properties.is_duplicate);
+  const withGeo = uniqueRecords.filter(f => f.geometry?.type === 'Point');
+  const highRelevance = uniqueRecords.filter(f => (f.properties.relevance_score as number) >= 0.7);
+  
+  const avgRelevance = uniqueRecords.length > 0
+    ? uniqueRecords.reduce((sum, f) => sum + ((f.properties.relevance_score as number) || 0.5), 0) / uniqueRecords.length
+    : 0;
+
+  // Group by category
+  const categoryMap = new Map<string, { count: number; totalRelevance: number }>();
+  uniqueRecords.forEach(f => {
+    const cat = String(f.properties.category || 'OTHER');
+    const existing = categoryMap.get(cat) || { count: 0, totalRelevance: 0 };
+    categoryMap.set(cat, {
+      count: existing.count + 1,
+      totalRelevance: existing.totalRelevance + ((f.properties.relevance_score as number) || 0.5),
+    });
+  });
+  const categories = Array.from(categoryMap.entries())
+    .map(([name, data]) => ({
+      name,
+      count: data.count,
+      avg_relevance: Math.round((data.totalRelevance / data.count) * 100) / 100,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  // Group by source
+  const sourceMap = new Map<string, number>();
+  uniqueRecords.forEach(f => {
+    const src = String(f.properties.source || 'unknown');
+    sourceMap.set(src, (sourceMap.get(src) || 0) + 1);
+  });
+  const sourceSummary = Array.from(sourceMap.entries())
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count);
+
+  // Top results by relevance
+  const topResults = uniqueRecords
+    .sort((a, b) => ((b.properties.relevance_score as number) || 0) - ((a.properties.relevance_score as number) || 0))
+    .slice(0, 10)
+    .map(f => ({
+      id: String(f.properties.source_id || ''),
+      name: String(f.properties.name || 'Unknown'),
+      category: String(f.properties.category || 'OTHER'),
+      relevance_score: (f.properties.relevance_score as number) || 0.5,
+      lat: f.geometry?.type === 'Point' ? (f.geometry.coordinates as number[])[1] : undefined,
+      lng: f.geometry?.type === 'Point' ? (f.geometry.coordinates as number[])[0] : undefined,
+    }));
+
+  // Calculate bounds
+  let bounds = null;
+  if (withGeo.length > 0) {
+    const lats = withGeo.map(f => (f.geometry.coordinates as number[])[1]);
+    const lngs = withGeo.map(f => (f.geometry.coordinates as number[])[0]);
+    bounds = {
+      north: Math.max(...lats),
+      south: Math.min(...lats),
+      east: Math.max(...lngs),
+      west: Math.min(...lngs),
+    };
+  }
+
+  return {
+    stats: {
+      unique_records: uniqueRecords.length,
+      high_relevance: highRelevance.length,
+      avg_relevance: Math.round(avgRelevance * 100) / 100,
+      geo_percent: uniqueRecords.length > 0 ? Math.round((withGeo.length / uniqueRecords.length) * 100) : 0,
+      query_time_ms: processingTimeMs,
+      sources: sources.filter(s => s.status === 'success').length,
+      categories: categories.length,
+    },
+    categories: categories.slice(0, 5),
+    sources: sourceSummary.slice(0, 5),
+    top_results: topResults,
+    query_analysis: {
+      core_entity: intent.core_entity.type,
+      location: intent.where.raw || intent.where.state || 'Unknown',
+      keywords: intent.core_entity.keywords.slice(0, 5),
+    },
+    bounds,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // MAIN HANDLER
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -1427,7 +1521,7 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    const { prompt } = await req.json();
+    const { prompt, session_id } = await req.json();
     if (!prompt) {
       return new Response(JSON.stringify({ error: 'Prompt required' }), { 
         status: 400, 
@@ -1438,7 +1532,28 @@ serve(async (req) => {
     console.log('═══════════════════════════════════════════════════════════');
     console.log('🌍 BASED DATA v10.0 — INTELLIGENT QUERY ENGINE');
     console.log(`📝 Query: "${prompt}"`);
+    console.log(`📋 Session: ${session_id || 'anonymous'}`);
     const startTime = Date.now();
+
+    // Create query record for history tracking
+    let queryId = `bd_${Date.now()}`;
+    if (session_id) {
+      const { data: queryRecord } = await supabase
+        .from('queries')
+        .insert({
+          prompt,
+          session_id,
+          status: 'pending',
+          input_type: 'natural_language',
+          engine_version: 'baseddata-v10.0-intelligent',
+        })
+        .select('id')
+        .single();
+      
+      if (queryRecord) {
+        queryId = queryRecord.id;
+      }
+    }
 
     // STEP 1: Parse intent with intelligence
     console.log('🧠 Step 1: Parsing intent...');
@@ -1476,7 +1591,35 @@ serve(async (req) => {
     console.log('💡 Step 4: Generating insights...');
     const insights = generateInsights(features, intent);
 
-    // Persist to DB (non-blocking)
+    const processingTime = Date.now() - startTime;
+
+    // STEP 5: Generate snapshot for history
+    const snapshot = generateSnapshot(features, intent, sources, processingTime);
+
+    // STEP 6: Update query record with results
+    if (session_id && queryId !== `bd_${startTime}`) {
+      await supabase
+        .from('queries')
+        .update({
+          status: 'completed',
+          result_count: features.length,
+          sources_queried: sources.map(s => s.name),
+          categories_matched: [intent.what.category.toUpperCase()],
+          features: { type: 'FeatureCollection', features: features.slice(0, 100) },
+          insights,
+          processing_time_ms: processingTime,
+          avg_relevance_score: Math.round(avgRelevance * 100) / 100,
+          high_relevance_count: highRelevanceCount,
+          low_relevance_filtered: filteredOut,
+          total_records_raw: totalRaw,
+          snapshot,
+          parsed_intent: intent,
+          completed_at: new Date().toISOString(),
+        })
+        .eq('id', queryId);
+    }
+
+    // Persist to records table (non-blocking)
     if (features.length > 0) {
       const records = features.slice(0, 50).map(f => ({
         source_id: String(f.properties.source),
@@ -1491,14 +1634,13 @@ serve(async (req) => {
       supabase.from('records').upsert(records, { onConflict: 'source_id,source_record_id', ignoreDuplicates: true }).then(() => {});
     }
 
-    const processingTime = Date.now() - startTime;
     console.log(`✅ Complete: ${features.length} relevant features in ${processingTime}ms`);
     console.log(`   📊 Avg relevance: ${Math.round(avgRelevance * 100)}%, High relevance: ${highRelevanceCount}`);
     console.log('═══════════════════════════════════════════════════════════');
 
     return new Response(JSON.stringify({
       success: true,
-      query_id: `bd_${Date.now()}`,
+      query_id: queryId,
       prompt,
       intent: {
         use_case: intent.what.category,
