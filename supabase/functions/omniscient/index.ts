@@ -1,12 +1,13 @@
 // ═══════════════════════════════════════════════════════════════════════════
-// 🌍 BASED DATA ENGINE v9.0 — ZERO IN / ZERO OUT
+// 🌍 BASED DATA ENGINE v10.0 — INTELLIGENT QUERY ENGINE
 // 
 // ARCHITECTURE:
-// 1. AI-powered intent parsing (WHAT + WHERE + WHEN + FILTERS)
-// 2. Proper geocoding with Nominatim (accurate bounding boxes)
-// 3. Intelligent collector selection (only run what's needed)
-// 4. Lean parallel execution (batch size 3, memory optimized)
-// 5. High-fidelity data extraction (useful names, descriptions, addresses)
+// 1. AI-powered intent parsing with OSM tags + relevance criteria
+// 2. Precision geocoding with hardcoded fallbacks
+// 3. Intelligent collector selection based on intent
+// 4. RELEVANCE SCORING - filter out garbage before display
+// 5. POST-PROCESSING - hard filters + soft ranking + diversity
+// 6. High-fidelity data extraction with smart naming
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
@@ -19,14 +20,30 @@ const corsHeaders = {
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const LOVABLE_AI_URL = 'https://lovable.dev/api/generate';
-const USER_AGENT = 'BASEDDATA/9.0 (baseddata.lovable.app)';
+const USER_AGENT = 'BASEDDATA/10.0 (baseddata.lovable.app)';
 
 // ═══════════════════════════════════════════════════════════════════════════
-// TYPES
+// TYPES - Enhanced with Relevance Criteria
 // ═══════════════════════════════════════════════════════════════════════════
+
+interface CoreEntity {
+  type: string;
+  keywords: string[];
+  osm_tags: {
+    primary: Record<string, string>;
+    secondary: Record<string, string>[];
+  };
+  exclude_keywords: string[];
+}
+
+interface RelevanceCriteria {
+  must_have: string[];
+  should_have: string[];
+  must_not_have: string[];
+}
 
 interface ParsedIntent {
+  core_entity: CoreEntity;
   what: {
     primary: string;
     keywords: string[];
@@ -51,6 +68,12 @@ interface ParsedIntent {
     outdoor?: boolean;
     keywords: string[];
   };
+  relevance_criteria: RelevanceCriteria;
+  data_sources: {
+    primary: string[];
+    secondary: string[];
+    excluded: string[];
+  };
   collectors: string[];
   confidence: number;
 }
@@ -65,159 +88,236 @@ interface SourceResult {
   name: string;
   status: 'success' | 'empty' | 'error';
   count: number;
+  records_after_filter: number;
   time_ms: number;
   error?: string;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// STEP 1: AI-POWERED INTENT PARSING
+// ENTITY TYPE MAPPINGS - For smart inference
 // ═══════════════════════════════════════════════════════════════════════════
 
-async function parseQueryIntent(prompt: string): Promise<ParsedIntent> {
-  // Use robust fallback parsing - edge-optimized
-  return fallbackParse(prompt);
-}
+const ENTITY_MAPPINGS: Record<string, {
+  type: string;
+  osm_primary: Record<string, string>;
+  osm_secondary: Record<string, string>[];
+  keywords: string[];
+  exclude: string[];
+  must_have: string[];
+  should_have: string[];
+  must_not_have: string[];
+  category: string;
+}> = {
+  baseball: {
+    type: 'sports_facility',
+    osm_primary: { sport: 'baseball' },
+    osm_secondary: [{ leisure: 'pitch' }, { leisure: 'sports_centre' }, { leisure: 'stadium' }],
+    keywords: ['baseball', 'field', 'diamond', 'batting cage', 'little league', 'softball'],
+    exclude: ['golf', 'soccer', 'tennis', 'basketball', 'football'],
+    must_have: ['baseball', 'softball', 'batting', 'diamond', 'little league', 'dugout'],
+    should_have: ['field', 'park', 'recreation', 'sports'],
+    must_not_have: ['golf course', 'soccer field', 'tennis court', 'basketball court', 'football field'],
+    category: 'recreation',
+  },
+  soccer: {
+    type: 'sports_facility',
+    osm_primary: { sport: 'soccer' },
+    osm_secondary: [{ leisure: 'pitch' }, { sport: 'football' }],
+    keywords: ['soccer', 'football', 'pitch', 'field', 'goal'],
+    exclude: ['american football', 'baseball', 'golf'],
+    must_have: ['soccer', 'football', 'pitch'],
+    should_have: ['field', 'goal', 'recreation'],
+    must_not_have: ['baseball', 'golf', 'tennis', 'american football'],
+    category: 'recreation',
+  },
+  tennis: {
+    type: 'sports_facility',
+    osm_primary: { sport: 'tennis' },
+    osm_secondary: [{ leisure: 'pitch' }],
+    keywords: ['tennis', 'court', 'racquet'],
+    exclude: ['golf', 'soccer', 'baseball'],
+    must_have: ['tennis', 'court', 'racquet'],
+    should_have: ['club', 'recreation'],
+    must_not_have: ['golf', 'soccer', 'baseball'],
+    category: 'recreation',
+  },
+  basketball: {
+    type: 'sports_facility',
+    osm_primary: { sport: 'basketball' },
+    osm_secondary: [{ leisure: 'pitch' }],
+    keywords: ['basketball', 'court', 'hoop'],
+    exclude: ['golf', 'soccer', 'baseball', 'tennis'],
+    must_have: ['basketball', 'court', 'hoop'],
+    should_have: ['recreation', 'gym'],
+    must_not_have: ['golf', 'soccer', 'baseball', 'tennis'],
+    category: 'recreation',
+  },
+  golf: {
+    type: 'sports_facility',
+    osm_primary: { leisure: 'golf_course' },
+    osm_secondary: [{ sport: 'golf' }],
+    keywords: ['golf', 'course', 'driving range', 'club'],
+    exclude: ['mini golf', 'baseball', 'soccer'],
+    must_have: ['golf', 'course', 'club', 'driving range'],
+    should_have: ['country', 'links'],
+    must_not_have: ['baseball', 'soccer', 'tennis', 'mini'],
+    category: 'recreation',
+  },
+  park: {
+    type: 'recreation_area',
+    osm_primary: { leisure: 'park' },
+    osm_secondary: [{ boundary: 'national_park' }, { leisure: 'nature_reserve' }],
+    keywords: ['park', 'recreation', 'nature', 'outdoor'],
+    exclude: ['parking'],
+    must_have: ['park', 'recreation', 'nature'],
+    should_have: ['trail', 'playground', 'picnic'],
+    must_not_have: ['parking lot', 'parking garage'],
+    category: 'recreation',
+  },
+  hospital: {
+    type: 'healthcare_facility',
+    osm_primary: { amenity: 'hospital' },
+    osm_secondary: [{ amenity: 'clinic' }, { healthcare: 'hospital' }],
+    keywords: ['hospital', 'medical center', 'healthcare', 'emergency'],
+    exclude: ['veterinary'],
+    must_have: ['hospital', 'medical', 'healthcare', 'clinic'],
+    should_have: ['emergency', 'care'],
+    must_not_have: ['veterinary', 'animal'],
+    category: 'healthcare',
+  },
+  school: {
+    type: 'education_facility',
+    osm_primary: { amenity: 'school' },
+    osm_secondary: [{ amenity: 'college' }, { amenity: 'university' }],
+    keywords: ['school', 'education', 'elementary', 'high school', 'academy'],
+    exclude: ['driving school'],
+    must_have: ['school', 'education', 'academy', 'elementary', 'high'],
+    should_have: ['learning', 'student'],
+    must_not_have: ['driving school', 'dance school'],
+    category: 'education',
+  },
+  restaurant: {
+    type: 'food_establishment',
+    osm_primary: { amenity: 'restaurant' },
+    osm_secondary: [{ amenity: 'cafe' }, { amenity: 'fast_food' }],
+    keywords: ['restaurant', 'dining', 'food', 'eat'],
+    exclude: ['gas station'],
+    must_have: ['restaurant', 'dining', 'food', 'cafe'],
+    should_have: ['cuisine', 'menu'],
+    must_not_have: ['gas station', 'convenience'],
+    category: 'dining',
+  },
+  hunting: {
+    type: 'hunting_area',
+    osm_primary: { hunting: 'yes' },
+    osm_secondary: [{ leisure: 'nature_reserve' }, { natural: 'wetland' }],
+    keywords: ['hunting', 'game', 'waterfowl', 'deer', 'wildlife'],
+    exclude: [],
+    must_have: ['hunting', 'game', 'waterfowl', 'wildlife'],
+    should_have: ['reserve', 'management'],
+    must_not_have: [],
+    category: 'wildlife',
+  },
+};
 
-function selectCollectors(intent: { what: { primary: string; category: string; keywords?: string[] }; filters?: { indoor?: boolean } }): string[] {
-  const collectors: string[] = [];
-  const what = intent.what.primary.toLowerCase();
-  const category = intent.what.category.toLowerCase();
-  const keywords = intent.what.keywords?.map(k => k.toLowerCase()) || [];
+// ═══════════════════════════════════════════════════════════════════════════
+// STEP 1: INTELLIGENT QUERY PARSING
+// ═══════════════════════════════════════════════════════════════════════════
 
-  // RECREATION & SPORTS
-  if (category === 'recreation' || category === 'sports' ||
-      ['baseball', 'soccer', 'tennis', 'basketball', 'golf', 'swimming', 'gym', 'fitness', 'sports', 'athletic', 'field', 'court', 'stadium', 'arena', 'park', 'trail', 'hiking', 'camping'].some(k => what.includes(k) || keywords.includes(k))) {
-    collectors.push('osm_sports', 'recreation_gov');
-    if (what.includes('park') || keywords.includes('park')) {
-      collectors.push('nps');
-    }
-  }
-
-  // WILDLIFE & NATURE
-  if (category === 'wildlife' ||
-      ['bird', 'wildlife', 'animal', 'species', 'hunting', 'fishing', 'goose', 'duck', 'deer', 'nature'].some(k => what.includes(k) || keywords.includes(k))) {
-    collectors.push('inaturalist', 'gbif');
-  }
-
-  // WEATHER
-  if (category === 'weather' ||
-      ['weather', 'forecast', 'temperature', 'rain', 'storm', 'climate', 'conditions'].some(k => what.includes(k) || keywords.includes(k))) {
-    collectors.push('noaa_weather', 'open_meteo');
-  }
-
-  // MARINE
-  if (category === 'marine' ||
-      ['tide', 'ocean', 'marine', 'boat', 'fishing', 'coastal', 'beach', 'buoy'].some(k => what.includes(k) || keywords.includes(k))) {
-    collectors.push('noaa_tides');
-  }
-
-  // GOVERNMENT
-  if (category === 'government' ||
-      ['contract', 'grant', 'federal', 'government', 'spending', 'agency'].some(k => what.includes(k) || keywords.includes(k))) {
-    collectors.push('data_gov', 'usaspending');
-  }
-
-  // HEALTHCARE
-  if (category === 'healthcare' ||
-      ['hospital', 'doctor', 'clinic', 'medical', 'pharmacy', 'health'].some(k => what.includes(k) || keywords.includes(k))) {
-    collectors.push('osm_healthcare');
-  }
-
-  // EDUCATION
-  if (category === 'education' ||
-      ['school', 'college', 'university', 'education', 'library'].some(k => what.includes(k) || keywords.includes(k))) {
-    collectors.push('osm_education');
-  }
-
-  // TRANSPORTATION
-  if (category === 'transportation' ||
-      ['airport', 'road', 'transit', 'bus', 'train', 'traffic', 'highway', 'flight'].some(k => what.includes(k) || keywords.includes(k))) {
-    collectors.push('osm_transport');
-  }
-
-  // EMERGENCY
-  if (category === 'emergency' ||
-      ['emergency', 'fire', 'police', 'crime', 'disaster'].some(k => what.includes(k) || keywords.includes(k))) {
-    collectors.push('osm_emergency');
-  }
-
-  // ENVIRONMENT
-  if (category === 'environment' ||
-      ['pollution', 'air quality', 'water', 'environmental'].some(k => what.includes(k) || keywords.includes(k))) {
-    collectors.push('usgs_water');
-  }
-
-  // Default: OSM POI search
-  if (collectors.length === 0) {
-    collectors.push('osm_poi');
-  }
-
-  return [...new Set(collectors)];
-}
-
-// Hardcoded bounding boxes for major US counties (fallback when Nominatim fails)
+// Hardcoded bounding boxes for major US counties
 const COUNTY_BBOXES: Record<string, { bounds: { north: number; south: number; east: number; west: number }; center: [number, number] }> = {
   'baltimore_md': { bounds: { north: 39.72, south: 39.23, east: -76.32, west: -76.92 }, center: [-76.61, 39.47] },
   'baltimore city_md': { bounds: { north: 39.37, south: 39.20, east: -76.53, west: -76.71 }, center: [-76.61, 39.29] },
   'anne arundel_md': { bounds: { north: 39.22, south: 38.67, east: -76.40, west: -76.84 }, center: [-76.60, 38.95] },
   'montgomery_md': { bounds: { north: 39.36, south: 38.93, east: -76.88, west: -77.52 }, center: [-77.20, 39.14] },
   'prince george_md': { bounds: { north: 39.14, south: 38.54, east: -76.67, west: -77.04 }, center: [-76.85, 38.84] },
+  'howard_md': { bounds: { north: 39.35, south: 39.10, east: -76.70, west: -77.07 }, center: [-76.93, 39.25] },
+  'harford_md': { bounds: { north: 39.72, south: 39.35, east: -76.05, west: -76.51 }, center: [-76.30, 39.53] },
   'fairfax_va': { bounds: { north: 39.03, south: 38.59, east: -77.09, west: -77.53 }, center: [-77.31, 38.81] },
+  'arlington_va': { bounds: { north: 38.94, south: 38.83, east: -77.03, west: -77.17 }, center: [-77.10, 38.88] },
   'los angeles_ca': { bounds: { north: 34.82, south: 33.70, east: -117.65, west: -118.67 }, center: [-118.24, 34.05] },
+  'orange_ca': { bounds: { north: 33.95, south: 33.39, east: -117.41, west: -118.12 }, center: [-117.76, 33.67] },
+  'san diego_ca': { bounds: { north: 33.51, south: 32.53, east: -116.08, west: -117.60 }, center: [-117.16, 32.72] },
   'cook_il': { bounds: { north: 42.16, south: 41.47, east: -87.52, west: -88.26 }, center: [-87.68, 41.88] },
   'harris_tx': { bounds: { north: 30.17, south: 29.50, east: -95.01, west: -95.91 }, center: [-95.36, 29.76] },
   'maricopa_az': { bounds: { north: 34.04, south: 32.51, east: -111.04, west: -113.33 }, center: [-112.07, 33.45] },
+  'king_wa': { bounds: { north: 47.78, south: 47.08, east: -121.07, west: -122.54 }, center: [-122.33, 47.45] },
+  'miami-dade_fl': { bounds: { north: 25.98, south: 25.14, east: -80.09, west: -80.87 }, center: [-80.19, 25.76] },
+  'new york_ny': { bounds: { north: 40.92, south: 40.48, east: -73.70, west: -74.26 }, center: [-74.01, 40.71] },
+  'philadelphia_pa': { bounds: { north: 40.14, south: 39.87, east: -74.96, west: -75.28 }, center: [-75.16, 39.95] },
+  'suffolk_ny': { bounds: { north: 41.16, south: 40.59, east: -71.85, west: -73.50 }, center: [-72.80, 40.88] },
+  'nassau_ny': { bounds: { north: 40.93, south: 40.52, east: -73.42, west: -73.74 }, center: [-73.59, 40.73] },
 };
 
-function fallbackParse(prompt: string): ParsedIntent {
+const STATE_MAP: Record<string, { name: string; code: string; center: [number, number] }> = {
+  'maryland': { name: 'Maryland', code: 'MD', center: [-76.6, 39.0] },
+  'md': { name: 'Maryland', code: 'MD', center: [-76.6, 39.0] },
+  'california': { name: 'California', code: 'CA', center: [-119.4, 36.8] },
+  'ca': { name: 'California', code: 'CA', center: [-119.4, 36.8] },
+  'texas': { name: 'Texas', code: 'TX', center: [-99.9, 31.9] },
+  'tx': { name: 'Texas', code: 'TX', center: [-99.9, 31.9] },
+  'new york': { name: 'New York', code: 'NY', center: [-74.0, 40.7] },
+  'ny': { name: 'New York', code: 'NY', center: [-74.0, 40.7] },
+  'virginia': { name: 'Virginia', code: 'VA', center: [-78.2, 37.4] },
+  'va': { name: 'Virginia', code: 'VA', center: [-78.2, 37.4] },
+  'florida': { name: 'Florida', code: 'FL', center: [-81.5, 27.6] },
+  'fl': { name: 'Florida', code: 'FL', center: [-81.5, 27.6] },
+  'pennsylvania': { name: 'Pennsylvania', code: 'PA', center: [-77.2, 41.2] },
+  'pa': { name: 'Pennsylvania', code: 'PA', center: [-77.2, 41.2] },
+  'ohio': { name: 'Ohio', code: 'OH', center: [-82.9, 40.4] },
+  'oh': { name: 'Ohio', code: 'OH', center: [-82.9, 40.4] },
+  'georgia': { name: 'Georgia', code: 'GA', center: [-83.5, 32.9] },
+  'ga': { name: 'Georgia', code: 'GA', center: [-83.5, 32.9] },
+  'illinois': { name: 'Illinois', code: 'IL', center: [-89.3, 40.6] },
+  'il': { name: 'Illinois', code: 'IL', center: [-89.3, 40.6] },
+  'michigan': { name: 'Michigan', code: 'MI', center: [-84.5, 44.3] },
+  'mi': { name: 'Michigan', code: 'MI', center: [-84.5, 44.3] },
+  'arizona': { name: 'Arizona', code: 'AZ', center: [-111.9, 34.0] },
+  'az': { name: 'Arizona', code: 'AZ', center: [-111.9, 34.0] },
+  'washington': { name: 'Washington', code: 'WA', center: [-120.5, 47.4] },
+  'wa': { name: 'Washington', code: 'WA', center: [-120.5, 47.4] },
+  'massachusetts': { name: 'Massachusetts', code: 'MA', center: [-71.4, 42.4] },
+  'ma': { name: 'Massachusetts', code: 'MA', center: [-71.4, 42.4] },
+};
+
+function parseQueryIntent(prompt: string): ParsedIntent {
   const lower = prompt.toLowerCase();
   
-  // Enhanced location extraction - EXCLUDE prepositions from county name
-  // Pattern: Match word(s) before "county" but NOT "in", "at", "near", etc.
+  // ═══════════════════════════════════════════════════════════════
+  // STEP 1A: Detect entity type from ENTITY_MAPPINGS
+  // ═══════════════════════════════════════════════════════════════
+  let detectedEntity: typeof ENTITY_MAPPINGS[string] | null = null;
+  let entityKey = '';
+  
+  for (const [key, mapping] of Object.entries(ENTITY_MAPPINGS)) {
+    if (lower.includes(key)) {
+      detectedEntity = mapping;
+      entityKey = key;
+      break;
+    }
+    // Also check keywords
+    if (mapping.keywords.some(kw => lower.includes(kw))) {
+      detectedEntity = mapping;
+      entityKey = key;
+      break;
+    }
+  }
+  
+  // ═══════════════════════════════════════════════════════════════
+  // STEP 1B: Extract location - EXCLUDE prepositions from county name
+  // ═══════════════════════════════════════════════════════════════
   const countyMatch = lower.match(/(?:^|[\s,])(?!in\s|at\s|near\s|around\s|the\s)([a-z]+(?:\s+[a-z]+)?)\s+county\b/);
   
-  // State codes with expanded list
-  const stateMap: Record<string, { name: string; code: string; center: [number, number] }> = {
-    'maryland': { name: 'Maryland', code: 'MD', center: [-76.6, 39.0] },
-    'md': { name: 'Maryland', code: 'MD', center: [-76.6, 39.0] },
-    'california': { name: 'California', code: 'CA', center: [-119.4, 36.8] },
-    'ca': { name: 'California', code: 'CA', center: [-119.4, 36.8] },
-    'texas': { name: 'Texas', code: 'TX', center: [-99.9, 31.9] },
-    'tx': { name: 'Texas', code: 'TX', center: [-99.9, 31.9] },
-    'new york': { name: 'New York', code: 'NY', center: [-74.0, 40.7] },
-    'ny': { name: 'New York', code: 'NY', center: [-74.0, 40.7] },
-    'virginia': { name: 'Virginia', code: 'VA', center: [-78.2, 37.4] },
-    'va': { name: 'Virginia', code: 'VA', center: [-78.2, 37.4] },
-    'florida': { name: 'Florida', code: 'FL', center: [-81.5, 27.6] },
-    'fl': { name: 'Florida', code: 'FL', center: [-81.5, 27.6] },
-    'pennsylvania': { name: 'Pennsylvania', code: 'PA', center: [-77.2, 41.2] },
-    'pa': { name: 'Pennsylvania', code: 'PA', center: [-77.2, 41.2] },
-    'ohio': { name: 'Ohio', code: 'OH', center: [-82.9, 40.4] },
-    'oh': { name: 'Ohio', code: 'OH', center: [-82.9, 40.4] },
-    'georgia': { name: 'Georgia', code: 'GA', center: [-83.5, 32.9] },
-    'ga': { name: 'Georgia', code: 'GA', center: [-83.5, 32.9] },
-    'illinois': { name: 'Illinois', code: 'IL', center: [-89.3, 40.6] },
-    'il': { name: 'Illinois', code: 'IL', center: [-89.3, 40.6] },
-    'michigan': { name: 'Michigan', code: 'MI', center: [-84.5, 44.3] },
-    'mi': { name: 'Michigan', code: 'MI', center: [-84.5, 44.3] },
-    'arizona': { name: 'Arizona', code: 'AZ', center: [-111.9, 34.0] },
-    'az': { name: 'Arizona', code: 'AZ', center: [-111.9, 34.0] },
-  };
-
   let stateCode = '';
   let stateName = '';
   let center: [number, number] = [-98.5, 39.8];
   let countyName = '';
   
-  // Extract county if present - capitalize it properly
   if (countyMatch && countyMatch[1]) {
-    // Capitalize county name properly, trim any leading/trailing spaces
     countyName = countyMatch[1].trim().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-    console.log(`   📍 Extracted county: "${countyName}"`);
   }
   
-  // Find state from entire prompt
-  for (const [key, val] of Object.entries(stateMap)) {
+  for (const [key, val] of Object.entries(STATE_MAP)) {
     if (lower.includes(key)) {
       stateName = val.name;
       stateCode = val.code;
@@ -226,34 +326,49 @@ function fallbackParse(prompt: string): ParsedIntent {
     }
   }
 
-  // Detect category from keywords
-  let category = 'geospatial';
-  let subcategory: string | undefined;
-  
-  if (['baseball', 'soccer', 'tennis', 'basketball', 'sports', 'gym', 'fitness', 'park', 'trail', 'recreation', 'field', 'athletic', 'stadium'].some(k => lower.includes(k))) {
-    category = 'recreation';
-    if (lower.includes('baseball')) subcategory = 'baseball';
-    else if (lower.includes('soccer')) subcategory = 'soccer';
-    else if (lower.includes('tennis')) subcategory = 'tennis';
-    else if (lower.includes('basketball')) subcategory = 'basketball';
-    else if (lower.includes('golf')) subcategory = 'golf';
-  }
-  if (['bird', 'wildlife', 'animal', 'hunting', 'fishing', 'species'].some(k => lower.includes(k))) category = 'wildlife';
-  if (['weather', 'forecast', 'temperature', 'rain', 'storm'].some(k => lower.includes(k))) category = 'weather';
-  if (['hospital', 'doctor', 'clinic', 'medical', 'health'].some(k => lower.includes(k))) category = 'healthcare';
-  if (['contract', 'grant', 'federal', 'government'].some(k => lower.includes(k))) category = 'government';
-  if (['school', 'college', 'university', 'education'].some(k => lower.includes(k))) category = 'education';
-
-  // Extract primary search term - cleaned
+  // ═══════════════════════════════════════════════════════════════
+  // STEP 1C: Build core entity with OSM tags and relevance criteria
+  // ═══════════════════════════════════════════════════════════════
   const words = prompt.split(/\s+/).filter(w => w.length > 2);
-  const stopWords = ['in', 'at', 'near', 'around', 'the', 'for', 'and', 'with', 'county', 'city', 'state', 'facilities', 'facility'];
+  const stopWords = ['in', 'at', 'near', 'around', 'the', 'for', 'and', 'with', 'county', 'city', 'state', 'facilities', 'facility', 'all', 'show', 'find', 'get', 'list'];
   const primaryWords = words.filter(w => 
     !stopWords.includes(w.toLowerCase()) && 
-    !stateMap[w.toLowerCase()] &&
+    !STATE_MAP[w.toLowerCase()] &&
     !w.toLowerCase().includes('county')
   );
-  
-  // Build the location search string for geocoding
+
+  const coreEntity: CoreEntity = detectedEntity ? {
+    type: detectedEntity.type,
+    keywords: [...detectedEntity.keywords, ...primaryWords.slice(0, 3)],
+    osm_tags: {
+      primary: detectedEntity.osm_primary,
+      secondary: detectedEntity.osm_secondary,
+    },
+    exclude_keywords: detectedEntity.exclude,
+  } : {
+    type: 'generic_poi',
+    keywords: primaryWords.slice(0, 5),
+    osm_tags: { primary: {}, secondary: [] },
+    exclude_keywords: [],
+  };
+
+  const relevanceCriteria: RelevanceCriteria = detectedEntity ? {
+    must_have: detectedEntity.must_have,
+    should_have: detectedEntity.should_have,
+    must_not_have: detectedEntity.must_not_have,
+  } : {
+    must_have: primaryWords.slice(0, 2),
+    should_have: primaryWords.slice(2, 4),
+    must_not_have: [],
+  };
+
+  // ═══════════════════════════════════════════════════════════════
+  // STEP 1D: Determine data sources based on entity type
+  // ═══════════════════════════════════════════════════════════════
+  const category = detectedEntity?.category || detectCategory(lower);
+  const dataSources = selectDataSources(category, coreEntity.type);
+
+  // Build location string for geocoding
   const rawLocation = countyName 
     ? `${countyName} County${stateName ? `, ${stateName}` : ''}`
     : stateName || '';
@@ -266,16 +381,16 @@ function fallbackParse(prompt: string): ParsedIntent {
     if (hardcoded) {
       bounds = hardcoded.bounds;
       center = hardcoded.center;
-      console.log(`   ✅ Using hardcoded bbox for ${countyName} County, ${stateCode}`);
     }
   }
-  
+
   const intent: ParsedIntent = {
+    core_entity: coreEntity,
     what: {
-      primary: primaryWords.slice(0, 3).join(' ') || prompt,
+      primary: entityKey || primaryWords.slice(0, 3).join(' ') || prompt,
       keywords: primaryWords,
       category,
-      subcategory,
+      subcategory: entityKey || undefined,
     },
     where: {
       raw: rawLocation,
@@ -284,7 +399,7 @@ function fallbackParse(prompt: string): ParsedIntent {
       stateCode,
       country: 'USA',
       center,
-      bounds, // Pre-fill with hardcoded if available
+      bounds,
     },
     when: {
       temporal: lower.includes('forecast') ? 'forecast' : 'current',
@@ -294,22 +409,100 @@ function fallbackParse(prompt: string): ParsedIntent {
       outdoor: lower.includes('outdoor') ? true : undefined,
       keywords: primaryWords,
     },
+    relevance_criteria: relevanceCriteria,
+    data_sources: dataSources,
     collectors: [],
-    confidence: 0.8,
+    confidence: detectedEntity ? 0.95 : 0.75,
   };
 
   intent.collectors = selectCollectors(intent);
   return intent;
 }
 
+function detectCategory(text: string): string {
+  if (['baseball', 'soccer', 'tennis', 'basketball', 'sports', 'gym', 'fitness', 'park', 'trail', 'recreation', 'field', 'athletic', 'stadium', 'golf'].some(k => text.includes(k))) return 'recreation';
+  if (['bird', 'wildlife', 'animal', 'hunting', 'fishing', 'species', 'goose', 'duck'].some(k => text.includes(k))) return 'wildlife';
+  if (['weather', 'forecast', 'temperature', 'rain', 'storm'].some(k => text.includes(k))) return 'weather';
+  if (['hospital', 'doctor', 'clinic', 'medical', 'health'].some(k => text.includes(k))) return 'healthcare';
+  if (['contract', 'grant', 'federal', 'government', 'procurement'].some(k => text.includes(k))) return 'government';
+  if (['school', 'college', 'university', 'education'].some(k => text.includes(k))) return 'education';
+  if (['restaurant', 'food', 'dining', 'cafe'].some(k => text.includes(k))) return 'dining';
+  return 'geospatial';
+}
+
+function selectDataSources(category: string, entityType: string): { primary: string[]; secondary: string[]; excluded: string[] } {
+  const sources: { primary: string[]; secondary: string[]; excluded: string[] } = {
+    primary: [],
+    secondary: [],
+    excluded: [],
+  };
+
+  switch (category) {
+    case 'recreation':
+      sources.primary = ['osm_sports', 'recreation_gov'];
+      sources.secondary = ['nps'];
+      sources.excluded = ['inaturalist', 'noaa_weather'];
+      break;
+    case 'wildlife':
+      sources.primary = ['inaturalist', 'gbif'];
+      sources.secondary = ['osm_poi'];
+      sources.excluded = ['osm_sports', 'usaspending'];
+      break;
+    case 'weather':
+      sources.primary = ['noaa_weather', 'open_meteo'];
+      sources.secondary = [];
+      sources.excluded = ['osm_sports', 'inaturalist'];
+      break;
+    case 'healthcare':
+      sources.primary = ['osm_healthcare'];
+      sources.secondary = ['osm_poi'];
+      sources.excluded = ['inaturalist', 'noaa_weather'];
+      break;
+    case 'education':
+      sources.primary = ['osm_education'];
+      sources.secondary = ['osm_poi'];
+      sources.excluded = ['inaturalist', 'noaa_weather'];
+      break;
+    case 'government':
+      sources.primary = ['data_gov', 'usaspending'];
+      sources.secondary = ['osm_poi'];
+      sources.excluded = ['inaturalist'];
+      break;
+    default:
+      sources.primary = ['osm_poi'];
+      sources.secondary = ['recreation_gov'];
+      sources.excluded = [];
+  }
+
+  return sources;
+}
+
+function selectCollectors(intent: ParsedIntent): string[] {
+  const collectors: string[] = [];
+  const { primary, secondary } = intent.data_sources;
+  
+  // Add primary collectors
+  collectors.push(...primary);
+  
+  // Add secondary collectors
+  collectors.push(...secondary);
+  
+  // Default fallback
+  if (collectors.length === 0) {
+    collectors.push('osm_poi');
+  }
+
+  return [...new Set(collectors)];
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
-// STEP 2: GEOCODING WITH NOMINATIM
+// STEP 2: GEOCODING WITH NOMINATIM + HARDCODED FALLBACKS
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function geocodeLocation(where: ParsedIntent['where']): Promise<ParsedIntent['where']> {
   // If we already have bounds from hardcoded fallback, skip geocoding
   if (where.bounds) {
-    console.log(`📍 Using pre-filled bounds: [${where.bounds.south.toFixed(3)}, ${where.bounds.north.toFixed(3)}, ${where.bounds.west.toFixed(3)}, ${where.bounds.east.toFixed(3)}]`);
+    console.log(`📍 Using pre-filled bounds: [${where.bounds.south.toFixed(3)}, ${where.bounds.north.toFixed(3)}]`);
     return where;
   }
 
@@ -317,16 +510,13 @@ async function geocodeLocation(where: ParsedIntent['where']): Promise<ParsedInte
     return where;
   }
 
-  // Build search string - prioritize structured data
   let searchText = '';
   
   if (where.county) {
-    // Use structured county + state for best results - just the county name
     searchText = `${where.county} County, ${where.state || where.stateCode || ''}, United States`.replace(/,\s*,/g, ',').trim();
   } else if (where.city && where.state) {
     searchText = `${where.city}, ${where.state}, United States`;
   } else if (where.raw) {
-    // Clean the raw location - remove prepositions
     searchText = where.raw.replace(/^(in|at|near|around)\s+/i, '').trim();
     if (!searchText.toLowerCase().includes('usa') && !searchText.toLowerCase().includes('united states')) {
       searchText += ', United States';
@@ -338,7 +528,6 @@ async function geocodeLocation(where: ParsedIntent['where']): Promise<ParsedInte
   if (!searchText || searchText === ', United States') return where;
 
   try {
-    // Use featuretype=county for county searches - more specific
     let url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&q=${encodeURIComponent(searchText)}`;
     if (where.county) {
       url += '&featuretype=county';
@@ -350,33 +539,22 @@ async function geocodeLocation(where: ParsedIntent['where']): Promise<ParsedInte
       headers: { 'User-Agent': USER_AGENT, 'Accept': 'application/json' },
     });
 
-    if (!response.ok) {
-      console.log(`   ⚠ Nominatim returned ${response.status}`);
-      return where;
-    }
+    if (!response.ok) return where;
     const data = await response.json();
     
     if (data?.[0]) {
       const result = data[0];
       const [south, north, west, east] = result.boundingbox.map(Number);
       
-      // Validate the result is reasonable (not a tiny point)
       const latRange = north - south;
       const lngRange = east - west;
       
       if (latRange < 0.01 || lngRange < 0.01) {
-        console.log(`   ⚠ Result too small (${latRange.toFixed(4)}x${lngRange.toFixed(4)}), expanding...`);
-        // Expand tiny result to reasonable area (~10km radius)
-        const expandedBounds = {
-          north: north + 0.1,
-          south: south - 0.1,
-          east: east + 0.1,
-          west: west - 0.1,
-        };
+        console.log(`   ⚠ Result too small, expanding...`);
         return {
           ...where,
           raw: searchText,
-          bounds: expandedBounds,
+          bounds: { north: north + 0.1, south: south - 0.1, east: east + 0.1, west: west - 0.1 },
           center: [parseFloat(result.lon), parseFloat(result.lat)],
         };
       }
@@ -389,24 +567,17 @@ async function geocodeLocation(where: ParsedIntent['where']): Promise<ParsedInte
         bounds: { north, south, east, west },
         center: [parseFloat(result.lon), parseFloat(result.lat)],
       };
-    } else {
-      console.log(`   ⚠ No Nominatim results for "${searchText}"`);
     }
   } catch (e) {
     console.error('Geocoding failed:', e);
   }
 
-  // Last resort: if we have a county name and state, try the hardcoded bbox
+  // Last resort fallback
   if (where.county && where.stateCode) {
     const bboxKey = `${where.county.toLowerCase()}_${where.stateCode.toLowerCase()}`;
     const hardcoded = COUNTY_BBOXES[bboxKey];
     if (hardcoded) {
-      console.log(`   🔄 Using hardcoded fallback for ${where.county}, ${where.stateCode}`);
-      return {
-        ...where,
-        bounds: hardcoded.bounds,
-        center: hardcoded.center,
-      };
+      return { ...where, bounds: hardcoded.bounds, center: hardcoded.center };
     }
   }
 
@@ -414,7 +585,204 @@ async function geocodeLocation(where: ParsedIntent['where']): Promise<ParsedInte
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// STEP 3: HIGH-FIDELITY DATA COLLECTORS
+// STEP 3: RELEVANCE SCORING ENGINE (THE SECRET SAUCE)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function calculateRelevance(record: GeoJSONFeature, intent: ParsedIntent): number {
+  const criteria = intent.relevance_criteria;
+  const coreEntity = intent.core_entity;
+  
+  let score = 0.5; // Base score
+  
+  // Combine all searchable text from the record
+  const props = record.properties;
+  const searchableText = [
+    String(props.name || ''),
+    String(props.description || ''),
+    String(props.sport || ''),
+    String(props.leisure_type || ''),
+    String(props.amenity || ''),
+    String(props.facility_type || ''),
+    JSON.stringify(props),
+  ].join(' ').toLowerCase();
+  
+  // ═════ MUST HAVE CHECKS (Critical) ═════
+  let mustHaveMatches = 0;
+  const mustHaveTotal = criteria.must_have.length;
+  
+  for (const condition of criteria.must_have) {
+    const orTerms = condition.toLowerCase().split(' or ').map(t => t.trim());
+    const hasMatch = orTerms.some(term => searchableText.includes(term));
+    if (hasMatch) mustHaveMatches++;
+  }
+  
+  if (mustHaveTotal > 0) {
+    const mustHaveRatio = mustHaveMatches / mustHaveTotal;
+    if (mustHaveRatio === 0) {
+      score = 0.1; // Basically irrelevant
+    } else {
+      score += mustHaveRatio * 0.3;
+    }
+  }
+  
+  // ═════ MUST NOT HAVE CHECKS (Disqualifying) ═════
+  for (const term of criteria.must_not_have) {
+    if (searchableText.includes(term.toLowerCase())) {
+      score -= 0.3;
+    }
+  }
+  
+  // ═════ SHOULD HAVE CHECKS (Bonus) ═════
+  let shouldHaveMatches = 0;
+  for (const term of criteria.should_have) {
+    if (searchableText.includes(term.toLowerCase())) {
+      shouldHaveMatches++;
+    }
+  }
+  if (criteria.should_have.length > 0) {
+    score += (shouldHaveMatches / criteria.should_have.length) * 0.15;
+  }
+  
+  // ═════ KEYWORD MATCHING ═════
+  let keywordMatches = 0;
+  for (const keyword of coreEntity.keywords.slice(0, 5)) {
+    if (searchableText.includes(keyword.toLowerCase())) {
+      keywordMatches++;
+    }
+  }
+  if (coreEntity.keywords.length > 0) {
+    score += (keywordMatches / Math.min(coreEntity.keywords.length, 5)) * 0.1;
+  }
+  
+  // ═════ OSM TAG MATCHING (High confidence) ═════
+  const primaryTag = coreEntity.osm_tags?.primary;
+  if (primaryTag && Object.keys(primaryTag).length > 0) {
+    for (const [key, value] of Object.entries(primaryTag)) {
+      if (String(props[key]).toLowerCase() === value.toLowerCase() ||
+          String(props.sport).toLowerCase() === value.toLowerCase()) {
+        score += 0.2;
+        break;
+      }
+    }
+  }
+  
+  // ═════ NAME QUALITY ═════
+  if (props.has_official_name) {
+    score += 0.05;
+  }
+  const name = String(props.name || '').toLowerCase();
+  if (name.includes('unnamed') || name.includes('unknown') || name.includes('#')) {
+    score -= 0.05;
+  }
+  
+  // Clamp score between 0 and 1
+  return Math.max(0, Math.min(1.0, score));
+}
+
+function getRelevanceFlags(record: GeoJSONFeature, intent: ParsedIntent): string[] {
+  const flags: string[] = [];
+  const searchableText = JSON.stringify(record.properties).toLowerCase();
+  
+  for (const keyword of intent.core_entity.keywords.slice(0, 3)) {
+    if (searchableText.includes(keyword.toLowerCase())) {
+      flags.push(`✓ ${keyword}`);
+    }
+  }
+  
+  const props = record.properties;
+  if (props.sport) flags.push(`Sport: ${props.sport}`);
+  if (props.leisure_type) flags.push(`Type: ${props.leisure_type}`);
+  
+  return flags;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STEP 4: POST-PROCESSING FILTER
+// ═══════════════════════════════════════════════════════════════════════════
+
+function filterAndRankResults(
+  records: GeoJSONFeature[], 
+  intent: ParsedIntent
+): { filtered: GeoJSONFeature[]; filteredOutCount: number; avgRelevance: number } {
+  
+  // Calculate relevance scores
+  const scoredRecords = records.map(record => {
+    const relevanceScore = calculateRelevance(record, intent);
+    const relevanceFlags = getRelevanceFlags(record, intent);
+    const newRecord: GeoJSONFeature = {
+      type: 'Feature',
+      geometry: record.geometry,
+      properties: {
+        ...record.properties,
+        relevance_score: relevanceScore,
+        relevance_flags: relevanceFlags,
+      },
+    };
+    return newRecord;
+  });
+  
+  // ═════ HARD FILTERS ═════
+  const MINIMUM_RELEVANCE = 0.35;
+  let filtered = scoredRecords.filter(r => 
+    (r.properties.relevance_score as number) >= MINIMUM_RELEVANCE
+  );
+  
+  // Verify geographic bounds
+  if (intent.where.bounds) {
+    const { north, south, east, west } = intent.where.bounds;
+    filtered = filtered.filter(r => {
+      const coords = r.geometry?.coordinates;
+      if (!coords || r.geometry?.type !== 'Point') return true;
+      const [lng, lat] = coords as number[];
+      return lat <= north && lat >= south && lng <= east && lng >= west;
+    });
+  }
+  
+  // ═════ SOFT RANKING ═════
+  filtered.sort((a, b) => 
+    (b.properties.relevance_score as number) - (a.properties.relevance_score as number)
+  );
+  
+  // ═════ DIVERSITY - Don't show all from same source ═════
+  const bySource = new Map<string, GeoJSONFeature[]>();
+  filtered.forEach(r => {
+    const src = String(r.properties.source);
+    if (!bySource.has(src)) bySource.set(src, []);
+    bySource.get(src)!.push(r);
+  });
+  
+  const interleaved: GeoJSONFeature[] = [];
+  let hasMore = true;
+  let index = 0;
+  const sources = Array.from(bySource.keys());
+  
+  while (hasMore && interleaved.length < filtered.length) {
+    hasMore = false;
+    for (const source of sources) {
+      const sourceRecords = bySource.get(source)!;
+      if (index < sourceRecords.length) {
+        interleaved.push(sourceRecords[index]);
+        hasMore = true;
+      }
+    }
+    index++;
+  }
+  
+  // Re-sort by relevance after interleaving (keeps diversity but prioritizes relevance)
+  interleaved.sort((a, b) => 
+    (b.properties.relevance_score as number) - (a.properties.relevance_score as number)
+  );
+  
+  const filteredOutCount = records.length - interleaved.length;
+  const avgRelevance = interleaved.length > 0
+    ? interleaved.reduce((sum, r) => sum + (r.properties.relevance_score as number), 0) / interleaved.length
+    : 0;
+  
+  return { filtered: interleaved, filteredOutCount, avgRelevance };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STEP 5: HIGH-FIDELITY DATA COLLECTORS
 // ═══════════════════════════════════════════════════════════════════════════
 
 type CollectorFn = (intent: ParsedIntent) => Promise<GeoJSONFeature[]>;
@@ -433,14 +801,10 @@ function capitalize(str: string): string {
   return str.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
-// SMART NAME GENERATION - Creates unique, differentiated names when official name is missing
-function generateSmartName(tags: Record<string, string>, lat: number, lon: number, intent?: ParsedIntent): string {
-  // Priority 1: Real names from OSM (most valuable)
-  const realName = tags.name || tags.official_name || tags['name:en'] || tags.alt_name || 
-                   tags.loc_name || tags.short_name || tags.brand;
+function generateSmartName(tags: Record<string, string>, lat: number, lon: number): string {
+  const realName = tags.name || tags.official_name || tags['name:en'] || tags.alt_name || tags.loc_name || tags.short_name || tags.brand;
   if (realName && realName.trim()) return realName;
   
-  // Priority 2: Operator/owner + facility type (e.g., "YMCA Sports Center")
   if (tags.operator || tags.owner) {
     const operatorName = tags.operator || tags.owner;
     if (tags.leisure === 'sports_centre') return `${operatorName} Sports Center`;
@@ -453,7 +817,6 @@ function generateSmartName(tags: Record<string, string>, lat: number, lon: numbe
     return `${operatorName} Facility`;
   }
   
-  // Priority 3: Address-based naming (e.g., "Main Street Baseball Field")
   const street = tags['addr:street'] || tags['addr:place'];
   const city = tags['addr:city'] || tags['addr:suburb'];
   if (street || city) {
@@ -465,29 +828,24 @@ function generateSmartName(tags: Record<string, string>, lat: number, lon: numbe
     return `${locationPart} Recreation Area`;
   }
   
-  // Priority 4: Referenced name from nearby features
   if (tags.ref) {
     const sportType = tags.sport ? capitalize(tags.sport) : 'Sports';
     return `${sportType} Field ${tags.ref}`;
   }
   
-  // Priority 5: Sport + Leisure type + unique coordinate identifier
   const sportName = tags.sport ? capitalize(tags.sport) : null;
   const leisureType = tags.leisure ? capitalize(tags.leisure) : null;
-  
-  // Create a simple grid reference from coordinates (helps differentiate nearby points)
-  const gridRef = `${Math.abs(lat).toFixed(2)}${lat >= 0 ? 'N' : 'S'}_${Math.abs(lon).toFixed(2)}${lon >= 0 ? 'E' : 'W'}`;
+  const gridRef = `${lat.toFixed(3)}_${lon.toFixed(3)}`;
   
   if (sportName && leisureType) {
-    if (leisureType.toLowerCase() === 'pitch') return `${sportName} Field #${gridRef}`;
-    if (leisureType.toLowerCase() === 'sports centre') return `${sportName} Center #${gridRef}`;
-    return `${sportName} ${leisureType} #${gridRef}`;
+    if (leisureType.toLowerCase() === 'pitch') return `${sportName} Field @${gridRef}`;
+    if (leisureType.toLowerCase() === 'sports centre') return `${sportName} Center @${gridRef}`;
+    return `${sportName} ${leisureType} @${gridRef}`;
   }
-  if (sportName) return `${sportName} Facility #${gridRef}`;
-  if (leisureType) return `${leisureType} #${gridRef}`;
+  if (sportName) return `${sportName} Facility @${gridRef}`;
+  if (leisureType) return `${leisureType} @${gridRef}`;
   
-  // Fallback: Generic with unique ID
-  return `Recreation Site #${gridRef}`;
+  return `Recreation Site @${gridRef}`;
 }
 
 const COLLECTORS: Record<string, CollectorFn> = {
@@ -501,35 +859,34 @@ const COLLECTORS: Record<string, CollectorFn> = {
     const features: GeoJSONFeature[] = [];
     const sport = intent.what.subcategory || '';
     const isIndoor = intent.filters.indoor;
+    const osmPrimary = intent.core_entity.osm_tags.primary;
     
-    // Build targeted Overpass query
+    // Build targeted Overpass query using parsed OSM tags
     let query: string;
-    if (sport) {
-      // Specific sport query
-      query = `[out:json][timeout:25];(
+    
+    if (Object.keys(osmPrimary).length > 0) {
+      const primaryFilter = Object.entries(osmPrimary).map(([k, v]) => `["${k}"="${v}"]`).join('');
+      query = `[out:json][timeout:30];(
+        node${primaryFilter}(${bounds.south},${bounds.west},${bounds.north},${bounds.east});
+        way${primaryFilter}(${bounds.south},${bounds.west},${bounds.north},${bounds.east});
+        node["leisure"~"pitch|sports_centre|stadium"]${primaryFilter}(${bounds.south},${bounds.west},${bounds.north},${bounds.east});
+        way["leisure"~"pitch|sports_centre|stadium"]${primaryFilter}(${bounds.south},${bounds.west},${bounds.north},${bounds.east});
+        ${isIndoor ? `node["building"~"sports|gymnasium",i](${bounds.south},${bounds.west},${bounds.north},${bounds.east});` : ''}
+      );out center 200;`;
+    } else if (sport) {
+      query = `[out:json][timeout:30];(
         node["sport"~"${sport}",i](${bounds.south},${bounds.west},${bounds.north},${bounds.east});
         way["sport"~"${sport}",i](${bounds.south},${bounds.west},${bounds.north},${bounds.east});
-        node["leisure"~"pitch|sports_centre|stadium",i]["sport"~"${sport}",i](${bounds.south},${bounds.west},${bounds.north},${bounds.east});
-        way["leisure"~"pitch|sports_centre|stadium",i]["sport"~"${sport}",i](${bounds.south},${bounds.west},${bounds.north},${bounds.east});
-        ${isIndoor ? `node["building"~"sports|gymnasium",i](${bounds.south},${bounds.west},${bounds.north},${bounds.east});` : ''}
-      );out center 150;`;
-    } else if (isIndoor) {
-      // Indoor facilities
-      query = `[out:json][timeout:25];(
-        node["leisure"="sports_centre"](${bounds.south},${bounds.west},${bounds.north},${bounds.east});
-        way["leisure"="sports_centre"](${bounds.south},${bounds.west},${bounds.north},${bounds.east});
-        node["building"~"sports|gymnasium",i](${bounds.south},${bounds.west},${bounds.north},${bounds.east});
-        way["building"~"sports|gymnasium",i](${bounds.south},${bounds.west},${bounds.north},${bounds.east});
-        node["leisure"="fitness_centre"](${bounds.south},${bounds.west},${bounds.north},${bounds.east});
-      );out center 150;`;
+        node["leisure"~"pitch|sports_centre|stadium"]["sport"~"${sport}",i](${bounds.south},${bounds.west},${bounds.north},${bounds.east});
+        way["leisure"~"pitch|sports_centre|stadium"]["sport"~"${sport}",i](${bounds.south},${bounds.west},${bounds.north},${bounds.east});
+      );out center 200;`;
     } else {
-      // General sports facilities
-      query = `[out:json][timeout:25];(
+      query = `[out:json][timeout:30];(
         node["leisure"~"pitch|sports_centre|stadium"](${bounds.south},${bounds.west},${bounds.north},${bounds.east});
         way["leisure"~"pitch|sports_centre|stadium"](${bounds.south},${bounds.west},${bounds.north},${bounds.east});
         node["sport"](${bounds.south},${bounds.west},${bounds.north},${bounds.east});
         way["sport"](${bounds.south},${bounds.west},${bounds.north},${bounds.east});
-      );out center 150;`;
+      );out center 200;`;
     }
     
     const data = await fetchJSON(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`) as { elements?: Array<{ id: number; type: string; lat?: number; lon?: number; center?: { lat: number; lon: number }; tags?: Record<string, string> }> };
@@ -540,38 +897,22 @@ const COLLECTORS: Record<string, CollectorFn> = {
       const lon = el.lon || el.center?.lon;
       if (!lat || !lon) continue;
       
-      // SMART NAME EXTRACTION - creates unique differentiated names
-      const name = generateSmartName(tags, lat, lon, intent);
+      const name = generateSmartName(tags, lat, lon);
+      const hasRealName = !!(tags.name || tags.official_name || tags['name:en']);
       
-      // ENHANCED DESCRIPTION - useful details for differentiation
       const descParts: string[] = [];
       if (tags.sport) descParts.push(`Sport: ${capitalize(tags.sport)}`);
       if (tags.surface) descParts.push(`Surface: ${capitalize(tags.surface)}`);
       if (tags.indoor === 'yes' || tags.building) descParts.push('Indoor');
-      else if (tags.covered === 'yes') descParts.push('Covered');
-      if (tags.lit === 'yes' || tags.floodlit === 'yes') descParts.push('Lighted');
-      if (tags.access === 'public' || tags.access === 'yes') descParts.push('Public');
+      if (tags.lit === 'yes') descParts.push('Lighted');
+      if (tags.access === 'public') descParts.push('Public');
       else if (tags.access === 'private') descParts.push('Private');
-      else if (tags.access === 'members') descParts.push('Members Only');
-      if (tags.fee === 'no') descParts.push('Free');
-      else if (tags.fee === 'yes') descParts.push('Fee Required');
-      if (tags.capacity) descParts.push(`Capacity: ${tags.capacity}`);
       
-      // BUILD FULL ADDRESS
       const addressParts: string[] = [];
       if (tags['addr:housenumber']) addressParts.push(tags['addr:housenumber']);
       if (tags['addr:street']) addressParts.push(tags['addr:street']);
       if (tags['addr:city']) addressParts.push(tags['addr:city']);
-      if (tags['addr:state'] || tags['addr:postcode']) {
-        addressParts.push(`${tags['addr:state'] || ''} ${tags['addr:postcode'] || ''}`.trim());
-      }
       const address = tags['addr:full'] || (addressParts.length > 0 ? addressParts.join(', ') : undefined);
-      
-      // OPERATOR / OWNER - valuable for differentiation
-      const operatedBy = tags.operator || tags.owner || tags.brand || undefined;
-      
-      // HAS REAL NAME? (for confidence scoring)
-      const hasRealName = !!(tags.name || tags.official_name || tags['name:en']);
       
       features.push({
         type: 'Feature',
@@ -588,14 +929,12 @@ const COLLECTORS: Record<string, CollectorFn> = {
           leisure_type: tags.leisure,
           address,
           indoor: tags.indoor === 'yes' || !!tags.building,
-          lighted: tags.lit === 'yes' || tags.floodlit === 'yes',
+          lighted: tags.lit === 'yes',
           surface: tags.surface,
           access: tags.access,
-          capacity: tags.capacity,
           website: tags.website,
           phone: tags.phone,
-          operator: operatedBy,
-          opening_hours: tags.opening_hours,
+          operator: tags.operator || tags.owner,
           confidence: hasRealName ? 0.95 : 0.75,
         },
       });
@@ -609,7 +948,7 @@ const COLLECTORS: Record<string, CollectorFn> = {
   // ─────────────────────────────────────────────────────────────────────────
   recreation_gov: async (intent) => {
     const features: GeoJSONFeature[] = [];
-    const keywords = intent.what.keywords.join(' ') || intent.what.primary;
+    const keywords = intent.core_entity.keywords.slice(0, 3).join(' ') || intent.what.primary;
     const state = intent.where.stateCode || '';
     
     let url = `https://ridb.recreation.gov/api/v1/facilities?query=${encodeURIComponent(keywords)}&limit=50`;
@@ -719,7 +1058,7 @@ const COLLECTORS: Record<string, CollectorFn> = {
   },
 
   // ─────────────────────────────────────────────────────────────────────────
-  // GBIF - Global Biodiversity
+  // GBIF
   // ─────────────────────────────────────────────────────────────────────────
   gbif: async (intent) => {
     const bounds = intent.where.bounds;
@@ -767,20 +1106,22 @@ const COLLECTORS: Record<string, CollectorFn> = {
     const point = await fetchJSON(`https://api.weather.gov/points/${lat},${lng}`, { Accept: 'application/geo+json' }) as { properties?: { forecast?: string } };
     if (!point?.properties?.forecast) return features;
     
-    const forecast = await fetchJSON(point.properties.forecast, { Accept: 'application/geo+json' }) as { properties?: { periods?: Array<{ number: number; name: string; detailedForecast: string; startTime: string; temperature: number }> } };
+    const forecast = await fetchJSON(point.properties.forecast, { Accept: 'application/geo+json' }) as { properties?: { periods?: Array<{ number: number; name: string; temperature: number; temperatureUnit: string; shortForecast: string; windSpeed: string; windDirection: string }> } };
     
-    for (const pd of (forecast?.properties?.periods || []).slice(0, 7)) {
+    for (const period of (forecast?.properties?.periods || []).slice(0, 4)) {
       features.push({
         type: 'Feature',
         geometry: { type: 'Point', coordinates: [lng, lat] },
         properties: {
           source: 'noaa_weather',
-          source_id: `noaa-forecast-${pd.number}`,
+          source_id: `noaa-${period.number}`,
           category: 'WEATHER',
-          name: pd.name,
-          description: pd.detailedForecast,
-          timestamp: pd.startTime,
-          temperature: pd.temperature,
+          name: period.name,
+          description: period.shortForecast,
+          temperature: period.temperature,
+          temperature_unit: period.temperatureUnit,
+          wind_speed: period.windSpeed,
+          wind_direction: period.windDirection,
           confidence: 0.95,
         },
       });
@@ -907,123 +1248,11 @@ const COLLECTORS: Record<string, CollectorFn> = {
   },
 
   // ─────────────────────────────────────────────────────────────────────────
-  // OSM TRANSPORT
-  // ─────────────────────────────────────────────────────────────────────────
-  osm_transport: async (intent) => {
-    const bounds = intent.where.bounds;
-    if (!bounds) return [];
-    
-    const features: GeoJSONFeature[] = [];
-    const query = `[out:json][timeout:25];(
-      node["aeroway"="aerodrome"](${bounds.south},${bounds.west},${bounds.north},${bounds.east});
-      way["aeroway"="aerodrome"](${bounds.south},${bounds.west},${bounds.north},${bounds.east});
-      node["railway"="station"](${bounds.south},${bounds.west},${bounds.north},${bounds.east});
-      node["amenity"="bus_station"](${bounds.south},${bounds.west},${bounds.north},${bounds.east});
-    );out center 100;`;
-    
-    const data = await fetchJSON(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`) as { elements?: Array<{ id: number; type: string; lat?: number; lon?: number; center?: { lat: number; lon: number }; tags?: Record<string, string> }> };
-    
-    for (const el of data?.elements || []) {
-      const tags = el.tags || {};
-      const lat = el.lat || el.center?.lat;
-      const lon = el.lon || el.center?.lon;
-      if (!lat || !lon) continue;
-      
-      const type = tags.aeroway ? 'Airport' : tags.railway ? 'Train Station' : 'Transit Hub';
-      
-      features.push({
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: [lon, lat] },
-        properties: {
-          source: 'osm_transport',
-          source_id: `osm-${el.type}-${el.id}`,
-          category: 'TRANSPORTATION',
-          name: tags.name || type,
-          transport_type: type,
-          website: tags.website,
-          confidence: tags.name ? 0.9 : 0.7,
-        },
-      });
-    }
-    
-    return features;
-  },
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // OSM EMERGENCY
-  // ─────────────────────────────────────────────────────────────────────────
-  osm_emergency: async (intent) => {
-    const bounds = intent.where.bounds;
-    if (!bounds) return [];
-    
-    const features: GeoJSONFeature[] = [];
-    const query = `[out:json][timeout:25];(
-      node["amenity"="fire_station"](${bounds.south},${bounds.west},${bounds.north},${bounds.east});
-      node["amenity"="police"](${bounds.south},${bounds.west},${bounds.north},${bounds.east});
-      node["emergency"](${bounds.south},${bounds.west},${bounds.north},${bounds.east});
-    );out center 100;`;
-    
-    const data = await fetchJSON(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`) as { elements?: Array<{ id: number; type: string; lat?: number; lon?: number; center?: { lat: number; lon: number }; tags?: Record<string, string> }> };
-    
-    for (const el of data?.elements || []) {
-      const tags = el.tags || {};
-      const lat = el.lat || el.center?.lat;
-      const lon = el.lon || el.center?.lon;
-      if (!lat || !lon) continue;
-      
-      features.push({
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: [lon, lat] },
-        properties: {
-          source: 'osm_emergency',
-          source_id: `osm-${el.type}-${el.id}`,
-          category: 'EMERGENCY',
-          name: tags.name || capitalize(tags.amenity) || 'Emergency Services',
-          phone: tags.phone,
-          confidence: tags.name ? 0.9 : 0.7,
-        },
-      });
-    }
-    
-    return features;
-  },
-
-  // ─────────────────────────────────────────────────────────────────────────
-  // USGS WATER
-  // ─────────────────────────────────────────────────────────────────────────
-  usgs_water: async (intent) => {
-    const bounds = intent.where.bounds;
-    if (!bounds) return [];
-    
-    const features: GeoJSONFeature[] = [];
-    const data = await fetchJSON(`https://waterservices.usgs.gov/nwis/iv/?format=json&bBox=${bounds.west},${bounds.south},${bounds.east},${bounds.north}&siteStatus=active&parameterCd=00060`) as { value?: { timeSeries?: Array<{ sourceInfo?: { siteName?: string; geoLocation?: { geogLocation?: { latitude: number; longitude: number } }; siteCode?: Array<{ value: string }> } }> } };
-    
-    for (const s of (data?.value?.timeSeries || []).slice(0, 25)) {
-      const geo = s.sourceInfo?.geoLocation?.geogLocation;
-      if (!geo) continue;
-      
-      features.push({
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: [geo.longitude, geo.latitude] },
-        properties: {
-          source: 'usgs_water',
-          source_id: s.sourceInfo?.siteCode?.[0]?.value || 'usgs',
-          category: 'ENVIRONMENT',
-          name: s.sourceInfo?.siteName || 'USGS Water Station',
-          confidence: 0.95,
-        },
-      });
-    }
-    
-    return features;
-  },
-
-  // ─────────────────────────────────────────────────────────────────────────
   // DATA.GOV
   // ─────────────────────────────────────────────────────────────────────────
   data_gov: async (intent) => {
     const features: GeoJSONFeature[] = [];
-    const query = intent.what.keywords.join(' ') || intent.what.primary;
+    const query = intent.core_entity.keywords.join(' ') || intent.what.primary;
     
     const data = await fetchJSON(`https://catalog.data.gov/api/3/action/package_search?q=${encodeURIComponent(query)}&rows=10`) as { result?: { results?: Array<{ id: string; title: string; notes?: string }> } };
     
@@ -1055,9 +1284,8 @@ const COLLECTORS: Record<string, CollectorFn> = {
     if (!bounds) return [];
     
     const features: GeoJSONFeature[] = [];
-    const keywords = intent.what.keywords.slice(0, 2);
+    const keywords = intent.core_entity.keywords.slice(0, 2);
     
-    // Try to build a smart query from keywords
     let amenityFilter = '';
     if (keywords.some(k => ['restaurant', 'food', 'dining'].includes(k))) amenityFilter = '["amenity"="restaurant"]';
     else if (keywords.some(k => ['hotel', 'lodging'].includes(k))) amenityFilter = '["tourism"="hotel"]';
@@ -1087,17 +1315,16 @@ const COLLECTORS: Record<string, CollectorFn> = {
     return features;
   },
 
-  // Placeholder collectors
-  noaa_tides: async () => [],
+  // Placeholders
   usaspending: async () => [],
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
-// STEP 4: LEAN PARALLEL EXECUTION
+// STEP 6: PARALLEL EXECUTION
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function collectData(intent: ParsedIntent): Promise<{ features: GeoJSONFeature[]; sources: SourceResult[] }> {
-  const features: GeoJSONFeature[] = [];
+  const allFeatures: GeoJSONFeature[] = [];
   const sources: SourceResult[] = [];
   
   const collectorsToRun = intent.collectors.filter(c => COLLECTORS[c]);
@@ -1123,37 +1350,39 @@ async function collectData(intent: ParsedIntent): Promise<{ features: GeoJSONFea
     for (const result of results) {
       if (result.status === 'fulfilled') {
         const { name, data, time_ms, error } = result.value;
-        features.push(...data);
+        
+        // Apply relevance filtering per-source
+        const { filtered, filteredOutCount } = filterAndRankResults(data, intent);
+        
+        allFeatures.push(...filtered);
         sources.push({
           name,
-          status: error ? 'error' : data.length > 0 ? 'success' : 'empty',
+          status: error ? 'error' : filtered.length > 0 ? 'success' : 'empty',
           count: data.length,
+          records_after_filter: filtered.length,
           time_ms,
           error,
         });
       }
     }
     
-    // Small pause between batches
     if (i + BATCH_SIZE < collectorsToRun.length) {
       await new Promise(r => setTimeout(r, 10));
     }
   }
   
-  return { features, sources };
+  return { features: allFeatures, sources };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// STEP 5: AI INSIGHTS
+// STEP 7: INSIGHTS GENERATION
 // ═══════════════════════════════════════════════════════════════════════════
 
-async function generateInsights(features: GeoJSONFeature[], intent: ParsedIntent, prompt: string): Promise<{ summary: string; key_findings: string[]; recommendations: string[] }> {
-  // Generate smart insights based on collected data
+function generateInsights(features: GeoJSONFeature[], intent: ParsedIntent): { summary: string; key_findings: string[]; recommendations: string[] } {
   const uniqueSources = [...new Set(features.map(f => String(f.properties.source || '')))];
-  const uniqueCategories = [...new Set(features.map(f => String(f.properties.category || '')))];
-  const hasOfficialNames = features.filter(f => f.properties.has_official_name).length;
-  const avgConfidence = features.length > 0 
-    ? features.reduce((acc, f) => acc + (Number(f.properties.confidence) || 0), 0) / features.length 
+  const highRelevance = features.filter(f => (f.properties.relevance_score as number) >= 0.7);
+  const avgRelevance = features.length > 0 
+    ? features.reduce((acc, f) => acc + ((f.properties.relevance_score as number) || 0), 0) / features.length 
     : 0;
   
   if (features.length === 0) {
@@ -1164,32 +1393,25 @@ async function generateInsights(features: GeoJSONFeature[], intent: ParsedIntent
     };
   }
   
-  // Generate findings based on actual data
   const findings: string[] = [];
-  findings.push(`${features.length} data points collected from ${uniqueSources.length} source${uniqueSources.length > 1 ? 's' : ''}`);
-  if (hasOfficialNames > 0) {
-    findings.push(`${hasOfficialNames} locations have verified official names`);
+  findings.push(`${features.length} relevant ${intent.what.primary} found`);
+  if (highRelevance.length > 0) {
+    findings.push(`${highRelevance.length} high-relevance matches (≥70% confidence)`);
   }
-  findings.push(`Average data confidence: ${Math.round(avgConfidence * 100)}%`);
-  if (uniqueCategories.length > 1) {
-    findings.push(`Data spans ${uniqueCategories.length} categories`);
-  }
+  findings.push(`Data from ${uniqueSources.length} source${uniqueSources.length > 1 ? 's' : ''}: ${uniqueSources.join(', ')}`);
+  findings.push(`Average relevance score: ${Math.round(avgRelevance * 100)}%`);
   
-  // Smart recommendations
   const recommendations: string[] = [];
-  if (features.length > 20) {
+  if (features.length > 50) {
     recommendations.push('Use filters to narrow down results');
   }
-  if (avgConfidence < 0.7) {
-    recommendations.push('Cross-reference with official sources for verification');
+  if (avgRelevance < 0.6) {
+    recommendations.push('Results may include partial matches - verify before use');
   }
   recommendations.push('Export data for offline analysis');
-  if (features.length < 10) {
-    recommendations.push('Try expanding the search area for more results');
-  }
   
   return {
-    summary: `Found ${features.length} ${intent.what.primary} in ${intent.where.raw || intent.where.state || 'your search area'}. Data sourced from ${uniqueSources.join(', ')}.`,
+    summary: `Found ${features.length} ${intent.what.primary} in ${intent.where.raw || intent.where.state || 'your search area'}. ${highRelevance.length} are high-confidence matches.`,
     key_findings: findings.slice(0, 4),
     recommendations: recommendations.slice(0, 3),
   };
@@ -1214,16 +1436,18 @@ serve(async (req) => {
     }
 
     console.log('═══════════════════════════════════════════════════════════');
-    console.log('🌍 BASED DATA v9.0 — ZERO IN / ZERO OUT');
+    console.log('🌍 BASED DATA v10.0 — INTELLIGENT QUERY ENGINE');
     console.log(`📝 Query: "${prompt}"`);
     const startTime = Date.now();
 
-    // STEP 1: Parse intent with AI
+    // STEP 1: Parse intent with intelligence
     console.log('🧠 Step 1: Parsing intent...');
-    const intent = await parseQueryIntent(prompt);
-    console.log(`   ✓ What: ${intent.what.primary} (${intent.what.category})`);
+    const intent = parseQueryIntent(prompt);
+    console.log(`   ✓ Entity: ${intent.core_entity.type} (${intent.what.category})`);
+    console.log(`   ✓ Keywords: ${intent.core_entity.keywords.slice(0, 5).join(', ')}`);
     console.log(`   ✓ Where: ${intent.where.raw || 'Not specified'}`);
-    console.log(`   ✓ Collectors: ${intent.collectors.join(', ')}`);
+    console.log(`   ✓ Must have: ${intent.relevance_criteria.must_have.slice(0, 3).join(' OR ')}`);
+    console.log(`   ✓ Must NOT have: ${intent.relevance_criteria.must_not_have.slice(0, 3).join(', ') || 'none'}`);
 
     // STEP 2: Geocode location
     console.log('📍 Step 2: Geocoding location...');
@@ -1232,18 +1456,29 @@ serve(async (req) => {
       console.log(`   ✓ Bounds: [${intent.where.bounds.south.toFixed(3)}, ${intent.where.bounds.north.toFixed(3)}]`);
     }
 
-    // STEP 3: Collect data
-    console.log('📡 Step 3: Collecting data...');
+    // STEP 3: Collect data with per-source relevance filtering
+    console.log('📡 Step 3: Collecting & filtering data...');
     const { features, sources } = await collectData(intent);
-    console.log(`   ✓ Collected ${features.length} features from ${sources.length} sources`);
+    
+    const totalRaw = sources.reduce((sum, s) => sum + s.count, 0);
+    const totalFiltered = sources.reduce((sum, s) => sum + s.records_after_filter, 0);
+    const filteredOut = totalRaw - totalFiltered;
+    
+    console.log(`   ✓ Raw: ${totalRaw} → Filtered: ${totalFiltered} (removed ${filteredOut} low-relevance)`);
+
+    // Calculate stats
+    const avgRelevance = features.length > 0
+      ? features.reduce((sum, f) => sum + ((f.properties.relevance_score as number) || 0), 0) / features.length
+      : 0;
+    const highRelevanceCount = features.filter(f => (f.properties.relevance_score as number) >= 0.7).length;
 
     // STEP 4: Generate insights
     console.log('💡 Step 4: Generating insights...');
-    const insights = await generateInsights(features, intent, prompt);
+    const insights = generateInsights(features, intent);
 
-    // Persist a sample to DB (non-blocking)
+    // Persist to DB (non-blocking)
     if (features.length > 0) {
-      const records = features.slice(0, 30).map(f => ({
+      const records = features.slice(0, 50).map(f => ({
         source_id: String(f.properties.source),
         source_record_id: String(f.properties.source_id || `${f.properties.source}_${Math.random().toString(36).slice(2)}`),
         category: String(f.properties.category || 'OTHER'),
@@ -1251,13 +1486,14 @@ serve(async (req) => {
         description: String(f.properties.description || ''),
         geometry: f.geometry,
         properties: f.properties,
-        quality_score: Number(f.properties.confidence) || 0.5,
+        quality_score: f.properties.relevance_score as number || 0.5,
       }));
       supabase.from('records').upsert(records, { onConflict: 'source_id,source_record_id', ignoreDuplicates: true }).then(() => {});
     }
 
     const processingTime = Date.now() - startTime;
-    console.log(`✅ Complete: ${features.length} features in ${processingTime}ms`);
+    console.log(`✅ Complete: ${features.length} relevant features in ${processingTime}ms`);
+    console.log(`   📊 Avg relevance: ${Math.round(avgRelevance * 100)}%, High relevance: ${highRelevanceCount}`);
     console.log('═══════════════════════════════════════════════════════════');
 
     return new Response(JSON.stringify({
@@ -1266,6 +1502,7 @@ serve(async (req) => {
       prompt,
       intent: {
         use_case: intent.what.category,
+        entity_type: intent.core_entity.type,
         location: intent.where.bounds ? {
           name: intent.where.raw || intent.where.state || '',
           center: intent.where.center,
@@ -1273,29 +1510,35 @@ serve(async (req) => {
         } : null,
         time_context: { type: intent.when.temporal },
         categories: [intent.what.category.toUpperCase()],
-        keywords: intent.what.keywords,
+        keywords: intent.core_entity.keywords,
+        osm_tags: intent.core_entity.osm_tags,
+        relevance_criteria: intent.relevance_criteria,
         confidence: intent.confidence,
       },
       features: { type: 'FeatureCollection', features },
       insights,
+      quality_metrics: {
+        total_raw: totalRaw,
+        total_filtered: totalFiltered,
+        filtered_out: filteredOut,
+        avg_relevance: Math.round(avgRelevance * 100) / 100,
+        high_relevance_count: highRelevanceCount,
+      },
       collected_data: sources.map(s => ({
         source: s.name,
         status: s.status,
         record_count: s.count,
+        records_after_filter: s.records_after_filter,
         collection_time_ms: s.time_ms,
         error: s.error,
       })),
       sources_used: sources.filter(s => s.status === 'success').map(s => s.name),
       processing_time_ms: processingTime,
       credits_used: Math.ceil(sources.filter(s => s.status === 'success').length),
-      engine_version: 'baseddata-v9.0-zero',
-      enrichments: [],
+      engine_version: 'baseddata-v10.0-intelligent',
       data_tap: {
-        records_persisted: Math.min(features.length, 30),
+        records_persisted: Math.min(features.length, 50),
         records_deduplicated: 0,
-        dynamic_genesis: false,
-        enrichment_queued: false,
-        auto_expanded: false,
       },
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
@@ -1309,12 +1552,12 @@ serve(async (req) => {
       intent: { use_case: 'error', location: null, time_context: { type: 'current' }, categories: [], keywords: [], confidence: 0 },
       features: { type: 'FeatureCollection', features: [] },
       insights: null,
+      quality_metrics: { total_raw: 0, total_filtered: 0, filtered_out: 0, avg_relevance: 0, high_relevance_count: 0 },
       collected_data: [],
       sources_used: [],
       processing_time_ms: 0,
       credits_used: 0,
-      engine_version: 'baseddata-v9.0-zero',
-      enrichments: [],
+      engine_version: 'baseddata-v10.0-intelligent',
       data_tap: { records_persisted: 0, records_deduplicated: 0 },
     }), { 
       status: 500, 
