@@ -6,13 +6,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, Table, Lightbulb, Share2, Database, 
   CheckCircle2, Sparkles, Copy, Search, Download, Eye,
-  Filter, Layers, MapPin, ChevronDown, X
+  Filter, Layers, MapPin, ChevronDown, X, FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Logo } from '@/components/Logo';
 import { SimpleMap } from '@/components/map/SimpleMap';
 import { DataGrid } from '@/components/data/DataGrid';
+import { RecordDossier } from '@/components/dossier/RecordDossier';
 import type { GeoJSONFeature, GeoJSONFeatureCollection, CollectedData, OmniscientInsights, MapLayer } from '@/types/omniscient';
 import { CATEGORY_COLORS } from '@/lib/mapbox';
 import { toast } from 'sonner';
@@ -20,6 +21,7 @@ import { exportData, type ExportFormat } from '@/lib/export';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { deduplicateRecords, groupResults, getDataStats, type ProcessedRecord } from '@/lib/dataProcessing';
+import { generateMockEnrichment, type EnrichedRecord } from '@/types/enriched';
 
 interface PremiumOmniscientResultsProps {
   prompt: string;
@@ -68,6 +70,7 @@ export function PremiumOmniscientResults({
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [viewMode, setViewMode] = useState<'cards' | 'grid'>('cards');
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [dossierRecord, setDossierRecord] = useState<EnrichedRecord | null>(null);
   const dataScrollRef = useRef<HTMLDivElement>(null);
 
   // Process and deduplicate data
@@ -136,10 +139,15 @@ export function PremiumOmniscientResults({
     ));
   }, []);
 
-  const handleFeatureClick = useCallback((feature: GeoJSONFeature) => {
-    setSelectedFeature(feature);
+  const handleFeatureClick = useCallback((feature: GeoJSONFeature | ProcessedRecord) => {
+    setSelectedFeature(feature as GeoJSONFeature);
     const cat = String((feature.properties as Record<string, unknown>)?.category || '').toUpperCase();
     if (cat) setSelectedCategory(cat);
+  }, []);
+
+  const handleOpenDossier = useCallback((record: ProcessedRecord) => {
+    const enriched = generateMockEnrichment(record);
+    setDossierRecord(enriched);
   }, []);
 
   const handleCopyQuery = () => {
@@ -448,6 +456,7 @@ export function PremiumOmniscientResults({
                             onHover={() => setHoveredFeature(record)}
                             onHoverEnd={() => hoveredFeature === record && setHoveredFeature(null)}
                             onClick={() => handleFeatureClick(record)}
+                            onOpenDossier={() => handleOpenDossier(record)}
                           />
                         ))}
                         {items.length > 5 && (
@@ -509,6 +518,16 @@ export function PremiumOmniscientResults({
           </div>
         </div>
       </div>
+
+      {/* 10x Enriched Dossier Panel */}
+      <AnimatePresence>
+        {dossierRecord && (
+          <RecordDossier 
+            record={dossierRecord} 
+            onClose={() => setDossierRecord(null)} 
+          />
+        )}
+      </AnimatePresence>
     </div>
     </TooltipProvider>
   );
@@ -524,14 +543,15 @@ function QuickStat({ label, value }: { label: string; value: string | number }) 
   );
 }
 
-// Result Card Component - Light Theme
+// Result Card Component - Light Theme with 10x Dossier
 function ResultCard({ 
   record, 
   isSelected, 
   isHovered, 
   onHover, 
   onHoverEnd, 
-  onClick 
+  onClick,
+  onOpenDossier
 }: {
   record: ProcessedRecord;
   isSelected?: boolean;
@@ -539,6 +559,7 @@ function ResultCard({
   onHover?: () => void;
   onHoverEnd?: () => void;
   onClick?: () => void;
+  onOpenDossier?: () => void;
 }) {
   const props = (record.properties || {}) as Record<string, unknown>;
   const category = String(props.category || 'OTHER').toUpperCase();
@@ -595,11 +616,24 @@ function ResultCard({
           </div>
         )}
         
-        {/* Footer */}
+        {/* Footer with Dossier Button */}
         <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-          <div className="flex items-center gap-1 text-xs text-slate-400">
-            <MapPin className="w-3 h-3" />
-            <span>Georeferenced</span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 text-xs text-slate-400">
+              <MapPin className="w-3 h-3" />
+              <span>Georeferenced</span>
+            </div>
+            {/* 10x Dossier Button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenDossier?.();
+              }}
+              className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-full transition-colors"
+            >
+              <FileText className="w-3 h-3" />
+              <span>10x Dossier</span>
+            </button>
           </div>
           <div className="flex items-center gap-2">
             <div className="h-1.5 w-16 bg-slate-200 rounded-full overflow-hidden">
