@@ -1203,10 +1203,11 @@ serve(async (req) => {
       intent: {
         use_case: intent.what.category,
         location: intent.where.bounds ? {
-          name: intent.where.raw || intent.where.state,
+          name: intent.where.raw || intent.where.state || '',
           center: intent.where.center,
           bbox: [intent.where.bounds.west, intent.where.bounds.south, intent.where.bounds.east, intent.where.bounds.north],
         } : null,
+        time_context: { type: intent.when.temporal },
         categories: [intent.what.category.toUpperCase()],
         keywords: intent.what.keywords,
         confidence: intent.confidence,
@@ -1225,13 +1226,32 @@ serve(async (req) => {
       credits_used: Math.ceil(sources.filter(s => s.status === 'success').length),
       engine_version: 'baseddata-v9.0-zero',
       enrichments: [],
+      data_tap: {
+        records_persisted: Math.min(features.length, 30),
+        records_deduplicated: 0,
+        dynamic_genesis: false,
+        enrichment_queued: false,
+        auto_expanded: false,
+      },
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (error) {
-    console.error('OMNISCIENT error:', error);
+    console.error('🚨 BASED DATA Error:', error);
     return new Response(JSON.stringify({ 
       success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+      error: error instanceof Error ? error.message : 'Query failed',
+      query_id: `bd_error_${Date.now()}`,
+      prompt: '',
+      intent: { use_case: 'error', location: null, time_context: { type: 'current' }, categories: [], keywords: [], confidence: 0 },
+      features: { type: 'FeatureCollection', features: [] },
+      insights: null,
+      collected_data: [],
+      sources_used: [],
+      processing_time_ms: 0,
+      credits_used: 0,
+      engine_version: 'baseddata-v9.0-zero',
+      enrichments: [],
+      data_tap: { records_persisted: 0, records_deduplicated: 0 },
     }), { 
       status: 500, 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

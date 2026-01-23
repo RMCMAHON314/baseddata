@@ -2,7 +2,7 @@
 // Zero-token, zero-WebGL map that always works
 // Uses CARTO Dark Matter tiles (free, CORS-enabled)
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useMemo } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { GeoJSONFeature, GeoJSONFeatureCollection, MapLayer } from '@/types/omniscient';
@@ -67,7 +67,7 @@ export function SimpleMap({
   features,
   layers,
   layerOpacities,
-  center = [30.27, -97.74], // Austin default
+  center, // [lng, lat] format
   zoom = 11,
   selectedFeature,
   hoveredFeature,
@@ -76,6 +76,11 @@ export function SimpleMap({
   onCursorMove,
   className = '',
 }: SimpleMapProps) {
+  // Convert [lng, lat] to [lat, lng] for Leaflet and provide default - memoized for stable reference
+  const leafletCenter = useMemo<[number, number]>(
+    () => center ? [center[1], center[0]] : [39.8283, -98.5795],
+    [center?.[0], center?.[1]]
+  );
   const mapRef = useRef<L.Map | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const layerRef = useRef<L.GeoJSON | null>(null);
@@ -110,7 +115,7 @@ export function SimpleMap({
     if (!containerRef.current || mapRef.current) return;
 
     const map = L.map(containerRef.current, {
-      center: center,
+      center: leafletCenter,
       zoom: zoom,
       zoomControl: false,
       attributionControl: true,
@@ -149,9 +154,9 @@ export function SimpleMap({
   // Update center/zoom when they change
   useEffect(() => {
     if (mapRef.current && center) {
-      mapRef.current.setView(center, zoom, { animate: true, duration: 0.5 });
+      mapRef.current.setView(leafletCenter, zoom, { animate: true, duration: 0.5 });
     }
-  }, [center, zoom]);
+  }, [leafletCenter, zoom]);
 
   // Add/update data layer when features or visibility changes
   useEffect(() => {
