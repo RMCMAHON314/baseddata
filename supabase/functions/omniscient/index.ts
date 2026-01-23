@@ -19,8 +19,7 @@ const corsHeaders = {
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const LOVABLE_AI_URL = 'https://api-prod.lovable.dev/ai/generate';
-const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY') || '';
+const LOVABLE_AI_URL = 'https://lovable.dev/api/generate';
 const USER_AGENT = 'BASEDDATA/9.0 (baseddata.lovable.app)';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -75,74 +74,7 @@ interface SourceResult {
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function parseQueryIntent(prompt: string): Promise<ParsedIntent> {
-  // Try AI parsing first for best results
-  if (LOVABLE_API_KEY) {
-    try {
-      const response = await fetch(LOVABLE_AI_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${LOVABLE_API_KEY}` },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash-lite',
-          messages: [{
-            role: 'user',
-            content: `Parse this search query and extract structured intent. Return ONLY valid JSON (no markdown):
-
-Query: "${prompt}"
-
-{
-  "what": {
-    "primary": "the main thing being searched (e.g., 'baseball facilities')",
-    "keywords": ["relevant", "search", "terms", "synonyms"],
-    "category": "one of: recreation, sports, wildlife, weather, marine, government, healthcare, education, transportation, environment, business, demographics, emergency, infrastructure, energy, research",
-    "subcategory": "more specific type if applicable (e.g., 'baseball' for sports)"
-  },
-  "where": {
-    "raw": "the location as mentioned",
-    "city": "city name or null",
-    "county": "county name or null", 
-    "state": "full state name or null",
-    "stateCode": "two letter state code or null",
-    "country": "country, default USA"
-  },
-  "when": {
-    "temporal": "current, historical, or forecast"
-  },
-  "filters": {
-    "indoor": true/false/null,
-    "outdoor": true/false/null,
-    "keywords": ["any", "specific", "filter", "terms"]
-  }
-}
-
-Examples:
-- "indoor baseball facilities Baltimore county maryland" → recreation category, baseball subcategory, indoor filter true, Baltimore County MD location
-- "goose hunting conditions Long Island December" → wildlife category, Long Island NY location, forecast temporal
-- "federal contracts for cybersecurity" → government category, no specific location`
-          }],
-          temperature: 0.1,
-          max_tokens: 500,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const content = data.choices?.[0]?.message?.content || '';
-        const match = content.match(/\{[\s\S]*\}/);
-        if (match) {
-          const parsed = JSON.parse(match[0]);
-          return {
-            ...parsed,
-            collectors: selectCollectors(parsed),
-            confidence: 0.95,
-          };
-        }
-      }
-    } catch (e) {
-      console.error('AI parsing failed, falling back:', e);
-    }
-  }
-
-  // Fallback to keyword-based parsing
+  // Use robust fallback parsing - edge-optimized
   return fallbackParse(prompt);
 }
 
@@ -226,36 +158,53 @@ function selectCollectors(intent: { what: { primary: string; category: string; k
 function fallbackParse(prompt: string): ParsedIntent {
   const lower = prompt.toLowerCase();
   
-  // Extract location patterns
-  const locationMatch = prompt.match(/\b(?:in|near|around|at)\s+([A-Z][a-zA-Z\s]+(?:,?\s*[A-Z]{2})?(?:\s+county)?)/i) ||
-                        prompt.match(/\b([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*)\s+(?:county|city|state)/i);
+  // Enhanced location extraction patterns - more permissive
+  // Pattern 1: "X county" or "X county, Y" - case insensitive
+  const countyMatch = lower.match(/\b([a-z]+(?:\s+[a-z]+)?)\s+county\b/);
   
-  // State codes
-  const stateMap: Record<string, { name: string; center: [number, number] }> = {
-    'maryland': { name: 'Maryland', center: [-76.6, 39.0] },
-    'md': { name: 'Maryland', center: [-76.6, 39.0] },
-    'california': { name: 'California', center: [-119.4, 36.8] },
-    'ca': { name: 'California', center: [-119.4, 36.8] },
-    'texas': { name: 'Texas', center: [-99.9, 31.9] },
-    'tx': { name: 'Texas', center: [-99.9, 31.9] },
-    'new york': { name: 'New York', center: [-74.0, 40.7] },
-    'ny': { name: 'New York', center: [-74.0, 40.7] },
-    'virginia': { name: 'Virginia', center: [-78.2, 37.4] },
-    'va': { name: 'Virginia', center: [-78.2, 37.4] },
-    'florida': { name: 'Florida', center: [-81.5, 27.6] },
-    'fl': { name: 'Florida', center: [-81.5, 27.6] },
-    'pennsylvania': { name: 'Pennsylvania', center: [-77.2, 41.2] },
-    'pa': { name: 'Pennsylvania', center: [-77.2, 41.2] },
+  // State codes with expanded list
+  const stateMap: Record<string, { name: string; code: string; center: [number, number] }> = {
+    'maryland': { name: 'Maryland', code: 'MD', center: [-76.6, 39.0] },
+    'md': { name: 'Maryland', code: 'MD', center: [-76.6, 39.0] },
+    'california': { name: 'California', code: 'CA', center: [-119.4, 36.8] },
+    'ca': { name: 'California', code: 'CA', center: [-119.4, 36.8] },
+    'texas': { name: 'Texas', code: 'TX', center: [-99.9, 31.9] },
+    'tx': { name: 'Texas', code: 'TX', center: [-99.9, 31.9] },
+    'new york': { name: 'New York', code: 'NY', center: [-74.0, 40.7] },
+    'ny': { name: 'New York', code: 'NY', center: [-74.0, 40.7] },
+    'virginia': { name: 'Virginia', code: 'VA', center: [-78.2, 37.4] },
+    'va': { name: 'Virginia', code: 'VA', center: [-78.2, 37.4] },
+    'florida': { name: 'Florida', code: 'FL', center: [-81.5, 27.6] },
+    'fl': { name: 'Florida', code: 'FL', center: [-81.5, 27.6] },
+    'pennsylvania': { name: 'Pennsylvania', code: 'PA', center: [-77.2, 41.2] },
+    'pa': { name: 'Pennsylvania', code: 'PA', center: [-77.2, 41.2] },
+    'ohio': { name: 'Ohio', code: 'OH', center: [-82.9, 40.4] },
+    'oh': { name: 'Ohio', code: 'OH', center: [-82.9, 40.4] },
+    'georgia': { name: 'Georgia', code: 'GA', center: [-83.5, 32.9] },
+    'ga': { name: 'Georgia', code: 'GA', center: [-83.5, 32.9] },
+    'illinois': { name: 'Illinois', code: 'IL', center: [-89.3, 40.6] },
+    'il': { name: 'Illinois', code: 'IL', center: [-89.3, 40.6] },
+    'michigan': { name: 'Michigan', code: 'MI', center: [-84.5, 44.3] },
+    'mi': { name: 'Michigan', code: 'MI', center: [-84.5, 44.3] },
   };
 
   let stateCode = '';
   let stateName = '';
   let center: [number, number] = [-98.5, 39.8];
+  let countyName = '';
   
+  // Extract county if present - capitalize it properly
+  if (countyMatch && countyMatch[1]) {
+    // Capitalize county name properly
+    countyName = countyMatch[1].split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    console.log(`   📍 Found county: "${countyName}"`);
+  }
+  
+  // Find state from entire prompt
   for (const [key, val] of Object.entries(stateMap)) {
     if (lower.includes(key)) {
       stateName = val.name;
-      stateCode = key.length === 2 ? key.toUpperCase() : key.substring(0, 2).toUpperCase();
+      stateCode = val.code;
       center = val.center;
       break;
     }
@@ -263,26 +212,46 @@ function fallbackParse(prompt: string): ParsedIntent {
 
   // Detect category from keywords
   let category = 'geospatial';
-  if (['baseball', 'soccer', 'tennis', 'basketball', 'sports', 'gym', 'fitness', 'park', 'trail', 'recreation'].some(k => lower.includes(k))) category = 'recreation';
-  if (['bird', 'wildlife', 'animal', 'hunting', 'fishing'].some(k => lower.includes(k))) category = 'wildlife';
-  if (['weather', 'forecast', 'temperature', 'rain'].some(k => lower.includes(k))) category = 'weather';
-  if (['hospital', 'doctor', 'clinic', 'medical'].some(k => lower.includes(k))) category = 'healthcare';
+  let subcategory: string | undefined;
+  
+  if (['baseball', 'soccer', 'tennis', 'basketball', 'sports', 'gym', 'fitness', 'park', 'trail', 'recreation', 'field', 'athletic', 'stadium'].some(k => lower.includes(k))) {
+    category = 'recreation';
+    if (lower.includes('baseball')) subcategory = 'baseball';
+    else if (lower.includes('soccer')) subcategory = 'soccer';
+    else if (lower.includes('tennis')) subcategory = 'tennis';
+    else if (lower.includes('basketball')) subcategory = 'basketball';
+    else if (lower.includes('golf')) subcategory = 'golf';
+  }
+  if (['bird', 'wildlife', 'animal', 'hunting', 'fishing', 'species'].some(k => lower.includes(k))) category = 'wildlife';
+  if (['weather', 'forecast', 'temperature', 'rain', 'storm'].some(k => lower.includes(k))) category = 'weather';
+  if (['hospital', 'doctor', 'clinic', 'medical', 'health'].some(k => lower.includes(k))) category = 'healthcare';
   if (['contract', 'grant', 'federal', 'government'].some(k => lower.includes(k))) category = 'government';
+  if (['school', 'college', 'university', 'education'].some(k => lower.includes(k))) category = 'education';
 
-  // Extract primary search term
+  // Extract primary search term - cleaned
   const words = prompt.split(/\s+/).filter(w => w.length > 2);
-  const stopWords = ['in', 'at', 'near', 'around', 'the', 'for', 'and', 'with', 'county', 'city', 'state'];
-  const primaryWords = words.filter(w => !stopWords.includes(w.toLowerCase()) && !stateMap[w.toLowerCase()]);
+  const stopWords = ['in', 'at', 'near', 'around', 'the', 'for', 'and', 'with', 'county', 'city', 'state', 'facilities', 'facility'];
+  const primaryWords = words.filter(w => 
+    !stopWords.includes(w.toLowerCase()) && 
+    !stateMap[w.toLowerCase()] &&
+    !w.toLowerCase().includes('county')
+  );
+  
+  // Build the location search string for geocoding
+  const rawLocation = countyName 
+    ? `${countyName} County${stateName ? `, ${stateName}` : ''}`
+    : stateName || '';
   
   const intent: ParsedIntent = {
     what: {
       primary: primaryWords.slice(0, 3).join(' ') || prompt,
       keywords: primaryWords,
       category,
-      subcategory: lower.includes('baseball') ? 'baseball' : lower.includes('soccer') ? 'soccer' : undefined,
+      subcategory,
     },
     where: {
-      raw: locationMatch?.[1] || '',
+      raw: rawLocation,
+      county: countyName || undefined,
       state: stateName,
       stateCode,
       country: 'USA',
@@ -297,7 +266,7 @@ function fallbackParse(prompt: string): ParsedIntent {
       keywords: primaryWords,
     },
     collectors: [],
-    confidence: 0.7,
+    confidence: 0.8,
   };
 
   intent.collectors = selectCollectors(intent);
@@ -313,19 +282,35 @@ async function geocodeLocation(where: ParsedIntent['where']): Promise<ParsedInte
     return where;
   }
 
-  // Build search string
-  const parts: string[] = [];
-  if (where.county) parts.push(`${where.county} County`);
-  if (where.city) parts.push(where.city);
-  if (where.state) parts.push(where.state);
-  else if (where.stateCode) parts.push(where.stateCode);
-  parts.push('USA');
-
-  const searchText = parts.length > 1 ? parts.join(', ') : where.raw || '';
-  if (!searchText) return where;
+  // Build search string - prioritize structured data
+  let searchText = '';
+  
+  if (where.county) {
+    // Use structured county + state for best results
+    searchText = `${where.county} County, ${where.state || where.stateCode || ''}, USA`.replace(/,\s*,/g, ',').trim();
+  } else if (where.city && where.state) {
+    searchText = `${where.city}, ${where.state}, USA`;
+  } else if (where.raw) {
+    // Clean the raw location - remove prepositions
+    searchText = where.raw.replace(/^(in|at|near|around)\s+/i, '').trim();
+    if (!searchText.toLowerCase().includes('usa')) {
+      searchText += ', USA';
+    }
+  } else if (where.state) {
+    searchText = `${where.state}, USA`;
+  }
+  
+  if (!searchText || searchText === ', USA') return where;
 
   try {
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchText)}&format=json&limit=1&addressdetails=1`;
+    // Use featuretype=county for county searches
+    let url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchText)}&format=json&limit=1&addressdetails=1`;
+    if (where.county) {
+      url += '&featuretype=county';
+    }
+    
+    console.log(`📍 Geocoding: "${searchText}"`);
+    
     const response = await fetch(url, {
       headers: { 'User-Agent': USER_AGENT, 'Accept': 'application/json' },
     });
@@ -337,13 +322,16 @@ async function geocodeLocation(where: ParsedIntent['where']): Promise<ParsedInte
       const result = data[0];
       const [south, north, west, east] = result.boundingbox.map(Number);
       
-      console.log(`📍 Geocoded "${searchText}" → [${south.toFixed(3)}, ${north.toFixed(3)}, ${west.toFixed(3)}, ${east.toFixed(3)}]`);
+      console.log(`   ✓ Found: [${south.toFixed(3)}, ${north.toFixed(3)}, ${west.toFixed(3)}, ${east.toFixed(3)}]`);
       
       return {
         ...where,
+        raw: where.raw?.replace(/^(in|at|near|around)\s+/i, '').trim() || searchText,
         bounds: { north, south, east, west },
         center: [parseFloat(result.lon), parseFloat(result.lat)],
       };
+    } else {
+      console.log(`   ⚠ No results for "${searchText}"`);
     }
   } catch (e) {
     console.error('Geocoding failed:', e);
@@ -1087,47 +1075,50 @@ async function collectData(intent: ParsedIntent): Promise<{ features: GeoJSONFea
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function generateInsights(features: GeoJSONFeature[], intent: ParsedIntent, prompt: string): Promise<{ summary: string; key_findings: string[]; recommendations: string[] }> {
-  if (features.length < 3 || !LOVABLE_API_KEY) {
+  // Generate smart insights based on collected data
+  const uniqueSources = [...new Set(features.map(f => String(f.properties.source || '')))];
+  const uniqueCategories = [...new Set(features.map(f => String(f.properties.category || '')))];
+  const hasOfficialNames = features.filter(f => f.properties.has_official_name).length;
+  const avgConfidence = features.length > 0 
+    ? features.reduce((acc, f) => acc + (Number(f.properties.confidence) || 0), 0) / features.length 
+    : 0;
+  
+  if (features.length === 0) {
     return {
-      summary: features.length > 0 
-        ? `Found ${features.length} results for "${intent.what.primary}" in ${intent.where.raw || intent.where.state || 'your area'}.`
-        : 'No results found. Try broadening your search or different keywords.',
-      key_findings: features.length > 0 
-        ? [`${features.length} data points collected`, `Primary category: ${intent.what.category}`]
-        : ['No matching data found'],
-      recommendations: ['Try different search terms', 'Expand the geographic area'],
+      summary: 'No results found. Try broadening your search or different keywords.',
+      key_findings: ['No matching data found in the specified area'],
+      recommendations: ['Try different search terms', 'Expand the geographic area', 'Check spelling of location names'],
     };
   }
   
-  try {
-    const response = await fetch(LOVABLE_AI_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${LOVABLE_API_KEY}` },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-lite',
-        messages: [
-          { role: 'system', content: 'You analyze search results. Provide: 1 sentence summary, 3 key findings, 2 recommendations. Return JSON only: {"summary":"...","key_findings":["..."],"recommendations":["..."]}' },
-          { role: 'user', content: `Query: "${prompt}"\nResults: ${features.length} features. Categories: ${intent.what.category}. Location: ${intent.where.raw || intent.where.state}.\nSample names: ${features.slice(0, 5).map(f => f.properties.name).join(', ')}` }
-        ],
-        temperature: 0.3,
-        max_tokens: 400,
-      }),
-    });
-    
-    if (response.ok) {
-      const aiData = await response.json();
-      const content = aiData.choices?.[0]?.message?.content || '';
-      const match = content.match(/\{[\s\S]*\}/);
-      if (match) return JSON.parse(match[0]);
-    }
-  } catch {
-    // Fallback
+  // Generate findings based on actual data
+  const findings: string[] = [];
+  findings.push(`${features.length} data points collected from ${uniqueSources.length} source${uniqueSources.length > 1 ? 's' : ''}`);
+  if (hasOfficialNames > 0) {
+    findings.push(`${hasOfficialNames} locations have verified official names`);
+  }
+  findings.push(`Average data confidence: ${Math.round(avgConfidence * 100)}%`);
+  if (uniqueCategories.length > 1) {
+    findings.push(`Data spans ${uniqueCategories.length} categories`);
+  }
+  
+  // Smart recommendations
+  const recommendations: string[] = [];
+  if (features.length > 20) {
+    recommendations.push('Use filters to narrow down results');
+  }
+  if (avgConfidence < 0.7) {
+    recommendations.push('Cross-reference with official sources for verification');
+  }
+  recommendations.push('Export data for offline analysis');
+  if (features.length < 10) {
+    recommendations.push('Try expanding the search area for more results');
   }
   
   return {
-    summary: `Found ${features.length} results for "${intent.what.primary}".`,
-    key_findings: [`${features.length} data points`, `Location: ${intent.where.raw || intent.where.state || 'Not specified'}`],
-    recommendations: ['Explore the map', 'Export data for analysis'],
+    summary: `Found ${features.length} ${intent.what.primary} in ${intent.where.raw || intent.where.state || 'your search area'}. Data sourced from ${uniqueSources.join(', ')}.`,
+    key_findings: findings.slice(0, 4),
+    recommendations: recommendations.slice(0, 3),
   };
 }
 
