@@ -126,44 +126,71 @@ export type Database = {
         Row: {
           api_type: string | null
           auth_type: string | null
+          avg_response_time_ms: number | null
           base_url: string
           categories: string[]
+          consecutive_failures: number | null
           created_at: string | null
           description: string | null
           geographic_coverage: string | null
+          health_status: string | null
           id: string
           keywords: string[] | null
+          last_health_check: string | null
+          last_successful_query: string | null
           name: string
+          priority: number | null
+          rate_limit_per_day: number | null
+          rate_limit_per_minute: number | null
           slug: string
           status: string | null
+          updated_at: string | null
         }
         Insert: {
           api_type?: string | null
           auth_type?: string | null
+          avg_response_time_ms?: number | null
           base_url: string
           categories: string[]
+          consecutive_failures?: number | null
           created_at?: string | null
           description?: string | null
           geographic_coverage?: string | null
+          health_status?: string | null
           id?: string
           keywords?: string[] | null
+          last_health_check?: string | null
+          last_successful_query?: string | null
           name: string
+          priority?: number | null
+          rate_limit_per_day?: number | null
+          rate_limit_per_minute?: number | null
           slug: string
           status?: string | null
+          updated_at?: string | null
         }
         Update: {
           api_type?: string | null
           auth_type?: string | null
+          avg_response_time_ms?: number | null
           base_url?: string
           categories?: string[]
+          consecutive_failures?: number | null
           created_at?: string | null
           description?: string | null
           geographic_coverage?: string | null
+          health_status?: string | null
           id?: string
           keywords?: string[] | null
+          last_health_check?: string | null
+          last_successful_query?: string | null
           name?: string
+          priority?: number | null
+          rate_limit_per_day?: number | null
+          rate_limit_per_minute?: number | null
           slug?: string
           status?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -1000,6 +1027,53 @@ export type Database = {
           },
         ]
       }
+      health_checks: {
+        Row: {
+          checked_at: string | null
+          error_message: string | null
+          http_status: number | null
+          id: string
+          records_returned: number | null
+          response_time_ms: number | null
+          source_id: string | null
+          source_slug: string | null
+          status: string
+          test_endpoint: string | null
+        }
+        Insert: {
+          checked_at?: string | null
+          error_message?: string | null
+          http_status?: number | null
+          id?: string
+          records_returned?: number | null
+          response_time_ms?: number | null
+          source_id?: string | null
+          source_slug?: string | null
+          status: string
+          test_endpoint?: string | null
+        }
+        Update: {
+          checked_at?: string | null
+          error_message?: string | null
+          http_status?: number | null
+          id?: string
+          records_returned?: number | null
+          response_time_ms?: number | null
+          source_id?: string | null
+          source_slug?: string | null
+          status?: string
+          test_endpoint?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "health_checks_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "api_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       knowledge_edges: {
         Row: {
           created_at: string
@@ -1453,6 +1527,78 @@ export type Database = {
         }
         Relationships: []
       }
+      query_sources: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          error_code: string | null
+          error_message: string | null
+          execution_time_ms: number | null
+          http_status: number | null
+          id: string
+          query_id: string
+          records_after_filter: number | null
+          records_returned: number | null
+          response_size_bytes: number | null
+          retry_count: number | null
+          source_id: string | null
+          source_slug: string
+          started_at: string | null
+          status: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          execution_time_ms?: number | null
+          http_status?: number | null
+          id?: string
+          query_id: string
+          records_after_filter?: number | null
+          records_returned?: number | null
+          response_size_bytes?: number | null
+          retry_count?: number | null
+          source_id?: string | null
+          source_slug: string
+          started_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          execution_time_ms?: number | null
+          http_status?: number | null
+          id?: string
+          query_id?: string
+          records_after_filter?: number | null
+          records_returned?: number | null
+          response_size_bytes?: number | null
+          retry_count?: number | null
+          source_id?: string | null
+          source_slug?: string
+          started_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "query_sources_query_id_fkey"
+            columns: ["query_id"]
+            isOneToOne: false
+            referencedRelation: "queries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "query_sources_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "api_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       record_feedback: {
         Row: {
           correction_data: Json | null
@@ -1823,6 +1969,57 @@ export type Database = {
         }
         Relationships: []
       }
+      system_logs: {
+        Row: {
+          component: string
+          created_at: string | null
+          details: Json | null
+          id: string
+          level: string
+          message: string
+          query_id: string | null
+          source_id: string | null
+          stack_trace: string | null
+        }
+        Insert: {
+          component: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          level: string
+          message: string
+          query_id?: string | null
+          source_id?: string | null
+          stack_trace?: string | null
+        }
+        Update: {
+          component?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          level?: string
+          message?: string
+          query_id?: string | null
+          source_id?: string | null
+          stack_trace?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_logs_query_id_fkey"
+            columns: ["query_id"]
+            isOneToOne: false
+            referencedRelation: "queries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_logs_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "api_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1928,6 +2125,19 @@ export type Database = {
       }
       execute_nl_query: { Args: { p_sql: string }; Returns: Json }
       get_flywheel_health: { Args: never; Returns: Json }
+      get_matched_sources: {
+        Args: { p_query: string }
+        Returns: {
+          base_url: string
+          categories: string[]
+          id: string
+          keywords: string[]
+          match_score: number
+          name: string
+          priority: number
+          slug: string
+        }[]
+      }
       increment_query_access_count: {
         Args: { query_uuid: string }
         Returns: number
@@ -1938,6 +2148,17 @@ export type Database = {
           p_input_type?: string
           p_prompt: string
           p_user_id: string
+        }
+        Returns: string
+      }
+      log_system_event: {
+        Args: {
+          p_component: string
+          p_details?: Json
+          p_level: string
+          p_message: string
+          p_query_id?: string
+          p_source_id?: string
         }
         Returns: string
       }
@@ -1974,6 +2195,8 @@ export type Database = {
         Returns: string
       }
       record_master_dataset_stats: { Args: never; Returns: string }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       update_discovery_status: {
         Args: {
           p_discovery_id: string
