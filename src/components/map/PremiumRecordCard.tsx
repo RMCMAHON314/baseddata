@@ -61,14 +61,26 @@ export const PremiumRecordCard = React.forwardRef<HTMLDivElement, PremiumRecordC
     const props = record.properties;
     const category = String(props.category || 'OTHER');
     const color = CATEGORY_COLORS[category] || '#3B82F6';
-    const title = String(props.name || props.title || props.species || 'Unknown');
+    // Smart name extraction - prefer actual names over generic labels
+    const title = String(
+      props.name && props.name !== 'POI' && props.name !== 'Unknown' 
+        ? props.name 
+        : props.title || props.fullName || props.facility_name || props.species || 'Unnamed'
+    );
     const source = String(props.source || '');
     const timestamp = props.timestamp as string | undefined;
     const quality = Number(props.confidence || props.quality || 0.5);
-    const sourceUrl = String(props.source_url || props.source_record_url || '');
+    const sourceUrl = String(props.source_url || props.source_record_url || props.website || '');
     const coords = record.geometry?.type === 'Point'
       ? (record.geometry.coordinates as number[])
       : null;
+    
+    // Extract useful secondary info
+    const description = String(props.description || '');
+    const address = String(props.address || '');
+    const sport = props.sport ? String(props.sport) : undefined;
+    const facilityType = props.facility_type || props.leisure || props.park_type;
+    const subtitle = description || address || (sport ? `Sport: ${sport}` : '') || (facilityType ? String(facilityType).replace(/_/g, ' ') : '');
 
     return (
       <motion.div
@@ -118,6 +130,13 @@ export const PremiumRecordCard = React.forwardRef<HTMLDivElement, PremiumRecordC
         <h3 className="text-white font-medium mt-2 group-hover:text-cyan-400 transition-colors line-clamp-2">
           {title}
         </h3>
+        
+        {/* Subtitle/Description */}
+        {subtitle && (
+          <p className="text-xs text-white/50 mt-1 line-clamp-2">
+            {subtitle}
+          </p>
+        )}
 
         {/* Metadata */}
         <div className="flex items-center gap-4 mt-3 text-xs text-white/40">
