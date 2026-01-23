@@ -1258,7 +1258,9 @@ export type Database = {
       }
       queries: {
         Row: {
+          access_count: number | null
           api_key_id: string | null
+          avg_relevance_score: number | null
           cache_hit: boolean | null
           categories_matched: string[] | null
           completed_at: string | null
@@ -1266,19 +1268,29 @@ export type Database = {
           credits_used: number | null
           engine_version: string | null
           features: Json | null
+          high_relevance_count: number | null
           id: string
           input_type: string
           insights: Json | null
+          is_saved: boolean | null
+          last_accessed_at: string | null
+          low_relevance_filtered: number | null
           parsed_intent: Json | null
           processing_time_ms: number | null
           prompt: string
           result_count: number | null
+          session_id: string | null
+          snapshot: Json | null
           sources_queried: string[] | null
           status: string | null
+          title: string | null
+          total_records_raw: number | null
           user_id: string | null
         }
         Insert: {
+          access_count?: number | null
           api_key_id?: string | null
+          avg_relevance_score?: number | null
           cache_hit?: boolean | null
           categories_matched?: string[] | null
           completed_at?: string | null
@@ -1286,19 +1298,29 @@ export type Database = {
           credits_used?: number | null
           engine_version?: string | null
           features?: Json | null
+          high_relevance_count?: number | null
           id?: string
           input_type?: string
           insights?: Json | null
+          is_saved?: boolean | null
+          last_accessed_at?: string | null
+          low_relevance_filtered?: number | null
           parsed_intent?: Json | null
           processing_time_ms?: number | null
           prompt: string
           result_count?: number | null
+          session_id?: string | null
+          snapshot?: Json | null
           sources_queried?: string[] | null
           status?: string | null
+          title?: string | null
+          total_records_raw?: number | null
           user_id?: string | null
         }
         Update: {
+          access_count?: number | null
           api_key_id?: string | null
+          avg_relevance_score?: number | null
           cache_hit?: boolean | null
           categories_matched?: string[] | null
           completed_at?: string | null
@@ -1306,15 +1328,23 @@ export type Database = {
           credits_used?: number | null
           engine_version?: string | null
           features?: Json | null
+          high_relevance_count?: number | null
           id?: string
           input_type?: string
           insights?: Json | null
+          is_saved?: boolean | null
+          last_accessed_at?: string | null
+          low_relevance_filtered?: number | null
           parsed_intent?: Json | null
           processing_time_ms?: number | null
           prompt?: string
           result_count?: number | null
+          session_id?: string | null
+          snapshot?: Json | null
           sources_queried?: string[] | null
           status?: string | null
+          title?: string | null
+          total_records_raw?: number | null
           user_id?: string | null
         }
         Relationships: [
@@ -1853,6 +1883,10 @@ export type Database = {
       }
       execute_nl_query: { Args: { p_sql: string }; Returns: Json }
       get_flywheel_health: { Args: never; Returns: Json }
+      increment_query_access_count: {
+        Args: { query_uuid: string }
+        Returns: number
+      }
       log_query: {
         Args: {
           p_api_key_id?: string

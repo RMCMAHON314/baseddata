@@ -1,5 +1,5 @@
-// BASED DATA v7.5 - Query Hook
-// Manages the full data pipeline with 30+ categories and granular step tracking
+// BASED DATA v10.0 - Query Hook
+// Manages the full data pipeline with 30+ categories, granular step tracking, and history persistence
 
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,6 +9,7 @@ import type {
   GeoJSONFeatureCollection 
 } from '@/types/omniscient';
 import { PIPELINE_STEPS } from '@/lib/constants';
+import { getSessionId } from '@/lib/session';
 
 export type OmniscientPhase = 'idle' | 'analyzing' | 'collecting' | 'processing' | 'insights' | 'complete' | 'error';
 
@@ -183,9 +184,10 @@ export function useOmniscient(): UseOmniscientReturn {
       }
       startActionMessages('core');
 
-      // Call the OMNISCIENT edge function
+      // Call the OMNISCIENT edge function with session ID for history tracking
+      const sessionId = getSessionId();
       const { data, error: fnError } = await supabase.functions.invoke('omniscient', {
-        body: { prompt },
+        body: { prompt, session_id: sessionId },
       });
 
       if (fnError) throw fnError;
