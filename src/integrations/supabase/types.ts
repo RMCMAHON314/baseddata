@@ -674,10 +674,13 @@ export type Database = {
           created_at: string | null
           id: string
           last_queried_at: string | null
+          pattern_category: string | null
           pattern_signature: string
+          pattern_template: string | null
           query_count: number | null
           recommended_correlations: string[] | null
           recommended_sources: string[] | null
+          sample_queries: Json | null
           successful_sources: string[] | null
           unique_users: number | null
           updated_at: string | null
@@ -689,10 +692,13 @@ export type Database = {
           created_at?: string | null
           id?: string
           last_queried_at?: string | null
+          pattern_category?: string | null
           pattern_signature: string
+          pattern_template?: string | null
           query_count?: number | null
           recommended_correlations?: string[] | null
           recommended_sources?: string[] | null
+          sample_queries?: Json | null
           successful_sources?: string[] | null
           unique_users?: number | null
           updated_at?: string | null
@@ -704,10 +710,13 @@ export type Database = {
           created_at?: string | null
           id?: string
           last_queried_at?: string | null
+          pattern_category?: string | null
           pattern_signature?: string
+          pattern_template?: string | null
           query_count?: number | null
           recommended_correlations?: string[] | null
           recommended_sources?: string[] | null
+          sample_queries?: Json | null
           successful_sources?: string[] | null
           unique_users?: number | null
           updated_at?: string | null
@@ -2167,6 +2176,7 @@ export type Database = {
           collected_at: string
           description: string | null
           display_name: string | null
+          entity_id: string | null
           geometry: Json
           id: string
           last_seen_at: string
@@ -2185,6 +2195,7 @@ export type Database = {
           collected_at?: string
           description?: string | null
           display_name?: string | null
+          entity_id?: string | null
           geometry: Json
           id?: string
           last_seen_at?: string
@@ -2203,6 +2214,7 @@ export type Database = {
           collected_at?: string
           description?: string | null
           display_name?: string | null
+          entity_id?: string | null
           geometry?: Json
           id?: string
           last_seen_at?: string
@@ -2217,6 +2229,13 @@ export type Database = {
           user_validations?: Json | null
         }
         Relationships: [
+          {
+            foreignKeyName: "records_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "records_query_id_fkey"
             columns: ["query_id"]
@@ -2620,6 +2639,20 @@ export type Database = {
         Returns: boolean
       }
       execute_nl_query: { Args: { p_sql: string }; Returns: Json }
+      find_nearby_entities_by_name: {
+        Args: {
+          p_lat: number
+          p_lng: number
+          p_name: string
+          p_radius_km?: number
+        }
+        Returns: {
+          canonical_name: string
+          distance_km: number
+          id: string
+          similarity: number
+        }[]
+      }
       find_similar_entities: {
         Args: {
           search_name: string

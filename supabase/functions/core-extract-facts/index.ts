@@ -1,6 +1,6 @@
 // ============================================================
-// 🧠 THE CORE: FACT EXTRACTION ENGINE
-// Extracts temporal facts from records for the knowledge graph
+// 🧠 THE CORE: FACT EXTRACTION ENGINE v2.0
+// Extracts temporal facts AND links orphaned facts to entities
 // ============================================================
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -29,7 +29,48 @@ interface ExtractedFact {
   confidence: number;
 }
 
-// Extract all possible facts from a record
+// ═══════════════════════════════════════════════════════════════
+// LINK ORPHANED FACTS TO ENTITIES
+// ═══════════════════════════════════════════════════════════════
+async function linkOrphanedFacts(supabase: any): Promise<{ linked: number }> {
+  // Find facts without entity_id but with source_record_id
+  const { data: orphanedFacts } = await supabase
+    .from('core_facts')
+    .select('id, source_record_id')
+    .is('entity_id', null)
+    .not('source_record_id', 'is', null)
+    .limit(100);
+
+  if (!orphanedFacts || orphanedFacts.length === 0) {
+    return { linked: 0 };
+  }
+
+  let linked = 0;
+
+  for (const fact of orphanedFacts) {
+    // Get record's entity_id
+    const { data: record } = await supabase
+      .from('records')
+      .select('entity_id')
+      .eq('id', fact.source_record_id)
+      .single();
+
+    if (record?.entity_id) {
+      await supabase
+        .from('core_facts')
+        .update({ entity_id: record.entity_id })
+        .eq('id', fact.id);
+      linked++;
+    }
+  }
+
+  console.log(`[core-extract-facts] Linked ${linked} orphaned facts to entities`);
+  return { linked };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EXTRACT ALL POSSIBLE FACTS FROM A RECORD
+// ═══════════════════════════════════════════════════════════════
 function extractFactsFromRecord(record: RecordData): ExtractedFact[] {
   const facts: ExtractedFact[] = [];
   const props = record.properties || {};
@@ -186,9 +227,50 @@ function extractFactsFromRecord(record: RecordData): ExtractedFact[] {
     });
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // GRANT FACTS
+  // ═══════════════════════════════════════════════════════════════
+  
+  const grantAmount = props.grant_amount || props.funding_amount;
+  if (grantAmount && Number(grantAmount) > 0) {
+    facts.push({
+      ...baseInfo,
+      fact_type: 'grant_awarded',
+      fact_value: {
+        amount: Number(grantAmount),
+        agency: props.funding_agency || props.grantor_name,
+        program: props.program_name,
+        recipient: record.name,
+      },
+      fact_date: String(props.grant_date || props.award_date || new Date().toISOString()),
+      confidence: 0.9,
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // OWNERSHIP/AFFILIATION FACTS
+  // ═══════════════════════════════════════════════════════════════
+  
+  if (props.parent_company || props.owner_name || props.hospital_system) {
+    facts.push({
+      ...baseInfo,
+      fact_type: 'ownership',
+      fact_value: {
+        owner: props.parent_company || props.owner_name,
+        system: props.hospital_system,
+        entity: record.name,
+      },
+      fact_date: new Date().toISOString(),
+      confidence: 0.85,
+    });
+  }
+
   return facts;
 }
 
+// ═══════════════════════════════════════════════════════════════
+// MAIN HANDLER
+// ═══════════════════════════════════════════════════════════════
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -199,19 +281,27 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { record_ids, query_id, batch_size = 50 } = await req.json() as {
+    const { record_ids, query_id, batch_size = 50, link_orphans = true } = await req.json() as {
       record_ids?: string[];
       query_id?: string;
       batch_size?: number;
+      link_orphans?: boolean;
     };
 
     console.log(`[core-extract-facts] Starting extraction for ${record_ids?.length || 'batch'} records`);
     const startTime = Date.now();
 
+    // First, link any orphaned facts
+    let orphansLinked = 0;
+    if (link_orphans) {
+      const linkResult = await linkOrphanedFacts(supabase);
+      orphansLinked = linkResult.linked;
+    }
+
     // Fetch records
     let recordsQuery = supabase
       .from('records')
-      .select('id, name, category, source_id, properties')
+      .select('id, name, category, source_id, properties, entity_id')
       .order('collected_at', { ascending: false })
       .limit(batch_size);
 
@@ -229,51 +319,46 @@ Deno.serve(async (req) => {
 
     if (!records || records.length === 0) {
       return new Response(
-        JSON.stringify({ success: true, facts_created: 0, message: 'No records to process' }),
+        JSON.stringify({ 
+          success: true, 
+          facts_created: 0, 
+          orphans_linked: orphansLinked,
+          message: 'No records to process' 
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     console.log(`[core-extract-facts] Processing ${records.length} records`);
 
-    // Try to match records to entities
-    const recordsWithEntities: RecordData[] = [];
-    for (const record of records) {
-      // Try to find linked entity
-      const { data: entity } = await supabase
-        .from('core_entities')
-        .select('id')
-        .contains('source_records', [{ record_id: record.id }])
-        .single();
-
-      recordsWithEntities.push({
-        ...record,
-        entity_id: entity?.id,
-      });
-    }
-
     // Extract facts from all records
     const allFacts: ExtractedFact[] = [];
-    for (const record of recordsWithEntities) {
-      const facts = extractFactsFromRecord(record);
+    for (const record of records) {
+      const facts = extractFactsFromRecord(record as RecordData);
       allFacts.push(...facts);
     }
 
     if (allFacts.length === 0) {
       return new Response(
-        JSON.stringify({ success: true, facts_created: 0, message: 'No facts extractable from records' }),
+        JSON.stringify({ 
+          success: true, 
+          facts_created: 0, 
+          orphans_linked: orphansLinked,
+          message: 'No facts extractable from records' 
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Batch insert facts (skip if entity_id is null)
-    const factsToInsert = allFacts.filter(f => f.entity_id);
+    // Batch insert facts (include those without entity_id for later linking)
+    const factsWithEntity = allFacts.filter(f => f.entity_id);
+    const factsWithoutEntity = allFacts.filter(f => !f.entity_id);
     let factsCreated = 0;
 
-    if (factsToInsert.length > 0) {
+    if (factsWithEntity.length > 0) {
       const { error: insertError, data: inserted } = await supabase
         .from('core_facts')
-        .insert(factsToInsert)
+        .insert(factsWithEntity)
         .select('id');
 
       if (insertError) {
@@ -283,21 +368,34 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Also store facts without entity (for later matching)
-    const orphanFacts = allFacts.filter(f => !f.entity_id).length;
+    // Also insert facts without entity (they'll be linked later)
+    if (factsWithoutEntity.length > 0) {
+      const { data: orphanInserted } = await supabase
+        .from('core_facts')
+        .insert(factsWithoutEntity)
+        .select('id');
+      
+      factsCreated += orphanInserted?.length || 0;
+    }
 
     const processingTime = Date.now() - startTime;
     console.log(`[core-extract-facts] Created ${factsCreated} facts from ${records.length} records in ${processingTime}ms`);
 
     // Update metrics
-    await supabase.rpc('update_intelligence_metrics');
+    try {
+      await supabase.rpc('update_intelligence_metrics');
+    } catch (e) {
+      // Ignore metric update errors
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
         records_processed: records.length,
         facts_created: factsCreated,
-        facts_orphaned: orphanFacts,
+        facts_with_entity: factsWithEntity.length,
+        facts_orphaned: factsWithoutEntity.length,
+        orphans_linked: orphansLinked,
         fact_types: [...new Set(allFacts.map(f => f.fact_type))],
         processing_time_ms: processingTime,
       }),
