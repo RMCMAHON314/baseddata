@@ -338,7 +338,7 @@ function parseQueryIntent(prompt: string): ParsedIntent {
   }
   
   // ═══════════════════════════════════════════════════════════════
-  // STEP 1B: Extract location - EXCLUDE prepositions from county name
+  // STEP 1B: Extract location - Cities, Counties, and States
   // ═══════════════════════════════════════════════════════════════
   const countyMatch = lower.match(/(?:^|[\s,])(?!in\s|at\s|near\s|around\s|the\s)([a-z]+(?:\s+[a-z]+)?)\s+county\b/);
   
@@ -346,17 +346,80 @@ function parseQueryIntent(prompt: string): ParsedIntent {
   let stateName = '';
   let center: [number, number] = [-98.5, 39.8];
   let countyName = '';
+  let cityName = '';
   
   if (countyMatch && countyMatch[1]) {
     countyName = countyMatch[1].trim().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   }
   
-  for (const [key, val] of Object.entries(STATE_MAP)) {
-    if (lower.includes(key)) {
-      stateName = val.name;
-      stateCode = val.code;
-      center = val.center;
+  // Major US cities detection
+  const MAJOR_CITIES: Record<string, { state: string; stateCode: string; center: [number, number] }> = {
+    'baltimore': { state: 'Maryland', stateCode: 'MD', center: [-76.61, 39.29] },
+    'washington': { state: 'District of Columbia', stateCode: 'DC', center: [-77.04, 38.91] },
+    'washington dc': { state: 'District of Columbia', stateCode: 'DC', center: [-77.04, 38.91] },
+    'new york': { state: 'New York', stateCode: 'NY', center: [-74.01, 40.71] },
+    'new york city': { state: 'New York', stateCode: 'NY', center: [-74.01, 40.71] },
+    'nyc': { state: 'New York', stateCode: 'NY', center: [-74.01, 40.71] },
+    'los angeles': { state: 'California', stateCode: 'CA', center: [-118.24, 34.05] },
+    'la': { state: 'California', stateCode: 'CA', center: [-118.24, 34.05] },
+    'chicago': { state: 'Illinois', stateCode: 'IL', center: [-87.63, 41.88] },
+    'houston': { state: 'Texas', stateCode: 'TX', center: [-95.36, 29.76] },
+    'phoenix': { state: 'Arizona', stateCode: 'AZ', center: [-112.07, 33.45] },
+    'philadelphia': { state: 'Pennsylvania', stateCode: 'PA', center: [-75.16, 39.95] },
+    'san antonio': { state: 'Texas', stateCode: 'TX', center: [-98.49, 29.42] },
+    'san diego': { state: 'California', stateCode: 'CA', center: [-117.16, 32.72] },
+    'dallas': { state: 'Texas', stateCode: 'TX', center: [-96.80, 32.78] },
+    'san jose': { state: 'California', stateCode: 'CA', center: [-121.89, 37.34] },
+    'austin': { state: 'Texas', stateCode: 'TX', center: [-97.74, 30.27] },
+    'san francisco': { state: 'California', stateCode: 'CA', center: [-122.42, 37.77] },
+    'sf': { state: 'California', stateCode: 'CA', center: [-122.42, 37.77] },
+    'seattle': { state: 'Washington', stateCode: 'WA', center: [-122.33, 47.61] },
+    'denver': { state: 'Colorado', stateCode: 'CO', center: [-104.99, 39.74] },
+    'boston': { state: 'Massachusetts', stateCode: 'MA', center: [-71.06, 42.36] },
+    'atlanta': { state: 'Georgia', stateCode: 'GA', center: [-84.39, 33.75] },
+    'miami': { state: 'Florida', stateCode: 'FL', center: [-80.19, 25.76] },
+    'detroit': { state: 'Michigan', stateCode: 'MI', center: [-83.05, 42.33] },
+    'portland': { state: 'Oregon', stateCode: 'OR', center: [-122.68, 45.52] },
+    'las vegas': { state: 'Nevada', stateCode: 'NV', center: [-115.14, 36.17] },
+    'minneapolis': { state: 'Minnesota', stateCode: 'MN', center: [-93.27, 44.98] },
+    'charlotte': { state: 'North Carolina', stateCode: 'NC', center: [-80.84, 35.23] },
+    'raleigh': { state: 'North Carolina', stateCode: 'NC', center: [-78.64, 35.78] },
+    'cleveland': { state: 'Ohio', stateCode: 'OH', center: [-81.69, 41.50] },
+    'columbus': { state: 'Ohio', stateCode: 'OH', center: [-82.99, 39.96] },
+    'pittsburgh': { state: 'Pennsylvania', stateCode: 'PA', center: [-79.99, 40.44] },
+    'sacramento': { state: 'California', stateCode: 'CA', center: [-121.49, 38.58] },
+    'kansas city': { state: 'Missouri', stateCode: 'MO', center: [-94.58, 39.10] },
+    'indianapolis': { state: 'Indiana', stateCode: 'IN', center: [-86.16, 39.77] },
+    'orlando': { state: 'Florida', stateCode: 'FL', center: [-81.38, 28.54] },
+    'tampa': { state: 'Florida', stateCode: 'FL', center: [-82.46, 27.95] },
+    'nashville': { state: 'Tennessee', stateCode: 'TN', center: [-86.78, 36.16] },
+    'richmond': { state: 'Virginia', stateCode: 'VA', center: [-77.44, 37.54] },
+    'norfolk': { state: 'Virginia', stateCode: 'VA', center: [-76.28, 36.85] },
+    'annapolis': { state: 'Maryland', stateCode: 'MD', center: [-76.49, 38.98] },
+  };
+  
+  // Check for cities in query - prefer longer city names first
+  const sortedCities = Object.keys(MAJOR_CITIES).sort((a, b) => b.length - a.length);
+  for (const cityKey of sortedCities) {
+    if (lower.includes(cityKey)) {
+      const cityData = MAJOR_CITIES[cityKey];
+      cityName = cityKey.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      stateName = cityData.state;
+      stateCode = cityData.stateCode;
+      center = cityData.center;
       break;
+    }
+  }
+  
+  // If no city found, check for state
+  if (!cityName) {
+    for (const [key, val] of Object.entries(STATE_MAP)) {
+      if (lower.includes(key)) {
+        stateName = val.name;
+        stateCode = val.code;
+        center = val.center;
+        break;
+      }
     }
   }
 
@@ -402,14 +465,41 @@ function parseQueryIntent(prompt: string): ParsedIntent {
   const category = detectedEntity?.category || detectCategory(lower);
   const dataSources = selectDataSources(category, coreEntity.type);
 
-  // Build location string for geocoding
-  const rawLocation = countyName 
-    ? `${countyName} County${stateName ? `, ${stateName}` : ''}`
-    : stateName || '';
+  // Build location string for geocoding - prioritize city, then county, then state
+  const rawLocation = cityName 
+    ? `${cityName}${stateName ? `, ${stateName}` : ''}`
+    : countyName 
+      ? `${countyName} County${stateName ? `, ${stateName}` : ''}`
+      : stateName || '';
   
-  // Check for hardcoded bbox
+  // Check for hardcoded bbox - first try city, then county
   let bounds: ParsedIntent['where']['bounds'] | undefined;
-  if (countyName && stateCode) {
+  
+  // City bounding boxes
+  const CITY_BBOXES: Record<string, { bounds: { north: number; south: number; east: number; west: number }; center: [number, number] }> = {
+    'baltimore': { bounds: { north: 39.37, south: 39.20, east: -76.53, west: -76.71 }, center: [-76.61, 39.29] },
+    'washington dc': { bounds: { north: 38.99, south: 38.79, east: -76.91, west: -77.12 }, center: [-77.04, 38.91] },
+    'new york': { bounds: { north: 40.92, south: 40.48, east: -73.70, west: -74.26 }, center: [-74.01, 40.71] },
+    'los angeles': { bounds: { north: 34.34, south: 33.70, east: -118.16, west: -118.67 }, center: [-118.24, 34.05] },
+    'chicago': { bounds: { north: 42.02, south: 41.64, east: -87.52, west: -87.94 }, center: [-87.63, 41.88] },
+    'houston': { bounds: { north: 30.11, south: 29.54, east: -95.01, west: -95.79 }, center: [-95.36, 29.76] },
+    'philadelphia': { bounds: { north: 40.14, south: 39.87, east: -74.96, west: -75.28 }, center: [-75.16, 39.95] },
+    'san francisco': { bounds: { north: 37.83, south: 37.71, east: -122.35, west: -122.52 }, center: [-122.42, 37.77] },
+    'seattle': { bounds: { north: 47.73, south: 47.49, east: -122.22, west: -122.44 }, center: [-122.33, 47.61] },
+    'denver': { bounds: { north: 39.91, south: 39.61, east: -104.60, west: -105.11 }, center: [-104.99, 39.74] },
+    'boston': { bounds: { north: 42.40, south: 42.23, east: -70.92, west: -71.19 }, center: [-71.06, 42.36] },
+    'atlanta': { bounds: { north: 33.89, south: 33.65, east: -84.29, west: -84.55 }, center: [-84.39, 33.75] },
+    'miami': { bounds: { north: 25.86, south: 25.71, east: -80.12, west: -80.32 }, center: [-80.19, 25.76] },
+  };
+  
+  if (cityName) {
+    const cityKey = cityName.toLowerCase();
+    const cityBbox = CITY_BBOXES[cityKey];
+    if (cityBbox) {
+      bounds = cityBbox.bounds;
+      center = cityBbox.center;
+    }
+  } else if (countyName && stateCode) {
     const bboxKey = `${countyName.toLowerCase()}_${stateCode.toLowerCase()}`;
     const hardcoded = COUNTY_BBOXES[bboxKey];
     if (hardcoded) {
@@ -428,6 +518,7 @@ function parseQueryIntent(prompt: string): ParsedIntent {
     },
     where: {
       raw: rawLocation,
+      city: cityName || undefined,
       county: countyName || undefined,
       state: stateName,
       stateCode,
