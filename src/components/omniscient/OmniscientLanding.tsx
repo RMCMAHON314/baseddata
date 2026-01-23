@@ -137,7 +137,7 @@ export function OmniscientLanding({ onSubmit, isLoading }: OmniscientLandingProp
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-accent border border-primary/20 text-sm font-medium text-primary mb-6"
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/20 text-sm font-medium text-primary mb-6"
             >
               <Sparkles className="w-4 h-4" />
               OMNISCIENT v4.0 — Self-Evolving Data Engine
