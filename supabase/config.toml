@@ -29,3 +29,12 @@ verify_jwt = false
 
 [functions.scheduled-runner]
 verify_jwt = false
+
+[functions.flywheel-scheduler]
+verify_jwt = false
+
+[functions.discovery-processor]
+verify_jwt = false
+
+[functions.auto-crawler]
+verify_jwt = false
