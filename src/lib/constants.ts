@@ -11,7 +11,7 @@ export * from './discovery';
 // PLATFORM IDENTITY
 // ============================================================================
 
-export const BASED_DATA_VERSION = '7.5';
+export const BASED_DATA_VERSION = '9.0';
 export const BASED_DATA_TAGLINE = 'Every Dataset. On Demand.';
 export const BASED_DATA_DESCRIPTION = 'Self-evolving data platform that queries 70+ live APIs and generates new collectors on demand.';
 

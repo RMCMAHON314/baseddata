@@ -1,5 +1,5 @@
-// BASED DATA v8.1 - Premium Record Card
-// Right sidebar data card with hover highlight, quality indicator, two-way sync
+// BASED DATA v9.0 - Premium Record Card
+// High-fidelity display: real names, addresses, descriptions - no generic "POI"
 
 import * as React from 'react';
 import { motion } from 'framer-motion';
