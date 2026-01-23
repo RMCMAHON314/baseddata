@@ -33,6 +33,25 @@ interface ResolvedEntity {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// HELPER: Check if name is too generic to match
+// ═══════════════════════════════════════════════════════════════
+const GENERIC_NAMES = new Set([
+  'poi', 'unknown', 'unnamed', 'n/a', 'na', 'none', 'null', 'undefined',
+  'test', 'sample', 'example', 'default', 'placeholder', 'temp', 'tmp',
+  'point', 'location', 'place', 'site', 'area', 'zone', 'region',
+  'passeriformes', 'magnoliopsida', 'aves', 'mammalia', 'insecta', // Taxonomic classes
+  'animalia', 'plantae', 'fungi', 'chordata', 'arthropoda',
+]);
+
+function isGenericName(name: string): boolean {
+  const normalized = name.toLowerCase().trim();
+  if (GENERIC_NAMES.has(normalized)) return true;
+  if (normalized.length < 3) return true;
+  if (/^\d+\s*km\s+(n|s|e|w|ne|nw|se|sw|nne|nnw|sse|ssw|ene|ese|wnw|wsw)\s+of/i.test(normalized)) return true; // Earthquake location patterns
+  return false;
+}
+
+// ═══════════════════════════════════════════════════════════════
 // HELPER: Normalize name for matching
 // ═══════════════════════════════════════════════════════════════
 function normalizeNameForMatch(name: string): string {
@@ -139,6 +158,14 @@ async function resolveRecordToEntity(
   const props = record.properties || {};
   const identifiers = extractIdentifiers(props);
   const entityType = inferEntityType(record.category, props);
+  const recordIsGeneric = isGenericName(record.name);
+
+  // Skip generic names entirely - create isolated entities for them
+  if (recordIsGeneric) {
+    console.log(`[entity-resolver] Generic name detected: "${record.name}" - creating isolated entity`);
+    const newEntity = await createNewEntity(record, entityType, identifiers, supabase);
+    return { entity_id: newEntity.id, is_new: true, confidence: 0.5, strategy: 'generic_isolated' };
+  }
   
   // ═══════════════════════════════════════════════════════════════
   // STRATEGY 1: Exact identifier match (highest confidence)
@@ -153,9 +180,12 @@ async function resolveRecordToEntity(
       
       if (matches && matches.length > 0) {
         const entity = matches[0];
-        await mergeRecordIntoEntity(record, entity, supabase);
-        console.log(`[entity-resolver] Strategy 1: Exact match on ${key}=${value}`);
-        return { entity_id: entity.id, is_new: false, confidence: 1.0, strategy: 'exact_identifier' };
+        // Don't merge into generic entities
+        if (!isGenericName(entity.canonical_name)) {
+          await mergeRecordIntoEntity(record, entity, supabase);
+          console.log(`[entity-resolver] Strategy 1: Exact match on ${key}=${value}`);
+          return { entity_id: entity.id, is_new: false, confidence: 1.0, strategy: 'exact_identifier' };
+        }
       }
     }
   }
@@ -176,10 +206,11 @@ async function resolveRecordToEntity(
     
     if (locationMatches && locationMatches.length > 0) {
       const scored = locationMatches
+        .filter((e: any) => !isGenericName(e.canonical_name)) // Skip generic entities
         .map((e: any) => ({ ...e, similarity: calculateSimilarity(record.name, e.canonical_name) }))
         .sort((a: any, b: any) => b.similarity - a.similarity);
       
-      if (scored[0].similarity > 0.7) {
+      if (scored.length > 0 && scored[0].similarity > 0.7) {
         await mergeRecordIntoEntity(record, scored[0], supabase);
         console.log(`[entity-resolver] Strategy 2: Location match ${record.name} -> ${scored[0].canonical_name} (${scored[0].similarity.toFixed(2)})`);
         return { entity_id: scored[0].id, is_new: false, confidence: scored[0].similarity, strategy: 'name_location' };
@@ -203,8 +234,10 @@ async function resolveRecordToEntity(
       });
     
     if (nearbyEntities && nearbyEntities.length > 0) {
-      const bestMatch = nearbyEntities[0];
-      if (bestMatch.similarity > 0.6) {
+      // Filter out generic entity names
+      const validMatches = nearbyEntities.filter((e: any) => !isGenericName(e.canonical_name));
+      const bestMatch = validMatches[0];
+      if (bestMatch && bestMatch.similarity > 0.6) {
         const { data: entity } = await supabase
           .from('core_entities')
           .select('*')
@@ -232,6 +265,7 @@ async function resolveRecordToEntity(
     
     if (typeMatches && typeMatches.length > 0) {
       const scored = typeMatches
+        .filter((e: any) => !isGenericName(e.canonical_name)) // Skip generic entities
         .map((e: any) => ({ ...e, similarity: calculateSimilarity(record.name, e.canonical_name) }))
         .filter((e: any) => e.similarity > 0.85)
         .sort((a: any, b: any) => b.similarity - a.similarity);
