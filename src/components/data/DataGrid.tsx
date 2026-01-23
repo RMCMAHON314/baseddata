@@ -45,31 +45,43 @@ export function DataGrid({ features, onExport, onRowClick, className }: DataGrid
   const [pageSize, setPageSize] = useState(50);
   const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set());
   
-  // Build column definitions from data
+  // Build column definitions from data - prioritize USEFUL columns
   const columns = useMemo<ColumnDef[]>(() => {
     const allKeys = new Set<string>();
     features.forEach(f => {
       Object.keys(f.properties || {}).forEach(k => allKeys.add(k));
     });
     
-    // Priority columns first
-    const priorityOrder = ['name', 'category', 'source', 'description', 'timestamp', 'confidence'];
-    const orderedKeys = [...priorityOrder.filter(k => allKeys.has(k)), ...Array.from(allKeys).filter(k => !priorityOrder.includes(k))];
+    // Priority columns - most useful first, hide internal/redundant ones
+    const priorityOrder = ['name', 'category', 'description', 'address', 'sport', 'facility_type', 'source', 'confidence'];
+    const hiddenKeys = ['source_id', 'source_url', 'source_record_url', 'api_documentation_url', 'url', 'attributes', 'subcategory'];
     
-    // Initialize visible columns if empty
+    const filteredKeys = Array.from(allKeys).filter(k => !hiddenKeys.includes(k));
+    const orderedKeys = [
+      ...priorityOrder.filter(k => filteredKeys.includes(k)), 
+      ...filteredKeys.filter(k => !priorityOrder.includes(k))
+    ];
+    
+    // Initialize visible columns - show the most useful ones by default
     if (visibleColumns.size === 0) {
-      setVisibleColumns(new Set(orderedKeys.slice(0, 6)));
+      const defaultVisible = orderedKeys.slice(0, 7);
+      setVisibleColumns(new Set(defaultVisible));
     }
     
     return orderedKeys.map(key => ({
       key,
       label: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' '),
       sortable: true,
-      width: key === 'description' ? 250 : key === 'name' ? 180 : 120,
-      format: (value: any) => {
+      width: key === 'description' ? 280 : key === 'name' ? 200 : key === 'address' ? 220 : 130,
+      format: (value: unknown) => {
         if (value === null || value === undefined) return '—';
         if (typeof value === 'object') return JSON.stringify(value);
-        if (typeof value === 'number') return value.toLocaleString();
+        if (typeof value === 'number') {
+          // Format confidence as percentage
+          if (key === 'confidence' && value <= 1) return `${(value * 100).toFixed(0)}%`;
+          return value.toLocaleString();
+        }
+        if (typeof value === 'boolean') return value ? 'Yes' : 'No';
         return String(value);
       },
     }));

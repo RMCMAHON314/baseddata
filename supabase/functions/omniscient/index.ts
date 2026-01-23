@@ -217,14 +217,61 @@ const collectors: Record<string, Record<string, CollectorFn>> = {
     OpenStreetMap: async (p, bbox) => {
       if (!bbox) return [];
       const features: GeoJSONFeature[] = [];
-      const query = p.keywords.length > 0 ? p.keywords[0] : 'amenity';
-      const overpass = `[out:json][timeout:10];node["${query}"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});out 50;`;
-      const data = await fetchJSON(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(overpass)}`);
+      // Build smarter query based on keywords
+      const keywords = p.keywords.filter(k => k.length > 2);
+      const sportTerms = ['baseball', 'basketball', 'soccer', 'tennis', 'golf', 'football', 'volleyball', 'swimming', 'gym', 'fitness'];
+      const hasSport = keywords.some(k => sportTerms.includes(k.toLowerCase()));
+      
+      let query: string;
+      if (hasSport) {
+        const sport = keywords.find(k => sportTerms.includes(k.toLowerCase())) || 'sport';
+        query = `[out:json][timeout:15];(node["sport"~"${sport}",i](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});node["leisure"~"pitch|sports_centre|stadium",i](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});way["sport"~"${sport}",i](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]}););out center 100;`;
+      } else if (keywords.includes('indoor')) {
+        query = `[out:json][timeout:15];(node["building"~"sports|gymnasium|arena",i](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});node["leisure"~"sports_centre|fitness_centre",i](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]}););out 100;`;
+      } else {
+        const searchTerm = keywords[0] || 'amenity';
+        query = `[out:json][timeout:15];node["${searchTerm}"](${bbox[1]},${bbox[0]},${bbox[3]},${bbox[2]});out 100;`;
+      }
+      
+      const data = await fetchJSON(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`);
       for (const n of data?.elements || []) {
+        const tags = n.tags || {};
+        // Build a meaningful name from available tags
+        const name = tags.name || tags.official_name || tags.brand || 
+          (tags.sport ? `${tags.sport.charAt(0).toUpperCase() + tags.sport.slice(1)} Facility` : null) ||
+          (tags.leisure ? `${tags.leisure.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}` : null) ||
+          (tags.amenity ? `${tags.amenity.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}` : null) ||
+          'Unnamed Location';
+        
+        // Build description from tags
+        const descParts: string[] = [];
+        if (tags.sport) descParts.push(`Sport: ${tags.sport}`);
+        if (tags.leisure) descParts.push(`Type: ${tags.leisure.replace(/_/g, ' ')}`);
+        if (tags['addr:street']) descParts.push(`${tags['addr:housenumber'] || ''} ${tags['addr:street']}`.trim());
+        if (tags['addr:city']) descParts.push(tags['addr:city']);
+        if (tags.operator) descParts.push(`Operator: ${tags.operator}`);
+        if (tags.indoor) descParts.push(`Indoor: ${tags.indoor}`);
+        
+        const coords = n.center ? [n.center.lon, n.center.lat] : [n.lon, n.lat];
+        
         features.push({
           type: 'Feature',
-          geometry: { type: 'Point', coordinates: [n.lon, n.lat] },
-          properties: { source: 'osm', source_id: String(n.id), category: 'GEOSPATIAL', name: n.tags?.name || 'POI', confidence: 0.85 },
+          geometry: { type: 'Point', coordinates: coords },
+          properties: { 
+            source: 'osm', 
+            source_id: String(n.id), 
+            category: 'GEOSPATIAL', 
+            name,
+            description: descParts.join(' • ') || undefined,
+            sport: tags.sport,
+            leisure: tags.leisure,
+            address: tags['addr:full'] || (tags['addr:street'] ? `${tags['addr:housenumber'] || ''} ${tags['addr:street']}, ${tags['addr:city'] || ''}`.trim() : undefined),
+            operator: tags.operator,
+            indoor: tags.indoor === 'yes',
+            website: tags.website,
+            phone: tags.phone,
+            confidence: tags.name ? 0.9 : 0.7,
+          },
         });
       }
       return features;
@@ -250,27 +297,54 @@ const collectors: Record<string, Record<string, CollectorFn>> = {
     RecreationGov: async (p) => {
       const features: GeoJSONFeature[] = [];
       const query = p.keywords.join(' ') || 'recreation';
-      const data = await fetchJSON(`https://ridb.recreation.gov/api/v1/facilities?query=${encodeURIComponent(query)}&limit=25&offset=0`, { apikey: 'demo' });
+      const data = await fetchJSON(`https://ridb.recreation.gov/api/v1/facilities?query=${encodeURIComponent(query)}&limit=50&offset=0`, { apikey: 'demo' });
       for (const f of data?.RECDATA || []) {
         if (f.FacilityLongitude && f.FacilityLatitude) {
           features.push({
             type: 'Feature',
             geometry: { type: 'Point', coordinates: [f.FacilityLongitude, f.FacilityLatitude] },
-            properties: { source: 'recreation_gov', source_id: f.FacilityID, category: 'RECREATION', name: f.FacilityName, description: (f.FacilityDescription || '').slice(0, 200), confidence: 0.9 },
+            properties: { 
+              source: 'recreation_gov', 
+              source_id: String(f.FacilityID), 
+              category: 'RECREATION', 
+              name: f.FacilityName, 
+              description: (f.FacilityDescription || '').replace(/<[^>]*>/g, '').slice(0, 300),
+              facility_type: f.FacilityTypeDescription,
+              address: [f.FacilityStreetAddress1, f.FacilityAdaAccess, f.GEOJSON?.CITY, f.GEOJSON?.STATE].filter(Boolean).join(', '),
+              reservable: f.Reservable,
+              website: f.FacilityURL,
+              confidence: 0.9,
+            },
           });
         }
       }
       return features;
     },
-    NPS: async () => {
+    NPS: async (p) => {
       const features: GeoJSONFeature[] = [];
-      const data = await fetchJSON(`https://developer.nps.gov/api/v1/parks?limit=25&api_key=DEMO_KEY`);
+      const stateCode = p.location?.name?.match(/\b([A-Z]{2})\b/)?.[1] || '';
+      const url = stateCode 
+        ? `https://developer.nps.gov/api/v1/parks?stateCode=${stateCode}&limit=50&api_key=DEMO_KEY`
+        : `https://developer.nps.gov/api/v1/parks?limit=25&api_key=DEMO_KEY`;
+      const data = await fetchJSON(url);
       for (const pk of data?.data || []) {
         if (pk.latitude && pk.longitude) {
           features.push({
             type: 'Feature',
             geometry: { type: 'Point', coordinates: [parseFloat(pk.longitude), parseFloat(pk.latitude)] },
-            properties: { source: 'nps', source_id: pk.id, category: 'RECREATION', name: pk.fullName, description: (pk.description || '').slice(0, 200), confidence: 0.95 },
+            properties: { 
+              source: 'nps', 
+              source_id: pk.id, 
+              category: 'RECREATION', 
+              name: pk.fullName, 
+              description: (pk.description || '').slice(0, 300),
+              park_type: pk.designation,
+              state: pk.states,
+              website: pk.url,
+              phone: pk.contacts?.phoneNumbers?.[0]?.phoneNumber,
+              address: pk.addresses?.find((a: { type: string }) => a.type === 'Physical')?.line1,
+              confidence: 0.95,
+            },
           });
         }
       }
