@@ -7,13 +7,14 @@ import {
   ArrowLeft, Table, Lightbulb, Share2, Database, 
   CheckCircle2, Sparkles, Copy, Search, Download, Eye,
   Filter, Layers, MapPin, ChevronDown, X, FileText,
-  TrendingUp, Shield, DollarSign, Users, Target
+  TrendingUp, Shield, DollarSign, Users, Target, List
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Logo } from '@/components/Logo';
 import { SimpleMap } from '@/components/map/SimpleMap';
 import { DataGrid } from '@/components/data/DataGrid';
+import { ResultsDataTable } from '@/components/data/ResultsDataTable';
 import { RecordDossier } from '@/components/dossier/RecordDossier';
 import type { GeoJSONFeature, GeoJSONFeatureCollection, CollectedData, OmniscientInsights, MapLayer } from '@/types/omniscient';
 import { CATEGORY_COLORS } from '@/lib/mapbox';
@@ -69,7 +70,7 @@ export function PremiumOmniscientResults({
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [cursorCoords, setCursorCoords] = useState<{ lng: number; lat: number } | null>(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
-  const [viewMode, setViewMode] = useState<'cards' | 'grid'>('cards');
+  const [viewMode, setViewMode] = useState<'cards' | 'table' | 'grid'>('table');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [dossierRecord, setDossierRecord] = useState<EnrichedRecord | null>(null);
   const dataScrollRef = useRef<HTMLDivElement>(null);
@@ -406,7 +407,17 @@ export function PremiumOmniscientResults({
           <div className="w-full lg:w-[480px] flex flex-col bg-white border-l border-slate-200">
             {/* Panel Header */}
             <div className="flex-none px-4 py-3 border-b border-slate-200 flex items-center justify-between">
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setViewMode('table')}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
+                    viewMode === 'table' ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:text-slate-700"
+                  )}
+                >
+                  <List className="w-4 h-4" />
+                  Table
+                </button>
                 <button
                   onClick={() => setViewMode('cards')}
                   className={cn(
@@ -433,7 +444,14 @@ export function PremiumOmniscientResults({
 
             {/* Content */}
             <ScrollArea className="flex-1">
-              {viewMode === 'cards' ? (
+              {viewMode === 'table' ? (
+                <div className="p-4">
+                  <ResultsDataTable 
+                    records={filteredRecords}
+                    onRowClick={handleFeatureClick}
+                  />
+                </div>
+              ) : viewMode === 'cards' ? (
                 <div ref={dataScrollRef} className="p-4 space-y-6">
                   {/* Grouped Results */}
                   {Object.entries(groupedResults).map(([groupName, items]) => (
