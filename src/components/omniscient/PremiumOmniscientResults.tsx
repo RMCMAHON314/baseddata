@@ -1,6 +1,7 @@
-// BASED DATA v10.0 - Premium Results View
-// Light theme matching landing page - Bloomberg Terminal meets Apple Maps
-// With integrated History Sidebar and Smart Stats
+// ============================================================================
+// BASED DATA v10.0 - NUCLEAR RESULTS VIEW
+// THE PALANTIR KILLER - Bloomberg Terminal meets Apple Maps meets Intelligence Platform
+// ============================================================================
 
 import { useState, useMemo, useCallback, useRef, forwardRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,7 +10,7 @@ import {
   CheckCircle2, Sparkles, Copy, Search, Download, Eye,
   Filter, Layers, MapPin, ChevronDown, X, FileText,
   TrendingUp, Shield, DollarSign, Users, Target, List,
-  Clock, PanelLeftClose, PanelLeft
+  Clock, PanelLeftClose, PanelLeft, Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -19,9 +20,11 @@ import { DataGrid } from '@/components/data/DataGrid';
 import { ResultsDataTable } from '@/components/data/ResultsDataTable';
 import { RecordDossier } from '@/components/dossier/RecordDossier';
 import { EntityProfile } from '@/components/entity/EntityProfile';
+import { EntityDeepDive } from '@/components/entity/EntityDeepDive';
 import { HistorySidebar } from '@/components/history/HistorySidebar';
 import { InsightsPanel } from '@/components/insights/InsightsPanel';
-import { SmartStatsBar } from '@/components/stats/SmartStatsBar';
+import { CriticalInsightsBanner } from '@/components/insights/CriticalInsightsBanner';
+import { LiveDashboardStats } from '@/components/insights/LiveDashboardStats';
 import type { GeoJSONFeature, GeoJSONFeatureCollection, CollectedData, OmniscientInsights, MapLayer } from '@/types/omniscient';
 import { CATEGORY_COLORS } from '@/lib/mapbox';
 import { toast } from 'sonner';
@@ -85,7 +88,9 @@ export function PremiumOmniscientResults({
   const [historySidebarOpen, setHistorySidebarOpen] = useState(false);
   const [dossierRecord, setDossierRecord] = useState<EnrichedRecord | null>(null);
   const [entityProfileFeature, setEntityProfileFeature] = useState<GeoJSONFeature | null>(null);
-  const [showInsightsPanel, setShowInsightsPanel] = useState(false);
+  const [entityDeepDive, setEntityDeepDive] = useState<ProcessedRecord | null>(null);
+  const [showInsightsPanel, setShowInsightsPanel] = useState(true); // Default open for NUCLEAR
+  const [showCriticalBanner, setShowCriticalBanner] = useState(true);
   const dataScrollRef = useRef<HTMLDivElement>(null);
 
   // Process and deduplicate data
@@ -313,13 +318,24 @@ export function PremiumOmniscientResults({
             </span>
           </div>
         </div>
+        {/* NUCLEAR: Live Dashboard Stats */}
+        <LiveDashboardStats records={processedRecords} />
         
-        {/* Smart Stats - adapts to data type */}
-        <SmartStatsBar
-          records={processedRecords}
-          queryTimeMs={processingTimeMs}
-          sourcesCount={successSources}
-        />
+        {/* NUCLEAR: Critical Insights Banner */}
+        {showCriticalBanner && processedRecords.length > 0 && (
+          <CriticalInsightsBanner 
+            records={processedRecords}
+            onShowOnMap={(records) => {
+              // Filter map to show these records
+              toast.success(`Showing ${records.length} records on map`);
+            }}
+            onViewDetails={(insight) => {
+              if (insight.relatedRecords?.[0]) {
+                setEntityDeepDive(insight.relatedRecords[0]);
+              }
+            }}
+          />
+        )}
         
         {/* Collapsible Insights Panel */}
         <AnimatePresence>
