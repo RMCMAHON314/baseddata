@@ -16,6 +16,7 @@ import { SimpleMap } from '@/components/map/SimpleMap';
 import { DataGrid } from '@/components/data/DataGrid';
 import { ResultsDataTable } from '@/components/data/ResultsDataTable';
 import { RecordDossier } from '@/components/dossier/RecordDossier';
+import { EntityProfile } from '@/components/entity/EntityProfile';
 import type { GeoJSONFeature, GeoJSONFeatureCollection, CollectedData, OmniscientInsights, MapLayer } from '@/types/omniscient';
 import { CATEGORY_COLORS } from '@/lib/mapbox';
 import { toast } from 'sonner';
@@ -37,7 +38,7 @@ interface PremiumOmniscientResultsProps {
   onBack: () => void;
 }
 
-// Category icons for filter sidebar
+// Category icons for filter sidebar - aligned with intelligence platform
 const CATEGORY_ICONS: Record<string, string> = {
   WILDLIFE: '🦅',
   WEATHER: '🌤️',
@@ -47,11 +48,15 @@ const CATEGORY_ICONS: Record<string, string> = {
   GEOSPATIAL: '🗺️',
   TRANSPORTATION: '✈️',
   HEALTH: '🏥',
+  HEALTHCARE: '🏥',
   ENERGY: '⚡',
   ECONOMIC: '💰',
+  FINANCIAL: '💵',
   RECREATION: '🏕️',
   DEMOGRAPHICS: '👥',
   RESEARCH: '🔬',
+  COMPLIANCE: '📋',
+  ENVIRONMENTAL: '🌱',
 };
 
 export function PremiumOmniscientResults({
@@ -73,6 +78,7 @@ export function PremiumOmniscientResults({
   const [viewMode, setViewMode] = useState<'cards' | 'table' | 'grid'>('table');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [dossierRecord, setDossierRecord] = useState<EnrichedRecord | null>(null);
+  const [entityProfileFeature, setEntityProfileFeature] = useState<GeoJSONFeature | null>(null);
   const dataScrollRef = useRef<HTMLDivElement>(null);
 
   // Process and deduplicate data
@@ -545,6 +551,17 @@ export function PremiumOmniscientResults({
           <RecordDossier 
             record={dossierRecord} 
             onClose={() => setDossierRecord(null)} 
+          />
+        )}
+        {entityProfileFeature && !dossierRecord && (
+          <EntityProfile 
+            feature={entityProfileFeature}
+            relatedFeatures={filteredRecords.filter(r => 
+              r !== entityProfileFeature && 
+              String((r.properties as Record<string, unknown>)?.category) === String((entityProfileFeature.properties as Record<string, unknown>)?.category)
+            ).slice(0, 5)}
+            onClose={() => setEntityProfileFeature(null)}
+            onViewRelated={(f) => setEntityProfileFeature(f)}
           />
         )}
       </AnimatePresence>
