@@ -1,5 +1,5 @@
-// BASED DATA v7.0 - Enhanced Spreadsheet-Style Data Grid
-// XLS-like interface with clickable source links
+// BASED DATA v9.0 - Enhanced Spreadsheet-Style Data Grid
+// XLS-like interface with smart column prioritization (name, address, description first)
 
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
