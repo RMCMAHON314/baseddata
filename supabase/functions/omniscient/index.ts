@@ -2244,9 +2244,9 @@ serve(async (req) => {
       
       // Non-blocking: Trigger entity resolution for new records
       if (persistedRecordIds.length > 0) {
-        console.log('   🧠 Triggering Core entity resolution...');
+        console.log('   🧠 Triggering Core pipelines...');
         
-        // Call entity-resolver to merge records into unified entities
+        // 1. Entity Resolution - merge records into unified entities
         fetch(`${supabaseUrl}/functions/v1/entity-resolver`, {
           method: 'POST',
           headers: {
@@ -2254,16 +2254,52 @@ serve(async (req) => {
             'Authorization': `Bearer ${supabaseServiceKey}`,
           },
           body: JSON.stringify({
-            record_ids: persistedRecordIds.slice(0, 20), // Process top 20
+            record_ids: persistedRecordIds.slice(0, 20),
             query_id: queryId,
             entity_type: intent.core_entity.type,
             location: intent.where,
           }),
         }).then(res => res.json())
-          .then(data => console.log(`   ✓ Entity resolver: ${data.entities_created || 0} entities, ${data.entities_merged || 0} merged`))
+          .then(data => console.log(`   ✓ Entity resolver: ${data.new_entities || 0} new, ${data.merged_entities || 0} merged, ${data.new_facts || 0} facts`))
           .catch(err => console.log(`   ⚠ Entity resolver error: ${err.message}`));
         
-        // Call core-learning to update query patterns and boost relevance
+        // 2. Fact Extraction - extract temporal facts from records
+        fetch(`${supabaseUrl}/functions/v1/core-extract-facts`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseServiceKey}`,
+          },
+          body: JSON.stringify({
+            record_ids: persistedRecordIds.slice(0, 30),
+            query_id: queryId,
+          }),
+        }).then(res => res.json())
+          .then(data => console.log(`   ✓ Fact extraction: ${data.facts_created || 0} facts created`))
+          .catch(err => console.log(`   ⚠ Fact extraction error: ${err.message}`));
+
+        // 3. Insight Generation - generate actionable insights
+        fetch(`${supabaseUrl}/functions/v1/core-generate-insights`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseServiceKey}`,
+          },
+          body: JSON.stringify({
+            query_id: queryId,
+            prompt,
+            features: features.slice(0, 100),
+            intent: {
+              entity_type: intent.core_entity.type,
+              category: intent.what.category,
+              location: intent.where,
+            },
+          }),
+        }).then(res => res.json())
+          .then(data => console.log(`   ✓ Insights: ${data.insights_created || 0} insights generated`))
+          .catch(err => console.log(`   ⚠ Insight generation error: ${err.message}`));
+        
+        // 4. Core Learning - update query patterns and boost relevance
         fetch(`${supabaseUrl}/functions/v1/core-learning`, {
           method: 'POST',
           headers: {
