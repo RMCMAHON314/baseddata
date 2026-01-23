@@ -165,15 +165,34 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { query_data, user_behavior, entity_ids_clicked } = await req.json() as {
-      query_data: QueryData;
-      user_behavior: UserBehavior;
+    const body = await req.json() as {
+      // New format from omniscient
+      query_id?: string;
+      prompt?: string;
+      intent?: { entity_type?: string; category?: string; location?: unknown; keywords?: string[] };
+      result_count?: number;
+      avg_relevance?: number;
+      sources_used?: string[];
+      // Legacy format
+      query_data?: QueryData;
+      user_behavior?: UserBehavior;
       entity_ids_clicked?: string[];
     };
 
-    if (!query_data || !query_data.prompt) {
+    // Support both formats
+    const query_data: QueryData = body.query_data || {
+      query_id: body.query_id || '',
+      prompt: body.prompt || '',
+      result_count: body.result_count || 0,
+      sources_used: body.sources_used || [],
+      processing_time_ms: 0,
+    };
+    const user_behavior = body.user_behavior;
+    const entity_ids_clicked = body.entity_ids_clicked;
+
+    if (!query_data.prompt) {
       return new Response(
-        JSON.stringify({ error: 'query_data with prompt required' }),
+        JSON.stringify({ error: 'prompt required', pattern_id: null }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

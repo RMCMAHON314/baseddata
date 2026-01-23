@@ -2216,6 +2216,7 @@ serve(async (req) => {
     }
 
     // Persist to records table (non-blocking)
+    let persistedRecordIds: string[] = [];
     if (features.length > 0) {
       const records = features.slice(0, 50).map(f => ({
         source_id: String(f.properties.source),
@@ -2226,8 +2227,66 @@ serve(async (req) => {
         geometry: f.geometry,
         properties: f.properties,
         quality_score: f.properties.relevance_score as number || 0.5,
+        query_id: isPersistedQuery ? queryId : null,
       }));
-      supabase.from('records').upsert(records, { onConflict: 'source_id,source_record_id', ignoreDuplicates: true }).then(() => {});
+      
+      const { data: insertedRecords } = await supabase
+        .from('records')
+        .upsert(records, { onConflict: 'source_id,source_record_id', ignoreDuplicates: false })
+        .select('id');
+      
+      persistedRecordIds = (insertedRecords || []).map(r => r.id);
+      console.log(`   💾 Persisted ${persistedRecordIds.length} records to master dataset`);
+      
+      // ═══════════════════════════════════════════════════════════════════
+      // 🧠 THE CORE: Wire records into the Living Data Organism
+      // ═══════════════════════════════════════════════════════════════════
+      
+      // Non-blocking: Trigger entity resolution for new records
+      if (persistedRecordIds.length > 0) {
+        console.log('   🧠 Triggering Core entity resolution...');
+        
+        // Call entity-resolver to merge records into unified entities
+        fetch(`${supabaseUrl}/functions/v1/entity-resolver`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseServiceKey}`,
+          },
+          body: JSON.stringify({
+            record_ids: persistedRecordIds.slice(0, 20), // Process top 20
+            query_id: queryId,
+            entity_type: intent.core_entity.type,
+            location: intent.where,
+          }),
+        }).then(res => res.json())
+          .then(data => console.log(`   ✓ Entity resolver: ${data.entities_created || 0} entities, ${data.entities_merged || 0} merged`))
+          .catch(err => console.log(`   ⚠ Entity resolver error: ${err.message}`));
+        
+        // Call core-learning to update query patterns and boost relevance
+        fetch(`${supabaseUrl}/functions/v1/core-learning`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseServiceKey}`,
+          },
+          body: JSON.stringify({
+            query_id: queryId,
+            prompt,
+            intent: {
+              entity_type: intent.core_entity.type,
+              category: intent.what.category,
+              location: intent.where,
+              keywords: intent.core_entity.keywords,
+            },
+            result_count: features.length,
+            avg_relevance: avgRelevance,
+            sources_used: sources.filter(s => s.status === 'success').map(s => s.name),
+          }),
+        }).then(res => res.json())
+          .then(data => console.log(`   ✓ Core learning: pattern=${data.pattern_id || 'new'}`))
+          .catch(err => console.log(`   ⚠ Core learning error: ${err.message}`));
+      }
     }
 
     console.log(`✅ Complete: ${features.length} relevant features in ${processingTime}ms`);

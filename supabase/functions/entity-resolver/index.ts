@@ -165,14 +165,41 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { records, query_id } = await req.json() as { 
-      records: SourceRecord[];
+    const body = await req.json() as { 
+      records?: SourceRecord[];
+      record_ids?: string[];
       query_id?: string;
+      entity_type?: string;
     };
 
-    if (!records || !Array.isArray(records)) {
+    let records: SourceRecord[] = body.records || [];
+    
+    // If record_ids provided, fetch from database
+    if (body.record_ids && body.record_ids.length > 0) {
+      const { data: fetchedRecords } = await supabase
+        .from('records')
+        .select('id, name, category, source_id, source_record_id, properties, geometry, description, quality_score')
+        .in('id', body.record_ids);
+      
+      if (fetchedRecords) {
+        records = fetchedRecords.map(r => ({
+          id: r.id,
+          name: r.name,
+          category: r.category,
+          source_id: r.source_id,
+          source_record_id: r.source_record_id,
+          properties: r.properties as Record<string, unknown>,
+          geometry: r.geometry as { type: string; coordinates: number[] },
+          description: r.description || undefined,
+          quality_score: r.quality_score || undefined,
+        }));
+      }
+      console.log(`[entity-resolver] Fetched ${records.length} records from IDs`);
+    }
+
+    if (!records || records.length === 0) {
       return new Response(
-        JSON.stringify({ error: 'records array required' }),
+        JSON.stringify({ error: 'records array or record_ids required', entities_created: 0, entities_merged: 0 }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
