@@ -61,12 +61,14 @@ export const PremiumRecordCard = React.forwardRef<HTMLDivElement, PremiumRecordC
     const props = record.properties;
     const category = String(props.category || 'OTHER');
     const color = CATEGORY_COLORS[category] || '#3B82F6';
-    // Smart name extraction - prefer actual names over generic labels
+    // Smart name extraction - prefer actual names, with fallback indicators
+    const hasOfficialName = !!props.has_official_name;
     const title = String(
       props.name && props.name !== 'POI' && props.name !== 'Unknown' 
         ? props.name 
-        : props.title || props.fullName || props.facility_name || props.species || 'Unnamed'
+        : props.title || props.fullName || props.facility_name || props.species || 'Unnamed Location'
     );
+    
     const source = String(props.source || '');
     const timestamp = props.timestamp as string | undefined;
     const quality = Number(props.confidence || props.quality || 0.5);
@@ -75,12 +77,23 @@ export const PremiumRecordCard = React.forwardRef<HTMLDivElement, PremiumRecordC
       ? (record.geometry.coordinates as number[])
       : null;
     
-    // Extract useful secondary info
-    const description = String(props.description || '');
-    const address = String(props.address || '');
+    // Rich metadata for display
+    const operator = props.operator ? String(props.operator) : undefined;
+    const address = props.address ? String(props.address) : undefined;
     const sport = props.sport ? String(props.sport) : undefined;
-    const facilityType = props.facility_type || props.leisure || props.park_type;
-    const subtitle = description || address || (sport ? `Sport: ${sport}` : '') || (facilityType ? String(facilityType).replace(/_/g, ' ') : '');
+    const leisureType = props.leisure_type ? String(props.leisure_type).replace(/_/g, ' ') : undefined;
+    const surface = props.surface ? String(props.surface) : undefined;
+    const description = String(props.description || '');
+    
+    // Build a rich subtitle with most useful info first
+    const subtitleParts: string[] = [];
+    if (operator) subtitleParts.push(operator);
+    if (address) subtitleParts.push(address);
+    if (sport && !title.toLowerCase().includes(sport)) subtitleParts.push(`${sport} facility`);
+    if (surface) subtitleParts.push(surface);
+    if (leisureType && !subtitleParts.length) subtitleParts.push(leisureType);
+    if (!subtitleParts.length && description) subtitleParts.push(description);
+    const subtitle = subtitleParts.slice(0, 2).join(' • ');
 
     return (
       <motion.div
@@ -126,14 +139,21 @@ export const PremiumRecordCard = React.forwardRef<HTMLDivElement, PremiumRecordC
           </div>
         </div>
 
-        {/* Title */}
-        <h3 className="text-white font-medium mt-2 group-hover:text-cyan-400 transition-colors line-clamp-2">
-          {title}
-        </h3>
+        {/* Title + Official Name Badge */}
+        <div className="flex items-center gap-2 mt-2">
+          <h3 className="text-white font-medium group-hover:text-cyan-400 transition-colors line-clamp-2 flex-1">
+            {title}
+          </h3>
+          {hasOfficialName && (
+            <span className="shrink-0 text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium">
+              VERIFIED
+            </span>
+          )}
+        </div>
         
-        {/* Subtitle/Description */}
+        {/* Subtitle/Description - prioritize operator and address */}
         {subtitle && (
-          <p className="text-xs text-white/50 mt-1 line-clamp-2">
+          <p className="text-xs text-white/60 mt-1 line-clamp-2">
             {subtitle}
           </p>
         )}

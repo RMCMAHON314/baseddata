@@ -52,9 +52,17 @@ export function DataGrid({ features, onExport, onRowClick, className }: DataGrid
       Object.keys(f.properties || {}).forEach(k => allKeys.add(k));
     });
     
-    // Priority columns - most useful first, hide internal/redundant ones
-    const priorityOrder = ['name', 'category', 'description', 'address', 'sport', 'facility_type', 'source', 'confidence'];
-    const hiddenKeys = ['source_id', 'source_url', 'source_record_url', 'api_documentation_url', 'url', 'attributes', 'subcategory'];
+    // Priority columns - most useful data for humans FIRST
+    const priorityOrder = [
+      'name', 'operator', 'address', 'sport', 'description', 
+      'leisure_type', 'surface', 'access', 'capacity', 'lighted',
+      'opening_hours', 'phone', 'website', 'category', 'confidence'
+    ];
+    // Hide internal/redundant columns
+    const hiddenKeys = [
+      'source_id', 'source_url', 'source_record_url', 'api_documentation_url', 
+      'url', 'attributes', 'subcategory', 'osm_id', 'has_official_name', 'indoor'
+    ];
     
     const filteredKeys = Array.from(allKeys).filter(k => !hiddenKeys.includes(k));
     const orderedKeys = [
