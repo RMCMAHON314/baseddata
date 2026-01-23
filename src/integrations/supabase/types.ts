@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_circuit_breakers: {
+        Row: {
+          api_domain: string
+          created_at: string
+          failure_count: number
+          failure_threshold: number
+          half_open_at: string | null
+          id: string
+          last_failure_at: string | null
+          last_success_at: string | null
+          opened_at: string | null
+          state: string
+          success_count: number
+          success_threshold: number
+          timeout_seconds: number
+          updated_at: string
+        }
+        Insert: {
+          api_domain: string
+          created_at?: string
+          failure_count?: number
+          failure_threshold?: number
+          half_open_at?: string | null
+          id?: string
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          opened_at?: string | null
+          state?: string
+          success_count?: number
+          success_threshold?: number
+          timeout_seconds?: number
+          updated_at?: string
+        }
+        Update: {
+          api_domain?: string
+          created_at?: string
+          failure_count?: number
+          failure_threshold?: number
+          half_open_at?: string | null
+          id?: string
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          opened_at?: string | null
+          state?: string
+          success_count?: number
+          success_threshold?: number
+          timeout_seconds?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       api_keys: {
         Row: {
           created_at: string
@@ -123,6 +174,8 @@ export type Database = {
       }
       auto_crawlers: {
         Row: {
+          circuit_state: string | null
+          consecutive_failures: number | null
           crawler_type: string
           created_at: string
           description: string | null
@@ -130,6 +183,7 @@ export type Database = {
           firecrawl_config: Json | null
           id: string
           is_active: boolean
+          last_health_check: string | null
           last_run_at: string | null
           name: string
           next_run_at: string | null
@@ -144,6 +198,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          circuit_state?: string | null
+          consecutive_failures?: number | null
           crawler_type?: string
           created_at?: string
           description?: string | null
@@ -151,6 +207,7 @@ export type Database = {
           firecrawl_config?: Json | null
           id?: string
           is_active?: boolean
+          last_health_check?: string | null
           last_run_at?: string | null
           name: string
           next_run_at?: string | null
@@ -165,6 +222,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          circuit_state?: string | null
+          consecutive_failures?: number | null
           crawler_type?: string
           created_at?: string
           description?: string | null
@@ -172,6 +231,7 @@ export type Database = {
           firecrawl_config?: Json | null
           id?: string
           is_active?: boolean
+          last_health_check?: string | null
           last_run_at?: string | null
           name?: string
           next_run_at?: string | null
@@ -464,6 +524,59 @@ export type Database = {
           },
         ]
       }
+      discovery_dead_letter: {
+        Row: {
+          can_retry: boolean | null
+          created_at: string
+          failure_count: number
+          failure_reason: string
+          first_failed_at: string
+          id: string
+          last_failed_at: string
+          original_discovery_id: string | null
+          original_payload: Json
+          recovered_at: string | null
+          recovered_by: string | null
+          retry_after: string | null
+        }
+        Insert: {
+          can_retry?: boolean | null
+          created_at?: string
+          failure_count?: number
+          failure_reason: string
+          first_failed_at?: string
+          id?: string
+          last_failed_at?: string
+          original_discovery_id?: string | null
+          original_payload: Json
+          recovered_at?: string | null
+          recovered_by?: string | null
+          retry_after?: string | null
+        }
+        Update: {
+          can_retry?: boolean | null
+          created_at?: string
+          failure_count?: number
+          failure_reason?: string
+          first_failed_at?: string
+          id?: string
+          last_failed_at?: string
+          original_discovery_id?: string | null
+          original_payload?: Json
+          recovered_at?: string | null
+          recovered_by?: string | null
+          retry_after?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discovery_dead_letter_original_discovery_id_fkey"
+            columns: ["original_discovery_id"]
+            isOneToOne: false
+            referencedRelation: "source_discoveries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       discovery_metrics: {
         Row: {
           avg_confidence_score: number | null
@@ -709,6 +822,33 @@ export type Database = {
           times_triggered?: number | null
           trigger_condition?: Json
           updated_at?: string
+        }
+        Relationships: []
+      }
+      flywheel_metrics: {
+        Row: {
+          dimensions: Json | null
+          id: string
+          metric_name: string
+          metric_type: string
+          metric_value: number
+          recorded_at: string
+        }
+        Insert: {
+          dimensions?: Json | null
+          id?: string
+          metric_name: string
+          metric_type: string
+          metric_value: number
+          recorded_at?: string
+        }
+        Update: {
+          dimensions?: Json | null
+          id?: string
+          metric_name?: string
+          metric_type?: string
+          metric_value?: number
+          recorded_at?: string
         }
         Relationships: []
       }
@@ -1458,6 +1598,8 @@ export type Database = {
       }
       source_discoveries: {
         Row: {
+          backoff_multiplier: number | null
+          circuit_breaker_blocked: boolean | null
           confidence_score: number | null
           created_at: string
           error_count: number | null
@@ -1468,9 +1610,11 @@ export type Database = {
           id: string
           inferred_categories: string[]
           inferred_keywords: string[]
+          last_error_at: string | null
           last_generation_at: string | null
           priority: number | null
           processed_at: string | null
+          retry_after: string | null
           status: string | null
           target_api_name: string
           target_api_url: string | null
@@ -1483,6 +1627,8 @@ export type Database = {
           validation_result: Json | null
         }
         Insert: {
+          backoff_multiplier?: number | null
+          circuit_breaker_blocked?: boolean | null
           confidence_score?: number | null
           created_at?: string
           error_count?: number | null
@@ -1493,9 +1639,11 @@ export type Database = {
           id?: string
           inferred_categories?: string[]
           inferred_keywords?: string[]
+          last_error_at?: string | null
           last_generation_at?: string | null
           priority?: number | null
           processed_at?: string | null
+          retry_after?: string | null
           status?: string | null
           target_api_name: string
           target_api_url?: string | null
@@ -1508,6 +1656,8 @@ export type Database = {
           validation_result?: Json | null
         }
         Update: {
+          backoff_multiplier?: number | null
+          circuit_breaker_blocked?: boolean | null
           confidence_score?: number | null
           created_at?: string
           error_count?: number | null
@@ -1518,9 +1668,11 @@ export type Database = {
           id?: string
           inferred_categories?: string[]
           inferred_keywords?: string[]
+          last_error_at?: string | null
           last_generation_at?: string | null
           priority?: number | null
           processed_at?: string | null
+          retry_after?: string | null
           status?: string | null
           target_api_name?: string
           target_api_url?: string | null
@@ -1654,6 +1806,18 @@ export type Database = {
         Args: { p_cron: string; p_from?: string }
         Returns: string
       }
+      calculate_retry_delay: {
+        Args: { p_attempt: number; p_base_delay?: number }
+        Returns: unknown
+      }
+      check_circuit_breaker: {
+        Args: { p_domain: string }
+        Returns: {
+          is_open: boolean
+          retry_after: string
+          state: string
+        }[]
+      }
       complete_query: {
         Args: {
           p_categories_matched: string[]
@@ -1688,6 +1852,7 @@ export type Database = {
         Returns: boolean
       }
       execute_nl_query: { Args: { p_sql: string }; Returns: Json }
+      get_flywheel_health: { Args: never; Returns: Json }
       log_query: {
         Args: {
           p_api_key_id?: string
@@ -1695,6 +1860,10 @@ export type Database = {
           p_prompt: string
           p_user_id: string
         }
+        Returns: string
+      }
+      move_to_dead_letter: {
+        Args: { p_discovery_id: string; p_reason: string }
         Returns: string
       }
       queue_discovery: {
@@ -1709,6 +1878,19 @@ export type Database = {
           p_trigger_id?: string
           p_trigger_prompt?: string
           p_trigger_type: string
+        }
+        Returns: string
+      }
+      record_circuit_result: {
+        Args: { p_domain: string; p_success: boolean }
+        Returns: string
+      }
+      record_flywheel_metric: {
+        Args: {
+          p_dimensions?: Json
+          p_name: string
+          p_type: string
+          p_value: number
         }
         Returns: string
       }
