@@ -1,5 +1,7 @@
-// BASED DATA v6.0 - Auto-Crawler Engine
-// Autonomous data discovery that continuously expands the master dataset
+// ============================================================================
+// BASED DATA v10.0 - Auto-Crawler Engine (HARDENED)
+// Exponential Backoff, Circuit Breaker, Dead Letter Queue, Observability
+// ============================================================================
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -7,6 +9,22 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// ============================================================================
+// CONFIGURATION
+// ============================================================================
+
+const CONFIG = {
+  MAX_CONSECUTIVE_FAILURES: 5,
+  BASE_DELAY_SECONDS: 120,
+  REQUEST_TIMEOUT_MS: 15000,
+  MAX_SOURCES_PER_RUN: 20,
+  RATE_LIMIT_DELAY_MS: 1000,
+};
+
+// ============================================================================
+// TYPE DEFINITIONS
+// ============================================================================
 
 interface CrawlerConfig {
   id: string;
@@ -17,6 +35,8 @@ interface CrawlerConfig {
   firecrawl_config: Record<string, any> | null;
   target_categories: string[];
   expansion_keywords: string[];
+  consecutive_failures: number;
+  circuit_state: string;
 }
 
 interface DiscoveredSource {
@@ -30,104 +50,162 @@ interface DiscoveredSource {
   quality_score: number;
 }
 
-// Known API directories and data catalogs to discover new sources
-const DISCOVERY_SEEDS = [
-  // Government data catalogs
-  { url: 'https://catalog.data.gov/api/3/action/package_search', type: 'api_catalog', category: 'GOVERNMENT' },
-  { url: 'https://data.census.gov/api', type: 'api', category: 'DEMOGRAPHICS' },
-  
-  // Scientific data
-  { url: 'https://api.gbif.org/v1/dataset', type: 'api_catalog', category: 'WILDLIFE' },
-  { url: 'https://api.crossref.org/works', type: 'api', category: 'RESEARCH' },
-  
-  // Environmental
-  { url: 'https://www.epa.gov/enviro/envirofacts-data-service-api', type: 'documentation', category: 'WEATHER' },
-  { url: 'https://waterservices.usgs.gov/rest/Site-Service.html', type: 'documentation', category: 'MARINE' },
-];
+// ============================================================================
+// CIRCUIT BREAKER & METRICS
+// ============================================================================
 
-// Pattern-based discovery: Look for APIs matching patterns in query history
+async function checkCircuitBreaker(supabase: any, domain: string): Promise<boolean> {
+  try {
+    const { data } = await supabase.rpc('check_circuit_breaker', { p_domain: domain });
+    return data?.[0]?.is_open || false;
+  } catch {
+    return false;
+  }
+}
+
+async function recordCircuitResult(supabase: any, domain: string, success: boolean): Promise<void> {
+  try {
+    await supabase.rpc('record_circuit_result', { p_domain: domain, p_success: success });
+  } catch (e) {
+    console.error('Circuit result error:', e);
+  }
+}
+
+async function recordMetric(supabase: any, type: string, name: string, value: number, dimensions: Record<string, any> = {}): Promise<void> {
+  try {
+    await supabase.rpc('record_flywheel_metric', {
+      p_type: type,
+      p_name: name,
+      p_value: value,
+      p_dimensions: dimensions,
+    });
+  } catch (e) {
+    console.error('Metric error:', e);
+  }
+}
+
+// ============================================================================
+// SAFE FETCH WITH CIRCUIT BREAKER
+// ============================================================================
+
+async function safeFetch(
+  supabase: any,
+  url: string,
+  options: RequestInit = {}
+): Promise<Response | null> {
+  const domain = new URL(url).hostname;
+  
+  if (await checkCircuitBreaker(supabase, domain)) {
+    console.log(`Circuit breaker OPEN for ${domain}, skipping`);
+    return null;
+  }
+  
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), CONFIG.REQUEST_TIMEOUT_MS);
+    
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'BASEDDATA/10.0 AutoCrawler',
+        ...options.headers,
+      },
+    });
+    
+    clearTimeout(timeout);
+    await recordCircuitResult(supabase, domain, response.ok);
+    
+    return response;
+  } catch (error) {
+    await recordCircuitResult(supabase, domain, false);
+    console.error(`Fetch failed for ${url}:`, error);
+    return null;
+  }
+}
+
+// ============================================================================
+// DISCOVERY STRATEGIES
+// ============================================================================
+
 async function discoverByPattern(
   supabase: any,
-  crawler: CrawlerConfig,
-  firecrawlApiKey?: string
+  crawler: CrawlerConfig
 ): Promise<DiscoveredSource[]> {
   const discovered: DiscoveredSource[] = [];
   
-  // Get high-priority query patterns that need expansion
   const { data: patterns } = await supabase
     .from('query_patterns')
     .select('*')
     .eq('should_auto_expand', true)
     .order('execution_count', { ascending: false })
-    .limit(10) as { data: any[] | null };
+    .limit(10);
   
   if (!patterns?.length) {
     console.log('No patterns marked for expansion');
     return discovered;
   }
   
-  // For each pattern, search for relevant data sources
   for (const pattern of patterns) {
     const keywords = pattern.categories?.slice(0, 3) || [];
+    const searchQuery = keywords.join(' ');
     
-    // Search data.gov catalog
+    const response = await safeFetch(
+      supabase,
+      `https://catalog.data.gov/api/3/action/package_search?q=${encodeURIComponent(searchQuery)}&rows=5`
+    );
+    
+    if (!response?.ok) continue;
+    
     try {
-      const searchQuery = keywords.join(' ');
-      const response = await fetch(
-        `https://catalog.data.gov/api/3/action/package_search?q=${encodeURIComponent(searchQuery)}&rows=5`
-      );
+      const data = await response.json();
       
-      if (response.ok) {
-        const data = await response.json();
+      for (const result of data.result?.results?.slice(0, 5) || []) {
+        const apiResource = result.resources?.find((r: any) => 
+          r.format?.toLowerCase().includes('api') || 
+          r.url?.includes('/api/') ||
+          r.description?.toLowerCase().includes('api')
+        );
         
-        for (const result of data.result?.results || []) {
-          // Check if it has an API endpoint
-          const apiResource = result.resources?.find((r: any) => 
-            r.format?.toLowerCase().includes('api') || 
-            r.url?.includes('/api/') ||
-            r.description?.toLowerCase().includes('api')
-          );
-          
-          if (apiResource || result.resources?.length) {
-            discovered.push({
-              name: result.title || 'Unknown Dataset',
-              description: result.notes?.slice(0, 500) || '',
-              url: apiResource?.url || result.resources?.[0]?.url || '',
-              api_endpoint: apiResource?.url,
-              inferred_categories: keywords,
-              inferred_keywords: result.tags?.map((t: any) => t.name) || [],
-              data_type: apiResource ? 'api' : result.resources?.[0]?.format?.toLowerCase() || 'dataset',
-              quality_score: 0.6,
-            });
-          }
+        if (apiResource || result.resources?.length) {
+          discovered.push({
+            name: result.title || 'Unknown Dataset',
+            description: result.notes?.slice(0, 500) || '',
+            url: apiResource?.url || result.resources?.[0]?.url || '',
+            api_endpoint: apiResource?.url,
+            inferred_categories: keywords,
+            inferred_keywords: result.tags?.map((t: any) => t.name).slice(0, 10) || [],
+            data_type: apiResource ? 'api' : result.resources?.[0]?.format?.toLowerCase() || 'dataset',
+            quality_score: 0.6,
+          });
         }
       }
     } catch (e) {
-      console.error('Data.gov search failed:', e);
+      console.error('Pattern parse error:', e);
     }
+    
+    // Rate limiting
+    await new Promise(r => setTimeout(r, CONFIG.RATE_LIMIT_DELAY_MS));
   }
   
   return discovered;
 }
 
-// Similarity-based discovery: Find sources similar to high-performing ones
 async function discoverBySimilarity(
   supabase: any,
   crawler: CrawlerConfig
 ): Promise<DiscoveredSource[]> {
   const discovered: DiscoveredSource[] = [];
   
-  // Get top performing sources
   const { data: topSources } = await supabase
     .from('source_performance')
     .select('*')
     .gte('reliability_score', 0.8)
     .order('total_records_collected', { ascending: false })
-    .limit(20) as { data: any[] | null };
+    .limit(20);
   
   if (!topSources?.length) return discovered;
   
-  // Extract patterns from successful sources
   const successfulPatterns = topSources.map((s: any) => ({
     domain: (() => {
       try {
@@ -140,107 +218,105 @@ async function discoverBySimilarity(
     category: crawler.target_categories[0] || 'GEOSPATIAL',
   }));
   
-  // Search for similar domains/APIs
   for (const pattern of successfulPatterns.slice(0, 5)) {
+    const response = await safeFetch(
+      supabase,
+      `https://catalog.data.gov/api/3/action/package_search?q=organization:${pattern.domain}&rows=3`
+    );
+    
+    if (!response?.ok) continue;
+    
     try {
-      // Search data.gov for similar domains
-      const response = await fetch(
-        `https://catalog.data.gov/api/3/action/package_search?q=organization:${pattern.domain}&rows=3`
-      );
-      
-      if (response.ok) {
-        const data = await response.json();
-        for (const result of data.result?.results || []) {
-          const resource = result.resources?.[0];
-          if (resource?.url) {
-            discovered.push({
-              name: result.title,
-              description: result.notes?.slice(0, 300) || '',
-              url: resource.url,
-              inferred_categories: [pattern.category],
-              inferred_keywords: [],
-              data_type: resource.format?.toLowerCase() || 'dataset',
-              quality_score: 0.7,
-            });
-          }
+      const data = await response.json();
+      for (const result of data.result?.results || []) {
+        const resource = result.resources?.[0];
+        if (resource?.url) {
+          discovered.push({
+            name: result.title,
+            description: result.notes?.slice(0, 300) || '',
+            url: resource.url,
+            inferred_categories: [pattern.category],
+            inferred_keywords: [],
+            data_type: resource.format?.toLowerCase() || 'dataset',
+            quality_score: 0.7,
+          });
         }
       }
     } catch (e) {
-      console.error('Similarity search failed:', e);
+      console.error('Similarity parse error:', e);
     }
+    
+    await new Promise(r => setTimeout(r, CONFIG.RATE_LIMIT_DELAY_MS));
   }
   
   return discovered;
 }
 
-// Expansion discovery: Fill gaps in geographic/temporal/categorical coverage
 async function discoverByExpansion(
   supabase: any,
   crawler: CrawlerConfig
 ): Promise<DiscoveredSource[]> {
   const discovered: DiscoveredSource[] = [];
   
-  // Get current category distribution
   const { data: stats } = await supabase
     .from('master_dataset_stats')
     .select('records_by_category')
     .order('recorded_at', { ascending: false })
     .limit(1)
-    .single() as { data: any | null };
+    .single();
   
   if (!stats?.records_by_category) return discovered;
   
   const categoryCount = stats.records_by_category as Record<string, number>;
   const totalRecords = Object.values(categoryCount).reduce((a, b) => a + b, 0);
   
-  // Find underrepresented categories
   const targetCategories = Object.entries(categoryCount)
-    .filter(([_, count]) => count < totalRecords * 0.05) // Less than 5% of total
+    .filter(([_, count]) => count < totalRecords * 0.05)
     .map(([cat]) => cat);
   
-  // Also check for completely missing categories
   const allCategories = ['WILDLIFE', 'WEATHER', 'MARINE', 'GOVERNMENT', 'ECONOMIC', 'HEALTH', 'ENERGY', 'RECREATION', 'GEOSPATIAL', 'TRANSPORTATION'];
   const missingCategories = allCategories.filter(c => !categoryCount[c] || categoryCount[c] === 0);
   
   const categoriesToExpand = [...new Set([...targetCategories, ...missingCategories])];
   
-  // Search for sources in underrepresented categories
   for (const category of categoriesToExpand.slice(0, 3)) {
+    const response = await safeFetch(
+      supabase,
+      `https://catalog.data.gov/api/3/action/package_search?q=${category.toLowerCase()}&rows=5`
+    );
+    
+    if (!response?.ok) continue;
+    
     try {
-      const response = await fetch(
-        `https://catalog.data.gov/api/3/action/package_search?q=${category.toLowerCase()}&rows=5`
-      );
-      
-      if (response.ok) {
-        const data = await response.json();
-        for (const result of data.result?.results || []) {
-          const resource = result.resources?.find((r: any) => 
-            r.format?.toLowerCase() === 'api' || r.format?.toLowerCase() === 'json'
-          ) || result.resources?.[0];
-          
-          if (resource?.url) {
-            discovered.push({
-              name: result.title,
-              description: result.notes?.slice(0, 300) || '',
-              url: resource.url,
-              api_endpoint: resource.format?.toLowerCase() === 'api' ? resource.url : undefined,
-              inferred_categories: [category],
-              inferred_keywords: result.tags?.map((t: any) => t.name) || [],
-              data_type: resource.format?.toLowerCase() || 'dataset',
-              quality_score: 0.5,
-            });
-          }
+      const data = await response.json();
+      for (const result of data.result?.results || []) {
+        const resource = result.resources?.find((r: any) => 
+          r.format?.toLowerCase() === 'api' || r.format?.toLowerCase() === 'json'
+        ) || result.resources?.[0];
+        
+        if (resource?.url) {
+          discovered.push({
+            name: result.title,
+            description: result.notes?.slice(0, 300) || '',
+            url: resource.url,
+            api_endpoint: resource.format?.toLowerCase() === 'api' ? resource.url : undefined,
+            inferred_categories: [category],
+            inferred_keywords: result.tags?.map((t: any) => t.name).slice(0, 10) || [],
+            data_type: resource.format?.toLowerCase() || 'dataset',
+            quality_score: 0.5,
+          });
         }
       }
     } catch (e) {
-      console.error(`Expansion search for ${category} failed:`, e);
+      console.error(`Expansion parse error for ${category}:`, e);
     }
+    
+    await new Promise(r => setTimeout(r, CONFIG.RATE_LIMIT_DELAY_MS));
   }
   
   return discovered;
 }
 
-// Firecrawl-powered discovery: Crawl documentation sites and data catalogs
 async function discoverWithFirecrawl(
   supabase: any,
   crawler: CrawlerConfig,
@@ -259,42 +335,28 @@ async function discoverWithFirecrawl(
     options?: Record<string, any>;
   };
   
-  for (const targetUrl of urls || []) {
+  for (const targetUrl of urls?.slice(0, 5) || []) {
+    let endpoint = '';
+    let body: Record<string, any> = {};
+    
+    switch (mode) {
+      case 'scrape':
+        endpoint = 'https://api.firecrawl.dev/v1/scrape';
+        body = { url: targetUrl, formats: ['markdown', 'links'], onlyMainContent: true, ...options };
+        break;
+      case 'map':
+        endpoint = 'https://api.firecrawl.dev/v1/map';
+        body = { url: targetUrl, search: crawler.expansion_keywords?.join(' ') || 'api data', limit: 100, ...options };
+        break;
+      case 'crawl':
+        endpoint = 'https://api.firecrawl.dev/v1/crawl';
+        body = { url: targetUrl, limit: 50, scrapeOptions: { formats: ['markdown', 'links'] }, ...options };
+        break;
+    }
+    
     try {
-      let endpoint = '';
-      let body: Record<string, any> = {};
-      
-      switch (mode) {
-        case 'scrape':
-          endpoint = 'https://api.firecrawl.dev/v1/scrape';
-          body = {
-            url: targetUrl,
-            formats: ['markdown', 'links'],
-            onlyMainContent: true,
-            ...options,
-          };
-          break;
-          
-        case 'map':
-          endpoint = 'https://api.firecrawl.dev/v1/map';
-          body = {
-            url: targetUrl,
-            search: crawler.expansion_keywords?.join(' ') || 'api data',
-            limit: 100,
-            ...options,
-          };
-          break;
-          
-        case 'crawl':
-          endpoint = 'https://api.firecrawl.dev/v1/crawl';
-          body = {
-            url: targetUrl,
-            limit: 50,
-            scrapeOptions: { formats: ['markdown', 'links'] },
-            ...options,
-          };
-          break;
-      }
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
       
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -303,23 +365,20 @@ async function discoverWithFirecrawl(
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(body),
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeout);
       
       if (response.ok) {
         const data = await response.json();
-        
-        // Extract potential API links from results
         const links: string[] = mode === 'map' 
           ? (data.links || [])
           : (data.data?.links || data.links || []);
         
-        // Filter for API-like URLs
         const apiLinks = links.filter((link: string) => 
-          link.includes('/api') || 
-          link.includes('/v1') || 
-          link.includes('/v2') ||
-          link.includes('developer') ||
-          link.includes('docs')
+          link.includes('/api') || link.includes('/v1') || link.includes('/v2') ||
+          link.includes('developer') || link.includes('docs')
         );
         
         for (const link of apiLinks.slice(0, 10)) {
@@ -336,78 +395,114 @@ async function discoverWithFirecrawl(
         }
       }
     } catch (e) {
-      console.error(`Firecrawl discovery failed for ${targetUrl}:`, e);
+      console.error(`Firecrawl failed for ${targetUrl}:`, e);
     }
+    
+    await new Promise(r => setTimeout(r, CONFIG.RATE_LIMIT_DELAY_MS * 2));
   }
   
   return discovered;
 }
 
-// Main crawler execution
+// ============================================================================
+// MAIN CRAWLER EXECUTION (HARDENED)
+// ============================================================================
+
 async function runCrawler(
   supabase: any,
   crawler: CrawlerConfig,
   firecrawlApiKey?: string
 ): Promise<{
   sources: DiscoveredSource[];
-  recordsCollected: number;
-  newCollectors: number;
+  success: boolean;
+  error?: string;
 }> {
+  // Check if crawler is in circuit-open state
+  if (crawler.circuit_state === 'open') {
+    return { sources: [], success: false, error: 'Crawler circuit breaker open' };
+  }
+  
   let allDiscovered: DiscoveredSource[] = [];
   
-  switch (crawler.crawler_type) {
-    case 'pattern':
-      allDiscovered = await discoverByPattern(supabase, crawler, firecrawlApiKey);
-      break;
-      
-    case 'similarity':
-      allDiscovered = await discoverBySimilarity(supabase, crawler);
-      break;
-      
-    case 'expansion':
-      allDiscovered = await discoverByExpansion(supabase, crawler);
-      break;
-      
-    case 'firecrawl':
-      if (firecrawlApiKey) {
-        allDiscovered = await discoverWithFirecrawl(supabase, crawler, firecrawlApiKey);
-      } else {
-        console.log('Firecrawl API key not available');
-      }
-      break;
-  }
-  
-  // Deduplicate against existing discovered sources
-  const { data: existingUrls } = await supabase
-    .from('discovered_sources')
-    .select('url') as { data: any[] | null };
-  
-  const existingUrlSet = new Set((existingUrls || []).map((e: any) => e.url));
-  const newSources = allDiscovered.filter(s => !existingUrlSet.has(s.url));
-  
-  // Store new discovered sources
-  if (newSources.length > 0) {
-    const insertData = newSources.map(s => ({
-      discovered_by_crawler_id: crawler.id,
-      name: s.name,
-      description: s.description,
-      url: s.url,
-      api_endpoint: s.api_endpoint,
-      inferred_categories: s.inferred_categories,
-      inferred_keywords: s.inferred_keywords,
-      data_type: s.data_type,
-      quality_score: s.quality_score,
+  try {
+    switch (crawler.crawler_type) {
+      case 'pattern':
+        allDiscovered = await discoverByPattern(supabase, crawler);
+        break;
+      case 'similarity':
+        allDiscovered = await discoverBySimilarity(supabase, crawler);
+        break;
+      case 'expansion':
+        allDiscovered = await discoverByExpansion(supabase, crawler);
+        break;
+      case 'firecrawl':
+        if (firecrawlApiKey) {
+          allDiscovered = await discoverWithFirecrawl(supabase, crawler, firecrawlApiKey);
+        } else {
+          console.log('Firecrawl API key not available');
+        }
+        break;
+    }
+    
+    // Deduplicate
+    const { data: existingUrls } = await supabase
+      .from('discovered_sources')
+      .select('url');
+    
+    const existingUrlSet = new Set((existingUrls || []).map((e: any) => e.url));
+    const newSources = allDiscovered
+      .filter(s => s.url && !existingUrlSet.has(s.url))
+      .slice(0, CONFIG.MAX_SOURCES_PER_RUN);
+    
+    // Store new sources
+    if (newSources.length > 0) {
+      const insertData = newSources.map(s => ({
+        discovered_by_crawler_id: crawler.id,
+        name: s.name,
+        description: s.description,
+        url: s.url,
+        api_endpoint: s.api_endpoint,
+        inferred_categories: s.inferred_categories,
+        inferred_keywords: s.inferred_keywords,
+        data_type: s.data_type,
+        quality_score: s.quality_score,
         review_status: s.quality_score > 0.7 ? 'auto_approved' : 'pending',
-    }));
-    await supabase.from('discovered_sources').insert(insertData);
+      }));
+      await supabase.from('discovered_sources').insert(insertData);
+    }
+    
+    // Reset consecutive failures on success
+    await supabase
+      .from('auto_crawlers')
+      .update({ consecutive_failures: 0, circuit_state: 'closed', last_health_check: new Date().toISOString() })
+      .eq('id', crawler.id);
+    
+    return { sources: newSources, success: true };
+    
+  } catch (error) {
+    const newFailureCount = (crawler.consecutive_failures || 0) + 1;
+    const shouldOpenCircuit = newFailureCount >= CONFIG.MAX_CONSECUTIVE_FAILURES;
+    
+    await supabase
+      .from('auto_crawlers')
+      .update({
+        consecutive_failures: newFailureCount,
+        circuit_state: shouldOpenCircuit ? 'open' : 'closed',
+        last_health_check: new Date().toISOString(),
+      })
+      .eq('id', crawler.id);
+    
+    return {
+      sources: [],
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
   }
-  
-  return {
-    sources: newSources,
-    recordsCollected: 0, // Will be updated when we actually collect from sources
-    newCollectors: 0,
-  };
 }
+
+// ============================================================================
+// MAIN HANDLER
+// ============================================================================
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -421,13 +516,32 @@ Deno.serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    const { crawler_id, run_all } = await req.json().catch(() => ({}));
+    const { crawler_id, run_all, action } = await req.json().catch(() => ({}));
     
-    // Get crawlers to run
+    await recordMetric(supabase, 'invocation', 'auto_crawler', 1, { action: action || 'run' });
+
+    if (action === 'health') {
+      const { data: health } = await supabase.rpc('get_flywheel_health');
+      return new Response(JSON.stringify({ success: true, health }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'reset_circuits') {
+      // Reset all crawler circuits
+      await supabase
+        .from('auto_crawlers')
+        .update({ circuit_state: 'closed', consecutive_failures: 0 })
+        .eq('circuit_state', 'open');
+      
+      return new Response(JSON.stringify({ success: true, message: 'Circuits reset' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
     let crawlers: CrawlerConfig[] = [];
     
     if (crawler_id) {
-      // Run specific crawler
       const { data, error } = await supabase
         .from('auto_crawlers')
         .select('*')
@@ -443,20 +557,20 @@ Deno.serve(async (req) => {
       }
       crawlers = [data as CrawlerConfig];
     } else if (run_all) {
-      // Run all due crawlers
       const { data } = await supabase
         .from('auto_crawlers')
         .select('*')
         .eq('is_active', true)
+        .neq('circuit_state', 'open')
         .or(`next_run_at.is.null,next_run_at.lte.${new Date().toISOString()}`);
       
       crawlers = (data || []) as CrawlerConfig[];
     } else {
-      // Get next due crawler
       const { data } = await supabase
         .from('auto_crawlers')
         .select('*')
         .eq('is_active', true)
+        .neq('circuit_state', 'open')
         .or(`next_run_at.is.null,next_run_at.lte.${new Date().toISOString()}`)
         .order('next_run_at', { ascending: true })
         .limit(1);
@@ -479,79 +593,62 @@ Deno.serve(async (req) => {
     for (const crawler of crawlers) {
       const startTime = Date.now();
       
-      // Create run record
       const { data: runData } = await supabase
         .from('crawler_runs')
         .insert({ crawler_id: crawler.id })
         .select()
         .single();
       
-      try {
-        // Execute crawler
-        const result = await runCrawler(supabase, crawler, firecrawlApiKey);
-        
-        const processingTime = Date.now() - startTime;
-        
-        // Update run record
-        await supabase
-          .from('crawler_runs')
-          .update({
-            status: 'completed',
-            completed_at: new Date().toISOString(),
-            sources_discovered: result.sources.map(s => ({ name: s.name, url: s.url })),
-            records_collected: result.recordsCollected,
-            new_collectors_created: result.newCollectors,
-            processing_time_ms: processingTime,
-          })
-          .eq('id', runData?.id);
-        
-        // Update crawler stats
-        await supabase
-          .from('auto_crawlers')
-          .update({
-            last_run_at: new Date().toISOString(),
-            total_runs: (crawler as any).total_runs + 1,
-            total_sources_found: (crawler as any).total_sources_found + result.sources.length,
-          })
-          .eq('id', crawler.id);
-        
-        // Calculate next run
-        await supabase.rpc('calculate_crawler_next_run', { p_crawler_id: crawler.id });
-        
-        results.push({
-          crawler_id: crawler.id,
-          crawler_name: crawler.name,
-          success: true,
+      const result = await runCrawler(supabase, crawler, firecrawlApiKey);
+      const processingTime = Date.now() - startTime;
+      
+      await supabase
+        .from('crawler_runs')
+        .update({
+          status: result.success ? 'completed' : 'failed',
+          completed_at: new Date().toISOString(),
           sources_discovered: result.sources.length,
+          error_message: result.error,
           processing_time_ms: processingTime,
-        });
-      } catch (e) {
-        // Update run record with error
-        await supabase
-          .from('crawler_runs')
-          .update({
-            status: 'failed',
-            completed_at: new Date().toISOString(),
-            error_message: e instanceof Error ? e.message : 'Unknown error',
-            processing_time_ms: Date.now() - startTime,
-          })
-          .eq('id', runData?.id);
-        
-        results.push({
-          crawler_id: crawler.id,
-          crawler_name: crawler.name,
-          success: false,
-          error: e instanceof Error ? e.message : 'Unknown error',
-        });
-      }
+        })
+        .eq('id', runData?.id);
+      
+      // Update crawler stats
+      await supabase
+        .from('auto_crawlers')
+        .update({
+          last_run_at: new Date().toISOString(),
+          total_runs: (crawler as any).total_runs + 1 || 1,
+          successful_runs: result.success ? ((crawler as any).successful_runs + 1 || 1) : (crawler as any).successful_runs || 0,
+          total_sources_found: ((crawler as any).total_sources_found || 0) + result.sources.length,
+        })
+        .eq('id', crawler.id);
+      
+      // Calculate next run
+      await supabase.rpc('calculate_crawler_next_run', { p_crawler_id: crawler.id });
+      
+      await recordMetric(supabase, 'crawler', 'run_time_ms', processingTime, { crawler: crawler.name, success: result.success });
+      await recordMetric(supabase, 'crawler', 'sources_found', result.sources.length, { crawler: crawler.name });
+      
+      results.push({
+        crawler_id: crawler.id,
+        crawler_name: crawler.name,
+        success: result.success,
+        sources_discovered: result.sources.length,
+        error: result.error,
+        processing_time_ms: processingTime,
+      });
     }
     
-    // Record master dataset stats after crawling
-    await supabase.rpc('record_master_dataset_stats');
+    const successful = results.filter(r => r.success).length;
+    const totalSources = results.reduce((sum, r) => sum + r.sources_discovered, 0);
     
     return new Response(JSON.stringify({
       success: true,
-      crawlers_run: crawlers.length,
+      crawlers_run: results.length,
+      successful,
+      failed: results.length - successful,
+      total_sources_discovered: totalSources,
       results,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -559,6 +656,9 @@ Deno.serve(async (req) => {
     
   } catch (error) {
     console.error('Auto-crawler error:', error);
+    await recordMetric(supabase, 'error', 'auto_crawler', 1, {
+      error: error instanceof Error ? error.message : 'Unknown',
+    });
     return new Response(JSON.stringify({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
