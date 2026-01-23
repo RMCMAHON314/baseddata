@@ -79,9 +79,6 @@ export interface ParsedIntent {
   categories: DataCategory[];
   keywords: string[];
   confidence: number;
-  // Deprecated fields kept for backward compatibility
-  sources?: DataSourceQuery[];
-  insights?: string[];
 }
 
 export interface DataSourceQuery {

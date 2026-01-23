@@ -43,8 +43,6 @@ export function DataGrid({ features, onExport, onRowClick, className }: DataGrid
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
-  const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set());
-  
   // Build column definitions from data - prioritize USEFUL columns
   const columns = useMemo<ColumnDef[]>(() => {
     const allKeys = new Set<string>();
@@ -70,12 +68,6 @@ export function DataGrid({ features, onExport, onRowClick, className }: DataGrid
       ...filteredKeys.filter(k => !priorityOrder.includes(k))
     ];
     
-    // Initialize visible columns - show the most useful ones by default
-    if (visibleColumns.size === 0) {
-      const defaultVisible = orderedKeys.slice(0, 7);
-      setVisibleColumns(new Set(defaultVisible));
-    }
-    
     return orderedKeys.map(key => ({
       key,
       label: key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' '),
@@ -94,6 +86,16 @@ export function DataGrid({ features, onExport, onRowClick, className }: DataGrid
       },
     }));
   }, [features]);
+
+  // Initialize visible columns separately (after columns are computed)
+  const [visibleColumns, setVisibleColumns] = useState<Set<string>>(() => {
+    // Initialize with first 7 priority columns
+    const priorityOrder = [
+      'name', 'operator', 'address', 'sport', 'description', 
+      'leisure_type', 'surface'
+    ];
+    return new Set(priorityOrder);
+  });
   
   // Build row data with coordinates and source links
   const rowData = useMemo(() => {
