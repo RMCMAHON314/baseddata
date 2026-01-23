@@ -1,7 +1,7 @@
 // OMNISCIENT v4.0 - Ultimate Data Tap Landing
 // Premium showcase interface for the self-evolving data engine
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, forwardRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { 
@@ -74,7 +74,8 @@ const STATS = [
   { value: '∞', label: 'Dynamic Genesis' },
 ];
 
-export function OmniscientLanding({ onSubmit, isLoading }: OmniscientLandingProps) {
+// Use forwardRef to fix AnimatePresence warning
+export const OmniscientLanding = forwardRef<HTMLDivElement, OmniscientLandingProps>(function OmniscientLanding({ onSubmit, isLoading }, ref) {
   const [prompt, setPrompt] = useState('');
   const [activeQuery, setActiveQuery] = useState(0);
 
@@ -101,7 +102,7 @@ export function OmniscientLanding({ onSubmit, isLoading }: OmniscientLandingProp
   }, {} as Record<string, typeof DATA_SOURCE_REGISTRY>);
 
   return (
-    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
+    <div ref={ref} className="min-h-screen bg-background text-foreground overflow-x-hidden">
       {/* Background Effects */}
       <div className="fixed inset-0 bg-grid bg-grid-fade pointer-events-none" />
       <div className="fixed inset-0 radial-overlay pointer-events-none" />
@@ -386,4 +387,7 @@ export function OmniscientLanding({ onSubmit, isLoading }: OmniscientLandingProp
       </main>
     </div>
   );
-}
+});
+
+// Named export for backward compatibility
+export default OmniscientLanding;
