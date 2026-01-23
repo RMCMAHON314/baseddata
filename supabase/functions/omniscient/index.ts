@@ -2101,7 +2101,8 @@ serve(async (req) => {
     const snapshot = generateSnapshot(features, intent, sources, processingTime);
 
     // STEP 6: Update query record with results
-    if (session_id && queryId !== `bd_${startTime}`) {
+    const isPersistedQuery = session_id && typeof queryId === 'string' && queryId.length === 36;
+    if (isPersistedQuery) {
       await supabase
         .from('queries')
         .update({
