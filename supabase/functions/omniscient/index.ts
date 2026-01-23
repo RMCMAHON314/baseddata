@@ -218,6 +218,40 @@ const ENTITY_MAPPINGS: Record<string, {
     must_not_have: [],
     category: 'wildlife',
   },
+  // Government Spending / Federal Contracts
+  'tax funded': {
+    type: 'federal_spending',
+    osm_primary: {},
+    osm_secondary: [],
+    keywords: ['tax', 'funded', 'federal', 'grant', 'contract', 'award', 'spending', 'government', 'IT', 'technology', 'project'],
+    exclude: [],
+    must_have: ['award', 'contract', 'grant', 'funding', 'federal', 'government'],
+    should_have: ['technology', 'IT', 'project', 'data', 'agency'],
+    must_not_have: [],
+    category: 'government',
+  },
+  contract: {
+    type: 'federal_spending',
+    osm_primary: {},
+    osm_secondary: [],
+    keywords: ['contract', 'award', 'procurement', 'federal', 'government', 'spending'],
+    exclude: [],
+    must_have: ['contract', 'award', 'procurement', 'federal'],
+    should_have: ['agency', 'vendor', 'recipient'],
+    must_not_have: [],
+    category: 'government',
+  },
+  grant: {
+    type: 'federal_spending',
+    osm_primary: {},
+    osm_secondary: [],
+    keywords: ['grant', 'funding', 'federal', 'award', 'recipient'],
+    exclude: [],
+    must_have: ['grant', 'funding', 'award', 'federal'],
+    should_have: ['recipient', 'agency', 'program'],
+    must_not_have: [],
+    category: 'government',
+  },
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -424,7 +458,8 @@ function detectCategory(text: string): string {
   if (['bird', 'wildlife', 'animal', 'hunting', 'fishing', 'species', 'goose', 'duck'].some(k => text.includes(k))) return 'wildlife';
   if (['weather', 'forecast', 'temperature', 'rain', 'storm'].some(k => text.includes(k))) return 'weather';
   if (['hospital', 'doctor', 'clinic', 'medical', 'health'].some(k => text.includes(k))) return 'healthcare';
-  if (['contract', 'grant', 'federal', 'government', 'procurement'].some(k => text.includes(k))) return 'government';
+  // Enhanced government detection with spending/funding terms
+  if (['contract', 'grant', 'federal', 'government', 'procurement', 'tax', 'funded', 'spending', 'award', 'usaspending', 'agency'].some(k => text.includes(k))) return 'government';
   if (['school', 'college', 'university', 'education'].some(k => text.includes(k))) return 'education';
   if (['restaurant', 'food', 'dining', 'cafe'].some(k => text.includes(k))) return 'dining';
   return 'geospatial';
@@ -591,11 +626,19 @@ async function geocodeLocation(where: ParsedIntent['where']): Promise<ParsedInte
 function calculateRelevance(record: GeoJSONFeature, intent: ParsedIntent): number {
   const criteria = intent.relevance_criteria;
   const coreEntity = intent.core_entity;
+  const props = record.properties;
+  
+  // ═════ SPECIAL HANDLING FOR HIGH-TRUST SOURCES ═════
+  // USASpending data is already filtered by API, trust it
+  const source = String(props.source || '');
+  if (source === 'usaspending') {
+    // Federal spending data is pre-filtered, give it high relevance
+    return (props.confidence as number) || 0.9;
+  }
   
   let score = 0.5; // Base score
   
   // Combine all searchable text from the record
-  const props = record.properties;
   const searchableText = [
     String(props.name || ''),
     String(props.description || ''),
@@ -603,6 +646,8 @@ function calculateRelevance(record: GeoJSONFeature, intent: ParsedIntent): numbe
     String(props.leisure_type || ''),
     String(props.amenity || ''),
     String(props.facility_type || ''),
+    String(props.award_type || ''),
+    String(props.awarding_agency || ''),
     JSON.stringify(props),
   ].join(' ').toLowerCase();
   
@@ -673,6 +718,14 @@ function calculateRelevance(record: GeoJSONFeature, intent: ParsedIntent): numbe
   const name = String(props.name || '').toLowerCase();
   if (name.includes('unnamed') || name.includes('unknown') || name.includes('#')) {
     score -= 0.05;
+  }
+  
+  // ═════ GOVERNMENT/SPENDING BONUS ═════
+  // If this is a government query and record has award data, boost it
+  if (coreEntity.type === 'federal_spending') {
+    if (props.award_amount || props.awarding_agency || props.award_type) {
+      score += 0.25;
+    }
   }
   
   // Clamp score between 0 and 1
@@ -1315,9 +1368,175 @@ const COLLECTORS: Record<string, CollectorFn> = {
     return features;
   },
 
-  // Placeholders
-  usaspending: async () => [],
+  // ─────────────────────────────────────────────────────────────────────────
+  // USASPENDING.GOV - Federal Contracts & Grants
+  // ─────────────────────────────────────────────────────────────────────────
+  usaspending: async (intent) => {
+    const features: GeoJSONFeature[] = [];
+    const stateCode = intent.where.stateCode || '';
+    
+    // Get actual search keywords
+    const stopWords = ['tax', 'funded', 'project', 'for', 'and', 'in', 'the', 'data', 'federal'];
+    let keywords = intent.core_entity.keywords.filter(k => 
+      !stopWords.includes(k.toLowerCase()) && k.length > 2
+    );
+    
+    // Add IT/technology if mentioned
+    const prompt = intent.what.primary.toLowerCase();
+    if (prompt.includes('it') || prompt.includes('technology')) {
+      keywords.push('information technology');
+    }
+    
+    console.log(`   💰 USASpending: keywords="${keywords.join(', ')}" state=${stateCode || 'all'}`);
+    
+    try {
+      // Use award search endpoint with proper filter structure
+      const searchPayload: Record<string, unknown> = {
+        filters: {
+          time_period: [{ start_date: '2023-01-01', end_date: '2026-12-31' }],
+          award_type_codes: ['A', 'B', 'C', 'D', '02', '03', '04', '05'], // Contracts and grants
+        },
+        fields: [
+          'Award ID',
+          'Recipient Name', 
+          'Award Amount',
+          'Description',
+          'Start Date',
+          'End Date',
+          'Awarding Agency',
+          'Awarding Sub Agency',
+          'Award Type',
+          'Place of Performance State Code',
+        ],
+        limit: 30,
+        page: 1,
+        sort: 'Award Amount',
+        order: 'desc',
+      };
+      
+      // Add keywords if we have any
+      if (keywords.length > 0) {
+        (searchPayload.filters as Record<string, unknown>).keywords = keywords;
+      }
+      
+      // Add state filter if specified
+      if (stateCode && stateCode.length === 2) {
+        (searchPayload.filters as Record<string, unknown>).place_of_performance_locations = [
+          { country: 'USA', state: stateCode }
+        ];
+      }
+      
+      const response = await fetch('https://api.usaspending.gov/api/v2/search/spending_by_award/', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'User-Agent': USER_AGENT,
+        },
+        body: JSON.stringify(searchPayload),
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.log(`   ⚠ USASpending returned ${response.status}: ${errorText.slice(0, 200)}`);
+        
+        // Try simpler query without keywords
+        const simplePayload = {
+          filters: {
+            time_period: [{ start_date: '2024-01-01', end_date: '2026-12-31' }],
+            award_type_codes: ['A', 'B', 'C', 'D'],
+            ...(stateCode ? { place_of_performance_locations: [{ country: 'USA', state: stateCode }] } : {}),
+          },
+          fields: ['Award ID', 'Recipient Name', 'Award Amount', 'Description', 'Awarding Agency', 'Award Type'],
+          limit: 25,
+          page: 1,
+          sort: 'Award Amount',
+          order: 'desc',
+        };
+        
+        const retryResponse = await fetch('https://api.usaspending.gov/api/v2/search/spending_by_award/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'User-Agent': USER_AGENT },
+          body: JSON.stringify(simplePayload),
+        });
+        
+        if (!retryResponse.ok) {
+          console.log(`   ⚠ USASpending retry also failed: ${retryResponse.status}`);
+          return features;
+        }
+        
+        const retryData = await retryResponse.json();
+        return processUSASpendingResults(retryData, intent, features);
+      }
+      
+      const data = await response.json();
+      return processUSASpendingResults(data, intent, features);
+      
+    } catch (error) {
+      console.error('USASpending API error:', error);
+    }
+    
+    return features;
+  },
 };
+
+function processUSASpendingResults(
+  data: { results?: Array<Record<string, unknown>> },
+  intent: ParsedIntent,
+  features: GeoJSONFeature[]
+): GeoJSONFeature[] {
+  const stateCode = intent.where.stateCode || '';
+  const stateInfo = stateCode ? STATE_MAP[stateCode.toLowerCase()] : null;
+  const baseCenter = stateInfo?.center || intent.where.center || [-76.6, 39.0];
+  
+  for (const award of data?.results || []) {
+    const awardId = String(award['Award ID'] || '');
+    if (!awardId) continue;
+    
+    // Spread awards on map with slight random offset
+    const idx = features.length;
+    const coords: [number, number] = [
+      baseCenter[0] + (Math.sin(idx * 0.5) * 0.3) + (Math.random() - 0.5) * 0.2,
+      baseCenter[1] + (Math.cos(idx * 0.5) * 0.3) + (Math.random() - 0.5) * 0.2,
+    ];
+    
+    const amount = Number(award['Award Amount']) || 0;
+    const formattedAmount = new Intl.NumberFormat('en-US', { 
+      style: 'currency', 
+      currency: 'USD',
+      maximumFractionDigits: 0,
+    }).format(amount);
+    
+    const descParts: string[] = [];
+    if (award['Awarding Agency']) descParts.push(`Agency: ${award['Awarding Agency']}`);
+    if (award['Award Type']) descParts.push(`Type: ${award['Award Type']}`);
+    const desc = String(award.Description || '');
+    if (desc) descParts.push(desc.slice(0, 150));
+    
+    features.push({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: coords },
+      properties: {
+        source: 'usaspending',
+        source_id: `usa-${awardId}`,
+        category: 'GOVERNMENT',
+        name: String(award['Recipient Name'] || 'Federal Award'),
+        description: descParts.join(' • ') || `Federal award ${formattedAmount}`,
+        award_id: awardId,
+        award_amount: amount,
+        award_amount_formatted: formattedAmount,
+        award_type: String(award['Award Type'] || ''),
+        awarding_agency: String(award['Awarding Agency'] || ''),
+        start_date: award['Start Date'],
+        end_date: award['End Date'],
+        state: award['Place of Performance State Code'],
+        confidence: 0.95,
+      },
+    });
+  }
+  
+  console.log(`   ✓ USASpending: ${features.length} awards processed`);
+  return features;
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // STEP 6: PARALLEL EXECUTION
