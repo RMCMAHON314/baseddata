@@ -372,6 +372,63 @@ function capitalize(str: string): string {
   return str.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 
+// SMART NAME GENERATION - Creates unique, differentiated names when official name is missing
+function generateSmartName(tags: Record<string, string>, lat: number, lon: number, intent?: ParsedIntent): string {
+  // Priority 1: Real names from OSM (most valuable)
+  const realName = tags.name || tags.official_name || tags['name:en'] || tags.alt_name || 
+                   tags.loc_name || tags.short_name || tags.brand;
+  if (realName && realName.trim()) return realName;
+  
+  // Priority 2: Operator/owner + facility type (e.g., "YMCA Sports Center")
+  if (tags.operator || tags.owner) {
+    const operatorName = tags.operator || tags.owner;
+    if (tags.leisure === 'sports_centre') return `${operatorName} Sports Center`;
+    if (tags.leisure === 'fitness_centre') return `${operatorName} Fitness Center`;
+    if (tags.leisure === 'stadium') return `${operatorName} Stadium`;
+    if (tags.leisure === 'pitch') {
+      const sportType = tags.sport ? capitalize(tags.sport) : 'Sports';
+      return `${operatorName} ${sportType} Field`;
+    }
+    return `${operatorName} Facility`;
+  }
+  
+  // Priority 3: Address-based naming (e.g., "Main Street Baseball Field")
+  const street = tags['addr:street'] || tags['addr:place'];
+  const city = tags['addr:city'] || tags['addr:suburb'];
+  if (street || city) {
+    const locationPart = street || city;
+    if (tags.sport) return `${locationPart} ${capitalize(tags.sport)} Facility`;
+    if (tags.leisure === 'pitch') return `${locationPart} Sports Field`;
+    if (tags.leisure === 'sports_centre') return `${locationPart} Sports Center`;
+    if (tags.leisure === 'park') return `${locationPart} Park`;
+    return `${locationPart} Recreation Area`;
+  }
+  
+  // Priority 4: Referenced name from nearby features
+  if (tags.ref) {
+    const sportType = tags.sport ? capitalize(tags.sport) : 'Sports';
+    return `${sportType} Field ${tags.ref}`;
+  }
+  
+  // Priority 5: Sport + Leisure type + unique coordinate identifier
+  const sportName = tags.sport ? capitalize(tags.sport) : null;
+  const leisureType = tags.leisure ? capitalize(tags.leisure) : null;
+  
+  // Create a simple grid reference from coordinates (helps differentiate nearby points)
+  const gridRef = `${Math.abs(lat).toFixed(2)}${lat >= 0 ? 'N' : 'S'}_${Math.abs(lon).toFixed(2)}${lon >= 0 ? 'E' : 'W'}`;
+  
+  if (sportName && leisureType) {
+    if (leisureType.toLowerCase() === 'pitch') return `${sportName} Field #${gridRef}`;
+    if (leisureType.toLowerCase() === 'sports centre') return `${sportName} Center #${gridRef}`;
+    return `${sportName} ${leisureType} #${gridRef}`;
+  }
+  if (sportName) return `${sportName} Facility #${gridRef}`;
+  if (leisureType) return `${leisureType} #${gridRef}`;
+  
+  // Fallback: Generic with unique ID
+  return `Recreation Site #${gridRef}`;
+}
+
 const COLLECTORS: Record<string, CollectorFn> = {
   // ─────────────────────────────────────────────────────────────────────────
   // OSM SPORTS - High fidelity extraction for sports facilities
@@ -422,29 +479,38 @@ const COLLECTORS: Record<string, CollectorFn> = {
       const lon = el.lon || el.center?.lon;
       if (!lat || !lon) continue;
       
-      // HIGH FIDELITY NAME EXTRACTION
-      const name = tags.name || tags.official_name || tags.brand ||
-        (tags.sport ? `${capitalize(tags.sport)} Facility` : null) ||
-        (tags.leisure === 'pitch' && tags.sport ? `${capitalize(tags.sport)} Field` : null) ||
-        (tags.leisure === 'sports_centre' ? 'Sports Center' : null) ||
-        (tags.leisure === 'stadium' ? 'Stadium' : null) ||
-        (tags.leisure ? capitalize(tags.leisure) : 'Sports Facility');
+      // SMART NAME EXTRACTION - creates unique differentiated names
+      const name = generateSmartName(tags, lat, lon, intent);
       
-      // BUILD USEFUL DESCRIPTION
+      // ENHANCED DESCRIPTION - useful details for differentiation
       const descParts: string[] = [];
-      if (tags.sport && tags.sport !== intent.what.subcategory) descParts.push(`Sport: ${capitalize(tags.sport)}`);
-      if (tags.surface) descParts.push(`Surface: ${tags.surface}`);
+      if (tags.sport) descParts.push(`Sport: ${capitalize(tags.sport)}`);
+      if (tags.surface) descParts.push(`Surface: ${capitalize(tags.surface)}`);
       if (tags.indoor === 'yes' || tags.building) descParts.push('Indoor');
-      if (tags.lit === 'yes') descParts.push('Lighted');
-      if (tags.access === 'public' || tags.access === 'yes') descParts.push('Public Access');
+      else if (tags.covered === 'yes') descParts.push('Covered');
+      if (tags.lit === 'yes' || tags.floodlit === 'yes') descParts.push('Lighted');
+      if (tags.access === 'public' || tags.access === 'yes') descParts.push('Public');
+      else if (tags.access === 'private') descParts.push('Private');
+      else if (tags.access === 'members') descParts.push('Members Only');
       if (tags.fee === 'no') descParts.push('Free');
-      if (tags.operator) descParts.push(`Operated by: ${tags.operator}`);
+      else if (tags.fee === 'yes') descParts.push('Fee Required');
+      if (tags.capacity) descParts.push(`Capacity: ${tags.capacity}`);
       
-      // BUILD ADDRESS
-      const address = tags['addr:full'] || 
-        (tags['addr:housenumber'] && tags['addr:street'] 
-          ? `${tags['addr:housenumber']} ${tags['addr:street']}${tags['addr:city'] ? `, ${tags['addr:city']}` : ''}`
-          : tags['addr:street'] || undefined);
+      // BUILD FULL ADDRESS
+      const addressParts: string[] = [];
+      if (tags['addr:housenumber']) addressParts.push(tags['addr:housenumber']);
+      if (tags['addr:street']) addressParts.push(tags['addr:street']);
+      if (tags['addr:city']) addressParts.push(tags['addr:city']);
+      if (tags['addr:state'] || tags['addr:postcode']) {
+        addressParts.push(`${tags['addr:state'] || ''} ${tags['addr:postcode'] || ''}`.trim());
+      }
+      const address = tags['addr:full'] || (addressParts.length > 0 ? addressParts.join(', ') : undefined);
+      
+      // OPERATOR / OWNER - valuable for differentiation
+      const operatedBy = tags.operator || tags.owner || tags.brand || undefined;
+      
+      // HAS REAL NAME? (for confidence scoring)
+      const hasRealName = !!(tags.name || tags.official_name || tags['name:en']);
       
       features.push({
         type: 'Feature',
@@ -452,16 +518,24 @@ const COLLECTORS: Record<string, CollectorFn> = {
         properties: {
           source: 'osm_sports',
           source_id: `osm-${el.type}-${el.id}`,
+          osm_id: el.id,
           category: 'RECREATION',
           name,
+          has_official_name: hasRealName,
           description: descParts.join(' • ') || undefined,
           sport: tags.sport,
+          leisure_type: tags.leisure,
           address,
           indoor: tags.indoor === 'yes' || !!tags.building,
+          lighted: tags.lit === 'yes' || tags.floodlit === 'yes',
+          surface: tags.surface,
+          access: tags.access,
+          capacity: tags.capacity,
           website: tags.website,
           phone: tags.phone,
-          operator: tags.operator,
-          confidence: tags.name ? 0.95 : 0.8,
+          operator: operatedBy,
+          opening_hours: tags.opening_hours,
+          confidence: hasRealName ? 0.95 : 0.75,
         },
       });
     }
