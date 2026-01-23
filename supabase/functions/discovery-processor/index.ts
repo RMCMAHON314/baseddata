@@ -233,18 +233,283 @@ async function validateApiEndpoint(
 // AI COLLECTOR GENERATION (GENESIS) with Timeout
 // ============================================================================
 
+// ============================================================================
+// KNOWLEDGE-BASED COLLECTOR TEMPLATES
+// When AI is unavailable, use pre-defined working APIs
+// ============================================================================
+
+const KNOWN_API_TEMPLATES: Record<string, DynamicCollector> = {
+  'WILDLIFE': {
+    name: 'iNaturalist Observations',
+    description: 'Wildlife observations from citizen scientists',
+    api_url: 'https://api.inaturalist.org/v1/observations?lat={lat}&lng={lng}&radius=50&per_page=100',
+    api_method: 'GET',
+    headers: {},
+    params_template: {},
+    response_mapping: {
+      features_path: 'results',
+      lat_path: 'geojson.coordinates.1',
+      lng_path: 'geojson.coordinates.0',
+      name_path: 'species_guess',
+      description_path: 'description',
+      id_path: 'id',
+    },
+    categories: ['WILDLIFE'],
+    keywords: ['wildlife', 'species', 'observations', 'nature'],
+  },
+  'WEATHER': {
+    name: 'NOAA Weather Stations',
+    description: 'Weather station data from NOAA',
+    api_url: 'https://api.weather.gov/points/{lat},{lng}',
+    api_method: 'GET',
+    headers: { 'User-Agent': 'BASEDDATA/10.0' },
+    params_template: {},
+    response_mapping: {
+      features_path: 'properties',
+      lat_path: 'relativeLocation.geometry.coordinates.1',
+      lng_path: 'relativeLocation.geometry.coordinates.0',
+      name_path: 'relativeLocation.properties.city',
+      description_path: 'forecast',
+      id_path: 'gridId',
+    },
+    categories: ['WEATHER'],
+    keywords: ['weather', 'forecast', 'temperature', 'climate'],
+  },
+  'RECREATION': {
+    name: 'Recreation.gov Facilities',
+    description: 'Federal recreation facilities',
+    api_url: 'https://ridb.recreation.gov/api/v1/facilities?latitude={lat}&longitude={lng}&radius=50&limit=50',
+    api_method: 'GET',
+    headers: {},
+    params_template: {},
+    response_mapping: {
+      features_path: 'RECDATA',
+      lat_path: 'FacilityLatitude',
+      lng_path: 'FacilityLongitude',
+      name_path: 'FacilityName',
+      description_path: 'FacilityDescription',
+      id_path: 'FacilityID',
+    },
+    categories: ['RECREATION'],
+    keywords: ['recreation', 'parks', 'camping', 'outdoors'],
+  },
+  'GOVERNMENT': {
+    name: 'USASpending Contracts',
+    description: 'Federal government contract data',
+    api_url: 'https://api.usaspending.gov/api/v2/search/spending_by_geography/',
+    api_method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    params_template: { scope: 'place_of_performance', geo_layer: 'state' },
+    response_mapping: {
+      features_path: 'results',
+      lat_path: 'shape_code',
+      lng_path: 'shape_code',
+      name_path: 'display_name',
+      description_path: 'aggregated_amount',
+      id_path: 'shape_code',
+    },
+    categories: ['GOVERNMENT'],
+    keywords: ['contracts', 'federal', 'spending', 'government'],
+  },
+  'HEALTH': {
+    name: 'CDC Health Data',
+    description: 'Public health statistics from CDC',
+    api_url: 'https://data.cdc.gov/resource/pwn4-m3yp.json?$limit=100',
+    api_method: 'GET',
+    headers: {},
+    params_template: {},
+    response_mapping: {
+      features_path: '',
+      lat_path: 'latitude',
+      lng_path: 'longitude',
+      name_path: 'locationdesc',
+      description_path: 'topic',
+      id_path: 'locationid',
+    },
+    categories: ['HEALTH'],
+    keywords: ['health', 'cdc', 'public health', 'statistics'],
+  },
+  'MARINE': {
+    name: 'NOAA Marine Data',
+    description: 'Ocean and marine observations',
+    api_url: 'https://api.tidesandcurrents.noaa.gov/mdapi/prod/webapi/stations.json?type=waterlevels',
+    api_method: 'GET',
+    headers: {},
+    params_template: {},
+    response_mapping: {
+      features_path: 'stations',
+      lat_path: 'lat',
+      lng_path: 'lng',
+      name_path: 'name',
+      description_path: 'state',
+      id_path: 'id',
+    },
+    categories: ['MARINE'],
+    keywords: ['ocean', 'marine', 'tides', 'coastal'],
+  },
+  'GEOSPATIAL': {
+    name: 'OpenStreetMap Overpass',
+    description: 'Geospatial data from OpenStreetMap',
+    api_url: 'https://overpass-api.de/api/interpreter',
+    api_method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    params_template: { data: '[out:json];node["amenity"]({bbox});out 100;' },
+    response_mapping: {
+      features_path: 'elements',
+      lat_path: 'lat',
+      lng_path: 'lon',
+      name_path: 'tags.name',
+      description_path: 'tags.amenity',
+      id_path: 'id',
+    },
+    categories: ['GEOSPATIAL'],
+    keywords: ['geospatial', 'maps', 'locations', 'osm'],
+  },
+  'ECONOMIC': {
+    name: 'FRED Economic Data',
+    description: 'Federal Reserve Economic Data',
+    api_url: 'https://api.stlouisfed.org/fred/series/observations?series_id=GDP&file_type=json',
+    api_method: 'GET',
+    headers: {},
+    params_template: {},
+    response_mapping: {
+      features_path: 'observations',
+      lat_path: '',
+      lng_path: '',
+      name_path: 'date',
+      description_path: 'value',
+      id_path: 'realtime_start',
+    },
+    categories: ['ECONOMIC'],
+    keywords: ['economic', 'gdp', 'finance', 'federal reserve'],
+  },
+  'TRANSPORTATION': {
+    name: 'OpenSky Flight Data',
+    description: 'Real-time flight tracking data',
+    api_url: 'https://opensky-network.org/api/states/all?lamin={minlat}&lomin={minlng}&lamax={maxlat}&lomax={maxlng}',
+    api_method: 'GET',
+    headers: {},
+    params_template: {},
+    response_mapping: {
+      features_path: 'states',
+      lat_path: '6',
+      lng_path: '5',
+      name_path: '1',
+      description_path: '2',
+      id_path: '0',
+    },
+    categories: ['TRANSPORTATION'],
+    keywords: ['flights', 'aviation', 'transportation', 'aircraft'],
+  },
+  'DEMOGRAPHICS': {
+    name: 'Census Bureau Data',
+    description: 'US Census demographic data',
+    api_url: 'https://api.census.gov/data/2021/acs/acs5?get=NAME,B01001_001E&for=state:*',
+    api_method: 'GET',
+    headers: {},
+    params_template: {},
+    response_mapping: {
+      features_path: '',
+      lat_path: '',
+      lng_path: '',
+      name_path: '0',
+      description_path: '1',
+      id_path: '2',
+    },
+    categories: ['DEMOGRAPHICS'],
+    keywords: ['census', 'population', 'demographics', 'statistics'],
+  },
+  'RESEARCH': {
+    name: 'PubMed Research Articles',
+    description: 'Medical and scientific research data',
+    api_url: 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&retmode=json&term={query}',
+    api_method: 'GET',
+    headers: {},
+    params_template: {},
+    response_mapping: {
+      features_path: 'esearchresult.idlist',
+      lat_path: '',
+      lng_path: '',
+      name_path: '',
+      description_path: '',
+      id_path: '',
+    },
+    categories: ['RESEARCH'],
+    keywords: ['research', 'publications', 'science', 'medical'],
+  },
+  'ENERGY': {
+    name: 'EIA Energy Data',
+    description: 'US Energy Information Administration data',
+    api_url: 'https://api.eia.gov/v2/electricity/rto/daily-region-data/data/',
+    api_method: 'GET',
+    headers: {},
+    params_template: {},
+    response_mapping: {
+      features_path: 'response.data',
+      lat_path: '',
+      lng_path: '',
+      name_path: 'respondent',
+      description_path: 'value',
+      id_path: 'period',
+    },
+    categories: ['ENERGY'],
+    keywords: ['energy', 'electricity', 'power', 'utilities'],
+  },
+  'REGULATIONS': {
+    name: 'Federal Register Regulations',
+    description: 'US Federal regulations and rules',
+    api_url: 'https://www.federalregister.gov/api/v1/documents.json?per_page=50',
+    api_method: 'GET',
+    headers: {},
+    params_template: {},
+    response_mapping: {
+      features_path: 'results',
+      lat_path: '',
+      lng_path: '',
+      name_path: 'title',
+      description_path: 'abstract',
+      id_path: 'document_number',
+    },
+    categories: ['REGULATIONS'],
+    keywords: ['regulations', 'federal', 'rules', 'legal'],
+  },
+  'IMAGERY': {
+    name: 'NASA EONET Events',
+    description: 'Earth Observatory natural events',
+    api_url: 'https://eonet.gsfc.nasa.gov/api/v3/events?limit=50',
+    api_method: 'GET',
+    headers: {},
+    params_template: {},
+    response_mapping: {
+      features_path: 'events',
+      lat_path: 'geometry.0.coordinates.1',
+      lng_path: 'geometry.0.coordinates.0',
+      name_path: 'title',
+      description_path: 'description',
+      id_path: 'id',
+    },
+    categories: ['IMAGERY'],
+    keywords: ['satellite', 'imagery', 'nasa', 'earth observation'],
+  },
+};
+
 async function generateCollector(discovery: SourceDiscovery): Promise<DynamicCollector | null> {
-  const systemPrompt = `You are an EXPERT API integration engineer with encyclopedic knowledge of public data sources.
+  // First, try to use a known template for the category
+  const primaryCategory = discovery.inferred_categories[0];
+  const template = KNOWN_API_TEMPLATES[primaryCategory];
+  
+  if (template) {
+    console.log(`Using known template for ${primaryCategory}`);
+    return {
+      ...template,
+      name: `${discovery.target_api_name} - ${template.name}`,
+      keywords: [...template.keywords, ...discovery.inferred_keywords],
+    };
+  }
 
-Your task: Generate a working collector configuration for the provided API.
-
-## CRITICAL REQUIREMENTS:
-1. The api_url MUST be a valid, working endpoint
-2. Use {lat}, {lng}, {bbox}, {query}, {keyword}, {location} as placeholders
-3. The response_mapping must correctly extract data from the API response
-4. Only use FREE, public, no-auth APIs
-
-Return ONLY valid JSON in this exact format:
+  // Then try AI generation
+  const systemPrompt = `You are an EXPERT API integration engineer. Generate a collector configuration for the provided API.
+Return ONLY valid JSON:
 {
   "name": "Source Name",
   "description": "What data it provides",
@@ -268,15 +533,10 @@ Return ONLY valid JSON in this exact format:
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), CONFIG.AI_TIMEOUT_MS);
 
-    const userPrompt = `Generate a collector for this API discovery:
-Name: ${discovery.target_api_name}
-URL: ${discovery.target_api_url || 'Unknown - you must find a suitable API'}
-Description: ${discovery.target_description || 'No description'}
-Categories needed: ${discovery.inferred_categories.join(', ')}
-Keywords: ${discovery.inferred_keywords.join(', ')}
-Original query: ${discovery.trigger_prompt || 'General data collection'}
-
-If the URL is unknown, use your knowledge to find the BEST public API for this data type.`;
+    const userPrompt = `Generate a collector for: ${discovery.target_api_name}
+URL: ${discovery.target_api_url || 'Find best public API'}
+Categories: ${discovery.inferred_categories.join(', ')}
+Keywords: ${discovery.inferred_keywords.join(', ')}`;
 
     const response = await fetch(LOVABLE_AI_URL, {
       method: 'POST',
@@ -315,6 +575,7 @@ If the URL is unknown, use your knowledge to find the BEST public API for this d
     return JSON.parse(jsonMatch[0]) as DynamicCollector;
   } catch (error) {
     console.error('Collector generation error:', error);
+    // Return null - the template fallback above should catch most cases
     return null;
   }
 }
