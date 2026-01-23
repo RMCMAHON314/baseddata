@@ -1,12 +1,13 @@
 // BASED DATA v10.0 - Premium Results View
 // Light theme matching landing page - Bloomberg Terminal meets Apple Maps
 
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, forwardRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, Table, Lightbulb, Share2, Database, 
   CheckCircle2, Sparkles, Copy, Search, Download, Eye,
-  Filter, Layers, MapPin, ChevronDown, X, FileText
+  Filter, Layers, MapPin, ChevronDown, X, FileText,
+  TrendingUp, Shield, DollarSign, Users, Target
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -544,15 +545,7 @@ function QuickStat({ label, value }: { label: string; value: string | number }) 
 }
 
 // Result Card Component - Light Theme with 10x Dossier
-function ResultCard({ 
-  record, 
-  isSelected, 
-  isHovered, 
-  onHover, 
-  onHoverEnd, 
-  onClick,
-  onOpenDossier
-}: {
+const ResultCard = forwardRef<HTMLDivElement, {
   record: ProcessedRecord;
   isSelected?: boolean;
   isHovered?: boolean;
@@ -560,7 +553,15 @@ function ResultCard({
   onHoverEnd?: () => void;
   onClick?: () => void;
   onOpenDossier?: () => void;
-}) {
+}>(({ 
+  record, 
+  isSelected, 
+  isHovered, 
+  onHover, 
+  onHoverEnd, 
+  onClick,
+  onOpenDossier
+}, ref) => {
   const props = (record.properties || {}) as Record<string, unknown>;
   const category = String(props.category || 'OTHER').toUpperCase();
   const color = CATEGORY_COLORS[category] || '#3B82F6';
@@ -570,8 +571,23 @@ function ResultCard({
   const address = props.address ? String(props.address) : undefined;
   const description = props.description ? String(props.description) : undefined;
 
+  // Generate enrichment preview data
+  const enrichmentPreview = useMemo(() => {
+    const mockEnriched = generateMockEnrichment(record);
+    return {
+      qualityScore: mockEnriched.scores.overall_quality,
+      riskScore: mockEnriched.scores.risk_score,
+      opportunityScore: mockEnriched.scores.opportunity_score,
+      ownership: mockEnriched.ownership.owner_type,
+      complianceStatus: mockEnriched.regulatory.compliance_status,
+      investment: mockEnriched.financial.total_public_investment,
+      population: mockEnriched.context.demographics.population_1mi,
+    };
+  }, [record]);
+
   return (
     <motion.div
+      ref={ref}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
@@ -585,9 +601,15 @@ function ResultCard({
     >
       {/* Category Header */}
       <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-          {category}
-        </span>
+        <div className="flex items-center gap-2">
+          <span 
+            className="w-2 h-2 rounded-full"
+            style={{ backgroundColor: color }}
+          />
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            {category}
+          </span>
+        </div>
         <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
           {source}
         </span>
@@ -604,6 +626,67 @@ function ResultCard({
           </p>
         )}
         
+        {/* 10x Intelligence Preview */}
+        <div className="grid grid-cols-4 gap-2 mb-3 p-3 bg-gradient-to-r from-slate-50 to-blue-50/50 rounded-xl border border-slate-100">
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-1">
+              <Target className="w-3 h-3 text-emerald-500" />
+              <span className="text-xs font-bold text-slate-900">{enrichmentPreview.qualityScore}</span>
+            </div>
+            <span className="text-[10px] text-slate-400">Quality</span>
+          </div>
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-1">
+              <Shield className="w-3 h-3 text-amber-500" />
+              <span className="text-xs font-bold text-slate-900">{enrichmentPreview.riskScore}</span>
+            </div>
+            <span className="text-[10px] text-slate-400">Risk</span>
+          </div>
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-1">
+              <TrendingUp className="w-3 h-3 text-blue-500" />
+              <span className="text-xs font-bold text-slate-900">{enrichmentPreview.opportunityScore}</span>
+            </div>
+            <span className="text-[10px] text-slate-400">Opportunity</span>
+          </div>
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-1">
+              <Users className="w-3 h-3 text-purple-500" />
+              <span className="text-xs font-bold text-slate-900">{(enrichmentPreview.population / 1000).toFixed(0)}K</span>
+            </div>
+            <span className="text-[10px] text-slate-400">Pop 1mi</span>
+          </div>
+        </div>
+
+        {/* Quick Stats Row */}
+        <div className="flex flex-wrap gap-2 mb-3">
+          <span className={cn(
+            "text-xs px-2 py-1 rounded-full",
+            enrichmentPreview.ownership === 'government' 
+              ? "bg-emerald-100 text-emerald-700" 
+              : enrichmentPreview.ownership === 'nonprofit'
+              ? "bg-blue-100 text-blue-700"
+              : "bg-slate-100 text-slate-600"
+          )}>
+            {enrichmentPreview.ownership}
+          </span>
+          <span className={cn(
+            "text-xs px-2 py-1 rounded-full",
+            enrichmentPreview.complianceStatus === 'compliant' 
+              ? "bg-emerald-100 text-emerald-700" 
+              : enrichmentPreview.complianceStatus === 'major_issues'
+              ? "bg-red-100 text-red-700"
+              : "bg-amber-100 text-amber-700"
+          )}>
+            {enrichmentPreview.complianceStatus}
+          </span>
+          {enrichmentPreview.investment > 0 && (
+            <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full">
+              ${(enrichmentPreview.investment / 1000).toFixed(0)}K invested
+            </span>
+          )}
+        </div>
+        
         {/* Duplicate indicator */}
         {record.duplicateCount > 1 && (
           <div className="flex flex-wrap gap-2 mb-3">
@@ -618,10 +701,10 @@ function ResultCard({
         
         {/* Footer with Dossier Button */}
         <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <div className="flex items-center gap-1 text-xs text-slate-400">
               <MapPin className="w-3 h-3" />
-              <span>Georeferenced</span>
+              <span>Geo</span>
             </div>
             {/* 10x Dossier Button */}
             <button
@@ -629,7 +712,7 @@ function ResultCard({
                 e.stopPropagation();
                 onOpenDossier?.();
               }}
-              className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-full transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 rounded-full transition-all shadow-sm hover:shadow-md"
             >
               <FileText className="w-3 h-3" />
               <span>10x Dossier</span>
@@ -638,8 +721,11 @@ function ResultCard({
           <div className="flex items-center gap-2">
             <div className="h-1.5 w-16 bg-slate-200 rounded-full overflow-hidden">
               <div 
-                className="h-full bg-emerald-500 rounded-full"
-                style={{ width: `${quality * 100}%` }}
+                className="h-full rounded-full"
+                style={{ 
+                  width: `${quality * 100}%`,
+                  backgroundColor: quality > 0.7 ? '#10B981' : quality > 0.4 ? '#F59E0B' : '#EF4444'
+                }}
               />
             </div>
             <span className="text-xs text-slate-500">{Math.round(quality * 100)}%</span>
@@ -648,4 +734,6 @@ function ResultCard({
       </div>
     </motion.div>
   );
-}
+});
+
+ResultCard.displayName = 'ResultCard';
