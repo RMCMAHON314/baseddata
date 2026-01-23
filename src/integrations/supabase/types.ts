@@ -319,6 +319,461 @@ export type Database = {
         }
         Relationships: []
       }
+      core_derived_insights: {
+        Row: {
+          action_count: number | null
+          confidence: number | null
+          created_at: string | null
+          description: string
+          id: string
+          insight_type: string
+          is_active: boolean | null
+          related_entities: string[] | null
+          scope_type: string
+          scope_value: string | null
+          severity: string | null
+          supporting_data: Json
+          title: string
+          valid_from: string | null
+          valid_until: string | null
+          view_count: number | null
+        }
+        Insert: {
+          action_count?: number | null
+          confidence?: number | null
+          created_at?: string | null
+          description: string
+          id?: string
+          insight_type: string
+          is_active?: boolean | null
+          related_entities?: string[] | null
+          scope_type: string
+          scope_value?: string | null
+          severity?: string | null
+          supporting_data?: Json
+          title: string
+          valid_from?: string | null
+          valid_until?: string | null
+          view_count?: number | null
+        }
+        Update: {
+          action_count?: number | null
+          confidence?: number | null
+          created_at?: string | null
+          description?: string
+          id?: string
+          insight_type?: string
+          is_active?: boolean | null
+          related_entities?: string[] | null
+          scope_type?: string
+          scope_value?: string | null
+          severity?: string | null
+          supporting_data?: Json
+          title?: string
+          valid_from?: string | null
+          valid_until?: string | null
+          view_count?: number | null
+        }
+        Relationships: []
+      }
+      core_entities: {
+        Row: {
+          canonical_name: string
+          city: string | null
+          clusters: string[] | null
+          country: string | null
+          created_at: string | null
+          data_quality_score: number | null
+          entity_type: string
+          health_score: number | null
+          id: string
+          identifiers: Json
+          last_source_update: string | null
+          last_verified_at: string | null
+          latitude: number | null
+          longitude: number | null
+          merged_data: Json
+          opportunity_score: number | null
+          risk_score: number | null
+          source_count: number | null
+          source_records: Json
+          state: string | null
+          tags: string[] | null
+          updated_at: string | null
+        }
+        Insert: {
+          canonical_name: string
+          city?: string | null
+          clusters?: string[] | null
+          country?: string | null
+          created_at?: string | null
+          data_quality_score?: number | null
+          entity_type: string
+          health_score?: number | null
+          id?: string
+          identifiers?: Json
+          last_source_update?: string | null
+          last_verified_at?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          merged_data?: Json
+          opportunity_score?: number | null
+          risk_score?: number | null
+          source_count?: number | null
+          source_records?: Json
+          state?: string | null
+          tags?: string[] | null
+          updated_at?: string | null
+        }
+        Update: {
+          canonical_name?: string
+          city?: string | null
+          clusters?: string[] | null
+          country?: string | null
+          created_at?: string | null
+          data_quality_score?: number | null
+          entity_type?: string
+          health_score?: number | null
+          id?: string
+          identifiers?: Json
+          last_source_update?: string | null
+          last_verified_at?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          merged_data?: Json
+          opportunity_score?: number | null
+          risk_score?: number | null
+          source_count?: number | null
+          source_records?: Json
+          state?: string | null
+          tags?: string[] | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      core_entity_history: {
+        Row: {
+          change_reason: string | null
+          change_source: string | null
+          change_type: string
+          changed_fields: string[] | null
+          created_at: string | null
+          entity_id: string | null
+          id: string
+          new_values: Json | null
+          old_values: Json | null
+        }
+        Insert: {
+          change_reason?: string | null
+          change_source?: string | null
+          change_type: string
+          changed_fields?: string[] | null
+          created_at?: string | null
+          entity_id?: string | null
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+        }
+        Update: {
+          change_reason?: string | null
+          change_source?: string | null
+          change_type?: string
+          changed_fields?: string[] | null
+          created_at?: string | null
+          entity_id?: string | null
+          id?: string
+          new_values?: Json | null
+          old_values?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "core_entity_history_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      core_facts: {
+        Row: {
+          confidence: number | null
+          created_at: string | null
+          entity_id: string | null
+          fact_date: string | null
+          fact_period: string | null
+          fact_type: string
+          fact_value: Json
+          id: string
+          source_name: string | null
+          source_record_id: string | null
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string | null
+          entity_id?: string | null
+          fact_date?: string | null
+          fact_period?: string | null
+          fact_type: string
+          fact_value: Json
+          id?: string
+          source_name?: string | null
+          source_record_id?: string | null
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string | null
+          entity_id?: string | null
+          fact_date?: string | null
+          fact_period?: string | null
+          fact_type?: string
+          fact_value?: Json
+          id?: string
+          source_name?: string | null
+          source_record_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "core_facts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      core_feedback: {
+        Row: {
+          created_at: string | null
+          entity_id: string | null
+          feedback_data: Json
+          feedback_type: string
+          id: string
+          processed_at: string | null
+          query_id: string | null
+          record_id: string | null
+          status: string | null
+          user_id: string | null
+          user_trust_score: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          entity_id?: string | null
+          feedback_data: Json
+          feedback_type: string
+          id?: string
+          processed_at?: string | null
+          query_id?: string | null
+          record_id?: string | null
+          status?: string | null
+          user_id?: string | null
+          user_trust_score?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          entity_id?: string | null
+          feedback_data?: Json
+          feedback_type?: string
+          id?: string
+          processed_at?: string | null
+          query_id?: string | null
+          record_id?: string | null
+          status?: string | null
+          user_id?: string | null
+          user_trust_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "core_feedback_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "core_feedback_query_id_fkey"
+            columns: ["query_id"]
+            isOneToOne: false
+            referencedRelation: "queries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "core_feedback_record_id_fkey"
+            columns: ["record_id"]
+            isOneToOne: false
+            referencedRelation: "records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      core_intelligence_metrics: {
+        Row: {
+          avg_data_freshness_days: number | null
+          avg_entity_completeness: number | null
+          avg_query_time_ms: number | null
+          cache_hit_rate: number | null
+          created_at: string | null
+          entities_verified_today: number | null
+          feedback_processed_today: number | null
+          id: string
+          insights_generated_today: number | null
+          metric_date: string
+          new_entities_today: number | null
+          new_relationships_today: number | null
+          patterns_learned_today: number | null
+          queries_processed_today: number | null
+          total_entities: number | null
+          total_facts: number | null
+          total_relationships: number | null
+        }
+        Insert: {
+          avg_data_freshness_days?: number | null
+          avg_entity_completeness?: number | null
+          avg_query_time_ms?: number | null
+          cache_hit_rate?: number | null
+          created_at?: string | null
+          entities_verified_today?: number | null
+          feedback_processed_today?: number | null
+          id?: string
+          insights_generated_today?: number | null
+          metric_date: string
+          new_entities_today?: number | null
+          new_relationships_today?: number | null
+          patterns_learned_today?: number | null
+          queries_processed_today?: number | null
+          total_entities?: number | null
+          total_facts?: number | null
+          total_relationships?: number | null
+        }
+        Update: {
+          avg_data_freshness_days?: number | null
+          avg_entity_completeness?: number | null
+          avg_query_time_ms?: number | null
+          cache_hit_rate?: number | null
+          created_at?: string | null
+          entities_verified_today?: number | null
+          feedback_processed_today?: number | null
+          id?: string
+          insights_generated_today?: number | null
+          metric_date?: string
+          new_entities_today?: number | null
+          new_relationships_today?: number | null
+          patterns_learned_today?: number | null
+          queries_processed_today?: number | null
+          total_entities?: number | null
+          total_facts?: number | null
+          total_relationships?: number | null
+        }
+        Relationships: []
+      }
+      core_query_patterns: {
+        Row: {
+          avg_result_count: number | null
+          avg_satisfaction_score: number | null
+          cached_insights: Json | null
+          created_at: string | null
+          id: string
+          last_queried_at: string | null
+          pattern_signature: string
+          query_count: number | null
+          recommended_correlations: string[] | null
+          recommended_sources: string[] | null
+          successful_sources: string[] | null
+          unique_users: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          avg_result_count?: number | null
+          avg_satisfaction_score?: number | null
+          cached_insights?: Json | null
+          created_at?: string | null
+          id?: string
+          last_queried_at?: string | null
+          pattern_signature: string
+          query_count?: number | null
+          recommended_correlations?: string[] | null
+          recommended_sources?: string[] | null
+          successful_sources?: string[] | null
+          unique_users?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          avg_result_count?: number | null
+          avg_satisfaction_score?: number | null
+          cached_insights?: Json | null
+          created_at?: string | null
+          id?: string
+          last_queried_at?: string | null
+          pattern_signature?: string
+          query_count?: number | null
+          recommended_correlations?: string[] | null
+          recommended_sources?: string[] | null
+          successful_sources?: string[] | null
+          unique_users?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      core_relationships: {
+        Row: {
+          confidence: number | null
+          created_at: string | null
+          end_date: string | null
+          evidence: Json
+          from_entity_id: string | null
+          id: string
+          is_active: boolean | null
+          relationship_type: string
+          start_date: string | null
+          strength: number | null
+          to_entity_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string | null
+          end_date?: string | null
+          evidence?: Json
+          from_entity_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          relationship_type: string
+          start_date?: string | null
+          strength?: number | null
+          to_entity_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string | null
+          end_date?: string | null
+          evidence?: Json
+          from_entity_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          relationship_type?: string
+          start_date?: string | null
+          strength?: number | null
+          to_entity_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "core_relationships_from_entity_id_fkey"
+            columns: ["from_entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "core_relationships_to_entity_id_fkey"
+            columns: ["to_entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crawler_runs: {
         Row: {
           completed_at: string | null
@@ -2165,6 +2620,19 @@ export type Database = {
         Returns: boolean
       }
       execute_nl_query: { Args: { p_sql: string }; Returns: Json }
+      find_similar_entities: {
+        Args: {
+          search_name: string
+          search_type?: string
+          similarity_threshold?: number
+        }
+        Returns: {
+          canonical_name: string
+          entity_id: string
+          entity_type: string
+          similarity: number
+        }[]
+      }
       get_flywheel_health: { Args: never; Returns: Json }
       get_matched_sources: {
         Args: { p_query: string }
@@ -2249,6 +2717,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      update_intelligence_metrics: { Args: never; Returns: undefined }
       update_query_stats: { Args: { p_query_id: string }; Returns: undefined }
       update_source_performance: {
         Args: {
