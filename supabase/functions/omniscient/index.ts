@@ -155,12 +155,26 @@ function selectCollectors(intent: { what: { primary: string; category: string; k
   return [...new Set(collectors)];
 }
 
+// Hardcoded bounding boxes for major US counties (fallback when Nominatim fails)
+const COUNTY_BBOXES: Record<string, { bounds: { north: number; south: number; east: number; west: number }; center: [number, number] }> = {
+  'baltimore_md': { bounds: { north: 39.72, south: 39.23, east: -76.32, west: -76.92 }, center: [-76.61, 39.47] },
+  'baltimore city_md': { bounds: { north: 39.37, south: 39.20, east: -76.53, west: -76.71 }, center: [-76.61, 39.29] },
+  'anne arundel_md': { bounds: { north: 39.22, south: 38.67, east: -76.40, west: -76.84 }, center: [-76.60, 38.95] },
+  'montgomery_md': { bounds: { north: 39.36, south: 38.93, east: -76.88, west: -77.52 }, center: [-77.20, 39.14] },
+  'prince george_md': { bounds: { north: 39.14, south: 38.54, east: -76.67, west: -77.04 }, center: [-76.85, 38.84] },
+  'fairfax_va': { bounds: { north: 39.03, south: 38.59, east: -77.09, west: -77.53 }, center: [-77.31, 38.81] },
+  'los angeles_ca': { bounds: { north: 34.82, south: 33.70, east: -117.65, west: -118.67 }, center: [-118.24, 34.05] },
+  'cook_il': { bounds: { north: 42.16, south: 41.47, east: -87.52, west: -88.26 }, center: [-87.68, 41.88] },
+  'harris_tx': { bounds: { north: 30.17, south: 29.50, east: -95.01, west: -95.91 }, center: [-95.36, 29.76] },
+  'maricopa_az': { bounds: { north: 34.04, south: 32.51, east: -111.04, west: -113.33 }, center: [-112.07, 33.45] },
+};
+
 function fallbackParse(prompt: string): ParsedIntent {
   const lower = prompt.toLowerCase();
   
-  // Enhanced location extraction patterns - more permissive
-  // Pattern 1: "X county" or "X county, Y" - case insensitive
-  const countyMatch = lower.match(/\b([a-z]+(?:\s+[a-z]+)?)\s+county\b/);
+  // Enhanced location extraction - EXCLUDE prepositions from county name
+  // Pattern: Match word(s) before "county" but NOT "in", "at", "near", etc.
+  const countyMatch = lower.match(/(?:^|[\s,])(?!in\s|at\s|near\s|around\s|the\s)([a-z]+(?:\s+[a-z]+)?)\s+county\b/);
   
   // State codes with expanded list
   const stateMap: Record<string, { name: string; code: string; center: [number, number] }> = {
@@ -186,6 +200,8 @@ function fallbackParse(prompt: string): ParsedIntent {
     'il': { name: 'Illinois', code: 'IL', center: [-89.3, 40.6] },
     'michigan': { name: 'Michigan', code: 'MI', center: [-84.5, 44.3] },
     'mi': { name: 'Michigan', code: 'MI', center: [-84.5, 44.3] },
+    'arizona': { name: 'Arizona', code: 'AZ', center: [-111.9, 34.0] },
+    'az': { name: 'Arizona', code: 'AZ', center: [-111.9, 34.0] },
   };
 
   let stateCode = '';
@@ -195,9 +211,9 @@ function fallbackParse(prompt: string): ParsedIntent {
   
   // Extract county if present - capitalize it properly
   if (countyMatch && countyMatch[1]) {
-    // Capitalize county name properly
-    countyName = countyMatch[1].split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-    console.log(`   📍 Found county: "${countyName}"`);
+    // Capitalize county name properly, trim any leading/trailing spaces
+    countyName = countyMatch[1].trim().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    console.log(`   📍 Extracted county: "${countyName}"`);
   }
   
   // Find state from entire prompt
@@ -242,6 +258,18 @@ function fallbackParse(prompt: string): ParsedIntent {
     ? `${countyName} County${stateName ? `, ${stateName}` : ''}`
     : stateName || '';
   
+  // Check for hardcoded bbox
+  let bounds: ParsedIntent['where']['bounds'] | undefined;
+  if (countyName && stateCode) {
+    const bboxKey = `${countyName.toLowerCase()}_${stateCode.toLowerCase()}`;
+    const hardcoded = COUNTY_BBOXES[bboxKey];
+    if (hardcoded) {
+      bounds = hardcoded.bounds;
+      center = hardcoded.center;
+      console.log(`   ✅ Using hardcoded bbox for ${countyName} County, ${stateCode}`);
+    }
+  }
+  
   const intent: ParsedIntent = {
     what: {
       primary: primaryWords.slice(0, 3).join(' ') || prompt,
@@ -256,6 +284,7 @@ function fallbackParse(prompt: string): ParsedIntent {
       stateCode,
       country: 'USA',
       center,
+      bounds, // Pre-fill with hardcoded if available
     },
     when: {
       temporal: lower.includes('forecast') ? 'forecast' : 'current',
@@ -278,6 +307,12 @@ function fallbackParse(prompt: string): ParsedIntent {
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function geocodeLocation(where: ParsedIntent['where']): Promise<ParsedIntent['where']> {
+  // If we already have bounds from hardcoded fallback, skip geocoding
+  if (where.bounds) {
+    console.log(`📍 Using pre-filled bounds: [${where.bounds.south.toFixed(3)}, ${where.bounds.north.toFixed(3)}, ${where.bounds.west.toFixed(3)}, ${where.bounds.east.toFixed(3)}]`);
+    return where;
+  }
+
   if (!where.raw && !where.city && !where.county && !where.state) {
     return where;
   }
@@ -286,25 +321,25 @@ async function geocodeLocation(where: ParsedIntent['where']): Promise<ParsedInte
   let searchText = '';
   
   if (where.county) {
-    // Use structured county + state for best results
-    searchText = `${where.county} County, ${where.state || where.stateCode || ''}, USA`.replace(/,\s*,/g, ',').trim();
+    // Use structured county + state for best results - just the county name
+    searchText = `${where.county} County, ${where.state || where.stateCode || ''}, United States`.replace(/,\s*,/g, ',').trim();
   } else if (where.city && where.state) {
-    searchText = `${where.city}, ${where.state}, USA`;
+    searchText = `${where.city}, ${where.state}, United States`;
   } else if (where.raw) {
     // Clean the raw location - remove prepositions
     searchText = where.raw.replace(/^(in|at|near|around)\s+/i, '').trim();
-    if (!searchText.toLowerCase().includes('usa')) {
-      searchText += ', USA';
+    if (!searchText.toLowerCase().includes('usa') && !searchText.toLowerCase().includes('united states')) {
+      searchText += ', United States';
     }
   } else if (where.state) {
-    searchText = `${where.state}, USA`;
+    searchText = `${where.state}, United States`;
   }
   
-  if (!searchText || searchText === ', USA') return where;
+  if (!searchText || searchText === ', United States') return where;
 
   try {
-    // Use featuretype=county for county searches
-    let url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchText)}&format=json&limit=1&addressdetails=1`;
+    // Use featuretype=county for county searches - more specific
+    let url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&q=${encodeURIComponent(searchText)}`;
     if (where.county) {
       url += '&featuretype=county';
     }
@@ -315,26 +350,64 @@ async function geocodeLocation(where: ParsedIntent['where']): Promise<ParsedInte
       headers: { 'User-Agent': USER_AGENT, 'Accept': 'application/json' },
     });
 
-    if (!response.ok) return where;
+    if (!response.ok) {
+      console.log(`   ⚠ Nominatim returned ${response.status}`);
+      return where;
+    }
     const data = await response.json();
     
     if (data?.[0]) {
       const result = data[0];
       const [south, north, west, east] = result.boundingbox.map(Number);
       
+      // Validate the result is reasonable (not a tiny point)
+      const latRange = north - south;
+      const lngRange = east - west;
+      
+      if (latRange < 0.01 || lngRange < 0.01) {
+        console.log(`   ⚠ Result too small (${latRange.toFixed(4)}x${lngRange.toFixed(4)}), expanding...`);
+        // Expand tiny result to reasonable area (~10km radius)
+        const expandedBounds = {
+          north: north + 0.1,
+          south: south - 0.1,
+          east: east + 0.1,
+          west: west - 0.1,
+        };
+        return {
+          ...where,
+          raw: searchText,
+          bounds: expandedBounds,
+          center: [parseFloat(result.lon), parseFloat(result.lat)],
+        };
+      }
+      
       console.log(`   ✓ Found: [${south.toFixed(3)}, ${north.toFixed(3)}, ${west.toFixed(3)}, ${east.toFixed(3)}]`);
       
       return {
         ...where,
-        raw: where.raw?.replace(/^(in|at|near|around)\s+/i, '').trim() || searchText,
+        raw: searchText,
         bounds: { north, south, east, west },
         center: [parseFloat(result.lon), parseFloat(result.lat)],
       };
     } else {
-      console.log(`   ⚠ No results for "${searchText}"`);
+      console.log(`   ⚠ No Nominatim results for "${searchText}"`);
     }
   } catch (e) {
     console.error('Geocoding failed:', e);
+  }
+
+  // Last resort: if we have a county name and state, try the hardcoded bbox
+  if (where.county && where.stateCode) {
+    const bboxKey = `${where.county.toLowerCase()}_${where.stateCode.toLowerCase()}`;
+    const hardcoded = COUNTY_BBOXES[bboxKey];
+    if (hardcoded) {
+      console.log(`   🔄 Using hardcoded fallback for ${where.county}, ${where.stateCode}`);
+      return {
+        ...where,
+        bounds: hardcoded.bounds,
+        center: hardcoded.center,
+      };
+    }
   }
 
   return where;
