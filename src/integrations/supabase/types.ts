@@ -1386,6 +1386,7 @@ export type Database = {
           created_at: string | null
           credits_used: number | null
           engine_version: string | null
+          execution_time_ms: number | null
           features: Json | null
           high_relevance_count: number | null
           id: string
@@ -1397,13 +1398,20 @@ export type Database = {
           parsed_intent: Json | null
           processing_time_ms: number | null
           prompt: string
+          raw_query: string | null
           result_count: number | null
           session_id: string | null
           snapshot: Json | null
+          sources_attempted: number | null
+          sources_failed: number | null
           sources_queried: string[] | null
+          sources_succeeded: number | null
+          started_at: string | null
           status: string | null
           title: string | null
           total_records_raw: number | null
+          total_results: number | null
+          total_time_ms: number | null
           user_id: string | null
         }
         Insert: {
@@ -1416,6 +1424,7 @@ export type Database = {
           created_at?: string | null
           credits_used?: number | null
           engine_version?: string | null
+          execution_time_ms?: number | null
           features?: Json | null
           high_relevance_count?: number | null
           id?: string
@@ -1427,13 +1436,20 @@ export type Database = {
           parsed_intent?: Json | null
           processing_time_ms?: number | null
           prompt: string
+          raw_query?: string | null
           result_count?: number | null
           session_id?: string | null
           snapshot?: Json | null
+          sources_attempted?: number | null
+          sources_failed?: number | null
           sources_queried?: string[] | null
+          sources_succeeded?: number | null
+          started_at?: string | null
           status?: string | null
           title?: string | null
           total_records_raw?: number | null
+          total_results?: number | null
+          total_time_ms?: number | null
           user_id?: string | null
         }
         Update: {
@@ -1446,6 +1462,7 @@ export type Database = {
           created_at?: string | null
           credits_used?: number | null
           engine_version?: string | null
+          execution_time_ms?: number | null
           features?: Json | null
           high_relevance_count?: number | null
           id?: string
@@ -1457,13 +1474,20 @@ export type Database = {
           parsed_intent?: Json | null
           processing_time_ms?: number | null
           prompt?: string
+          raw_query?: string | null
           result_count?: number | null
           session_id?: string | null
           snapshot?: Json | null
+          sources_attempted?: number | null
+          sources_failed?: number | null
           sources_queried?: string[] | null
+          sources_succeeded?: number | null
+          started_at?: string | null
           status?: string | null
           title?: string | null
           total_records_raw?: number | null
+          total_results?: number | null
+          total_time_ms?: number | null
           user_id?: string | null
         }
         Relationships: [
@@ -1687,12 +1711,15 @@ export type Database = {
           category: string
           collected_at: string
           description: string | null
+          display_name: string | null
           geometry: Json
           id: string
           last_seen_at: string
           name: string
           properties: Json
           quality_score: number | null
+          query_id: string | null
+          relevance_score: number | null
           seen_count: number
           source_id: string
           source_record_id: string
@@ -1702,12 +1729,15 @@ export type Database = {
           category: string
           collected_at?: string
           description?: string | null
+          display_name?: string | null
           geometry: Json
           id?: string
           last_seen_at?: string
           name: string
           properties?: Json
           quality_score?: number | null
+          query_id?: string | null
+          relevance_score?: number | null
           seen_count?: number
           source_id: string
           source_record_id: string
@@ -1717,18 +1747,29 @@ export type Database = {
           category?: string
           collected_at?: string
           description?: string | null
+          display_name?: string | null
           geometry?: Json
           id?: string
           last_seen_at?: string
           name?: string
           properties?: Json
           quality_score?: number | null
+          query_id?: string | null
+          relevance_score?: number | null
           seen_count?: number
           source_id?: string
           source_record_id?: string
           user_validations?: Json | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "records_query_id_fkey"
+            columns: ["query_id"]
+            isOneToOne: false
+            referencedRelation: "queries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scheduled_pipelines: {
         Row: {
@@ -2162,6 +2203,7 @@ export type Database = {
         }
         Returns: string
       }
+      mark_duplicates: { Args: { p_query_id: string }; Returns: number }
       move_to_dead_letter: {
         Args: { p_discovery_id: string; p_reason: string }
         Returns: string
@@ -2207,6 +2249,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      update_query_stats: { Args: { p_query_id: string }; Returns: undefined }
       update_source_performance: {
         Args: {
           p_error_message?: string

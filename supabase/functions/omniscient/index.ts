@@ -457,11 +457,16 @@ function detectCategory(text: string): string {
   if (['baseball', 'soccer', 'tennis', 'basketball', 'sports', 'gym', 'fitness', 'park', 'trail', 'recreation', 'field', 'athletic', 'stadium', 'golf'].some(k => text.includes(k))) return 'recreation';
   if (['bird', 'wildlife', 'animal', 'hunting', 'fishing', 'species', 'goose', 'duck'].some(k => text.includes(k))) return 'wildlife';
   if (['weather', 'forecast', 'temperature', 'rain', 'storm'].some(k => text.includes(k))) return 'weather';
-  if (['hospital', 'doctor', 'clinic', 'medical', 'health'].some(k => text.includes(k))) return 'healthcare';
+  // Enhanced healthcare detection with doctor payments, NPI, drugs
+  if (['hospital', 'doctor', 'clinic', 'medical', 'health', 'physician', 'npi', 'drug', 'pharma', 'prescription', 'pharmacy', 'payment', 'cms'].some(k => text.includes(k))) return 'healthcare';
   // Enhanced government detection with spending/funding terms
   if (['contract', 'grant', 'federal', 'government', 'procurement', 'tax', 'funded', 'spending', 'award', 'usaspending', 'agency'].some(k => text.includes(k))) return 'government';
   if (['school', 'college', 'university', 'education'].some(k => text.includes(k))) return 'education';
   if (['restaurant', 'food', 'dining', 'cafe'].some(k => text.includes(k))) return 'dining';
+  // Financial sector
+  if (['bank', 'financial', 'deposit', 'fdic', 'credit union', 'atm'].some(k => text.includes(k))) return 'financial';
+  // Environmental sector
+  if (['epa', 'pollution', 'environmental', 'toxic', 'emission', 'permit', 'water quality'].some(k => text.includes(k))) return 'environmental';
   return 'geospatial';
 }
 
@@ -489,9 +494,10 @@ function selectDataSources(category: string, entityType: string): { primary: str
       sources.excluded = ['osm_sports', 'inaturalist'];
       break;
     case 'healthcare':
-      sources.primary = ['osm_healthcare'];
-      sources.secondary = ['osm_poi'];
-      sources.excluded = ['inaturalist', 'noaa_weather'];
+      // DATAVERSE: Enhanced healthcare with NPI, CMS, FDA
+      sources.primary = ['osm_healthcare', 'npi_registry', 'cms_open_payments'];
+      sources.secondary = ['fda_drugs', 'osm_poi'];
+      sources.excluded = ['inaturalist', 'noaa_weather', 'usaspending'];
       break;
     case 'education':
       sources.primary = ['osm_education'];
@@ -502,6 +508,18 @@ function selectDataSources(category: string, entityType: string): { primary: str
       sources.primary = ['data_gov', 'usaspending'];
       sources.secondary = ['osm_poi'];
       sources.excluded = ['inaturalist'];
+      break;
+    case 'financial':
+      // DATAVERSE: FDIC Banks
+      sources.primary = ['fdic_banks', 'osm_poi'];
+      sources.secondary = [];
+      sources.excluded = ['inaturalist', 'noaa_weather', 'npi_registry'];
+      break;
+    case 'environmental':
+      // DATAVERSE: EPA ECHO
+      sources.primary = ['epa_echo'];
+      sources.secondary = ['osm_poi'];
+      sources.excluded = ['inaturalist', 'usaspending'];
       break;
     default:
       sources.primary = ['osm_poi'];
@@ -627,16 +645,33 @@ function calculateRelevance(record: GeoJSONFeature, intent: ParsedIntent): numbe
   const criteria = intent.relevance_criteria;
   const coreEntity = intent.core_entity;
   const props = record.properties;
+  const category = intent.what.category.toLowerCase();
   
   // ═════ SPECIAL HANDLING FOR HIGH-TRUST SOURCES ═════
-  // USASpending data is already filtered by API, trust it
   const source = String(props.source || '');
-  if (source === 'usaspending') {
-    // Federal spending data is pre-filtered, give it high relevance
-    return (props.confidence as number) || 0.9;
+  const recordCategory = String(props.category || '').toLowerCase();
+  
+  // Trust high-quality data sources - pre-filtered by API
+  if (['usaspending', 'npi_registry', 'cms_open_payments', 'fdic_banks', 'epa_echo'].includes(source)) {
+    // These are authoritative sources, trust their data
+    return Math.max((props.confidence as number) || 0.8, 0.75);
   }
   
+  // ═════ CATEGORY MATCHING BONUS ═════
+  // If record category matches query category, give it a baseline boost
   let score = 0.5; // Base score
+  
+  const categoryMatches = 
+    (category === 'healthcare' && ['health', 'healthcare', 'medical'].includes(recordCategory)) ||
+    (category === 'government' && ['government', 'contract', 'grant'].includes(recordCategory)) ||
+    (category === 'recreation' && ['recreation', 'sports'].includes(recordCategory)) ||
+    (category === 'education' && ['education'].includes(recordCategory)) ||
+    (category === 'financial' && ['financial', 'bank'].includes(recordCategory)) ||
+    (category === 'environmental' && ['environmental'].includes(recordCategory));
+  
+  if (categoryMatches) {
+    score += 0.25; // Significant boost for matching category
+  }
   
   // Combine all searchable text from the record
   const searchableText = [
@@ -651,7 +686,7 @@ function calculateRelevance(record: GeoJSONFeature, intent: ParsedIntent): numbe
     JSON.stringify(props),
   ].join(' ').toLowerCase();
   
-  // ═════ MUST HAVE CHECKS (Critical) ═════
+  // ═════ MUST HAVE CHECKS (Softened for category matches) ═════
   let mustHaveMatches = 0;
   const mustHaveTotal = criteria.must_have.length;
   
@@ -664,16 +699,17 @@ function calculateRelevance(record: GeoJSONFeature, intent: ParsedIntent): numbe
   if (mustHaveTotal > 0) {
     const mustHaveRatio = mustHaveMatches / mustHaveTotal;
     if (mustHaveRatio === 0) {
-      score = 0.1; // Basically irrelevant
+      // If category matches, don't penalize as harshly
+      score = categoryMatches ? 0.35 : 0.1;
     } else {
-      score += mustHaveRatio * 0.3;
+      score += mustHaveRatio * 0.25;
     }
   }
   
   // ═════ MUST NOT HAVE CHECKS (Disqualifying) ═════
   for (const term of criteria.must_not_have) {
     if (searchableText.includes(term.toLowerCase())) {
-      score -= 0.3;
+      score -= 0.25;
     }
   }
   
@@ -705,7 +741,7 @@ function calculateRelevance(record: GeoJSONFeature, intent: ParsedIntent): numbe
     for (const [key, value] of Object.entries(primaryTag)) {
       if (String(props[key]).toLowerCase() === value.toLowerCase() ||
           String(props.sport).toLowerCase() === value.toLowerCase()) {
-        score += 0.2;
+        score += 0.15;
         break;
       }
     }
@@ -721,10 +757,9 @@ function calculateRelevance(record: GeoJSONFeature, intent: ParsedIntent): numbe
   }
   
   // ═════ GOVERNMENT/SPENDING BONUS ═════
-  // If this is a government query and record has award data, boost it
   if (coreEntity.type === 'federal_spending') {
     if (props.award_amount || props.awarding_agency || props.award_type) {
-      score += 0.25;
+      score += 0.2;
     }
   }
   
@@ -1478,6 +1513,256 @@ const COLLECTORS: Record<string, CollectorFn> = {
     return features;
   },
 };
+
+// ─────────────────────────────────────────────────────────────────────────
+// NPI REGISTRY - Healthcare Providers (from DATAVERSE integration)
+// ─────────────────────────────────────────────────────────────────────────
+const npi_registry: CollectorFn = async (intent) => {
+  const stateCode = intent.where.stateCode;
+  if (!stateCode) return [];
+  
+  const features: GeoJSONFeature[] = [];
+  try {
+    const url = `https://npiregistry.cms.hhs.gov/api/?version=2.1&state=${stateCode}&limit=200`;
+    const response = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
+    if (!response.ok) return [];
+    
+    const data = await response.json();
+    for (const r of (data.results || []).slice(0, 150)) {
+      const basic = r.basic || {};
+      const firstName = basic.first_name || basic.authorized_official_first_name || '';
+      const lastName = basic.last_name || basic.authorized_official_last_name || basic.organization_name || '';
+      const addresses = r.addresses || [];
+      const address = addresses[0] || {};
+      const lat = parseFloat(address.latitude) || undefined;
+      const lon = parseFloat(address.longitude) || undefined;
+      
+      features.push({
+        type: 'Feature',
+        geometry: lat && lon ? { type: 'Point', coordinates: [lon, lat] } : { type: 'Point', coordinates: intent.where.center || [-98.5, 39.8] },
+        properties: {
+          source: 'npi_registry',
+          source_id: `npi-${r.number}`,
+          category: 'HEALTH',
+          name: basic.organization_name || `${firstName} ${lastName}`.trim(),
+          description: `NPI: ${r.number} | ${basic.enumeration_type === 'NPI-2' ? 'Organization' : 'Individual'}`,
+          npi_number: r.number,
+          provider_type: basic.enumeration_type,
+          city: address.city,
+          state: address.state,
+          zip: address.postal_code,
+          address: `${address.address_1 || ''} ${address.address_2 || ''}`.trim(),
+          confidence: 0.95,
+        },
+      });
+    }
+    console.log(`   ✓ NPI Registry: ${features.length} providers`);
+  } catch (e) {
+    console.error('NPI Registry error:', e);
+  }
+  return features;
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// CMS OPEN PAYMENTS - Doctor Payments (from DATAVERSE integration)
+// ─────────────────────────────────────────────────────────────────────────
+const cms_open_payments: CollectorFn = async (intent) => {
+  const stateCode = intent.where.stateCode;
+  if (!stateCode) return [];
+  
+  const features: GeoJSONFeature[] = [];
+  try {
+    const url = 'https://openpaymentsdata.cms.gov/api/1/datastore/query/ebd7ac92-73ee-4a1b-8022-a1339f016833';
+    const payload = {
+      conditions: [{ property: "recipient_state", value: stateCode, operator: "=" }],
+      limit: 300,
+      offset: 0,
+      sort: { property: "total_amount_of_payment_usdollars", order: "desc" }
+    };
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'User-Agent': USER_AGENT },
+      body: JSON.stringify(payload)
+    });
+    
+    if (!response.ok) return [];
+    const data = await response.json();
+    
+    for (const r of (data.results || []).slice(0, 200)) {
+      const firstName = r.physician_first_name || '';
+      const lastName = r.physician_last_name || '';
+      if (!firstName && !lastName) continue;
+      
+      const amount = parseFloat(r.total_amount_of_payment_usdollars || 0);
+      
+      features.push({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: intent.where.center || [-98.5, 39.8] },
+        properties: {
+          source: 'cms_open_payments',
+          source_id: `cms-${r.record_id || Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          category: 'HEALTH',
+          name: `Dr. ${firstName} ${lastName}`.trim(),
+          description: [
+            r.physician_specialty || 'Physician',
+            `Payment: $${amount.toLocaleString()}`,
+            r.applicable_manufacturer_or_applicable_gpo_making_payment_name ? `From: ${r.applicable_manufacturer_or_applicable_gpo_making_payment_name}` : null,
+            r.name_of_drug_or_biological_or_device_or_medical_supply_1 ? `Product: ${r.name_of_drug_or_biological_or_device_or_medical_supply_1}` : null
+          ].filter(Boolean).join(' | '),
+          specialty: r.physician_specialty,
+          payment_amount: amount,
+          payer: r.applicable_manufacturer_or_applicable_gpo_making_payment_name,
+          city: r.recipient_city,
+          state: r.recipient_state,
+          confidence: 0.98,
+        },
+      });
+    }
+    console.log(`   ✓ CMS Open Payments: ${features.length} payments`);
+  } catch (e) {
+    console.error('CMS Open Payments error:', e);
+  }
+  return features;
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// FDA DRUG DATABASE (from DATAVERSE integration)
+// ─────────────────────────────────────────────────────────────────────────
+const fda_drugs: CollectorFn = async (intent) => {
+  const features: GeoJSONFeature[] = [];
+  const searchTerms = intent.core_entity.keywords.filter(k => k.length > 3).slice(0, 3).join('+');
+  if (!searchTerms) return [];
+  
+  try {
+    const url = `https://api.fda.gov/drug/label.json?search=${encodeURIComponent(searchTerms)}&limit=50`;
+    const response = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
+    if (!response.ok) return [];
+    
+    const data = await response.json();
+    for (const r of (data.results || []).slice(0, 40)) {
+      const openfda = r.openfda || {};
+      const brandName = openfda.brand_name?.[0] || openfda.generic_name?.[0];
+      if (!brandName) continue;
+      
+      features.push({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: intent.where.center || [-98.5, 39.8] },
+        properties: {
+          source: 'fda_drugs',
+          source_id: `fda-${r.id || Date.now()}`,
+          category: 'HEALTH',
+          name: brandName,
+          description: `${openfda.generic_name?.[0] || ''} | ${openfda.manufacturer_name?.[0] || ''}`.trim(),
+          brand_name: openfda.brand_name,
+          generic_name: openfda.generic_name,
+          manufacturer: openfda.manufacturer_name,
+          confidence: 0.9,
+        },
+      });
+    }
+    console.log(`   ✓ FDA Drugs: ${features.length} drugs`);
+  } catch (e) {
+    console.error('FDA Drugs error:', e);
+  }
+  return features;
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// EPA ECHO - Environmental Facilities (from DATAVERSE integration)
+// ─────────────────────────────────────────────────────────────────────────
+const epa_echo: CollectorFn = async (intent) => {
+  const stateCode = intent.where.stateCode;
+  if (!stateCode) return [];
+  
+  const features: GeoJSONFeature[] = [];
+  try {
+    const url = `https://echo.epa.gov/tools/web-services/facility-search?output=JSON&p_st=${stateCode}&p_act=Y`;
+    const response = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
+    if (!response.ok) return [];
+    
+    const data = await response.json();
+    for (const f of (data.Results?.Facilities || []).slice(0, 100)) {
+      const lat = parseFloat(f.FacLat);
+      const lon = parseFloat(f.FacLong);
+      
+      features.push({
+        type: 'Feature',
+        geometry: lat && lon ? { type: 'Point', coordinates: [lon, lat] } : { type: 'Point', coordinates: intent.where.center || [-98.5, 39.8] },
+        properties: {
+          source: 'epa_echo',
+          source_id: `epa-${f.RegistryId}`,
+          category: 'ENVIRONMENTAL',
+          name: f.FacName,
+          description: `${f.FacTypeName || 'Facility'} | Compliance: ${f.CurrSvFlag === 'Y' ? 'Violation' : 'Compliant'}`,
+          has_violation: f.CurrSvFlag === 'Y',
+          facility_type: f.FacTypeName,
+          city: f.FacCity,
+          state: f.FacState,
+          zip: f.FacZip,
+          address: f.FacStreet,
+          confidence: 0.92,
+        },
+      });
+    }
+    console.log(`   ✓ EPA ECHO: ${features.length} facilities`);
+  } catch (e) {
+    console.error('EPA ECHO error:', e);
+  }
+  return features;
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+// FDIC BANKS - Financial Institutions (from DATAVERSE integration)
+// ─────────────────────────────────────────────────────────────────────────
+const fdic_banks: CollectorFn = async (intent) => {
+  const stateCode = intent.where.stateCode;
+  if (!stateCode) return [];
+  
+  const features: GeoJSONFeature[] = [];
+  try {
+    const url = `https://banks.data.fdic.gov/api/institutions?filters=STALP:${stateCode}&limit=100&format=json`;
+    const response = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
+    if (!response.ok) return [];
+    
+    const data = await response.json();
+    for (const b of (data.data || []).slice(0, 80)) {
+      const d = b.data;
+      if (!d?.NAME) continue;
+      
+      features.push({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: intent.where.center || [-98.5, 39.8] },
+        properties: {
+          source: 'fdic_banks',
+          source_id: `fdic-${d.CERT}`,
+          category: 'FINANCIAL',
+          name: d.NAME,
+          description: `FDIC Cert: ${d.CERT} | Assets: $${((d.ASSET || 0) * 1000).toLocaleString()}`,
+          cert: d.CERT,
+          assets: (d.ASSET || 0) * 1000,
+          deposits: (d.DEP || 0) * 1000,
+          city: d.CITY,
+          state: d.STALP,
+          zip: d.ZIP,
+          address: d.ADDRESS,
+          confidence: 0.95,
+        },
+      });
+    }
+    console.log(`   ✓ FDIC Banks: ${features.length} banks`);
+  } catch (e) {
+    console.error('FDIC Banks error:', e);
+  }
+  return features;
+};
+
+// Add new collectors to the registry
+COLLECTORS['npi_registry'] = npi_registry;
+COLLECTORS['cms_open_payments'] = cms_open_payments;
+COLLECTORS['fda_drugs'] = fda_drugs;
+COLLECTORS['epa_echo'] = epa_echo;
+COLLECTORS['fdic_banks'] = fdic_banks;
 
 function processUSASpendingResults(
   data: { results?: Array<Record<string, unknown>> },
