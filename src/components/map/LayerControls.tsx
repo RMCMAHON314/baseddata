@@ -25,8 +25,16 @@ const CATEGORY_ICONS: Record<DataCategory, string> = {
   MARINE: '⚓',
   ENERGY: '⚡',
   HEALTH: '🏥',
+  HEALTHCARE: '🩺',
   RECREATION: '🏕️',
   RESEARCH: '🔬',
+  ENVIRONMENTAL: '🌍',
+  FINANCIAL: '🏦',
+  CORPORATE: '🏢',
+  EDUCATION: '🎓',
+  FOOD: '🍽️',
+  HOUSING: '🏠',
+  PATENTS: '💡',
 };
 
 export function LayerControls({ layers, onToggle, className = '' }: LayerControlsProps) {
