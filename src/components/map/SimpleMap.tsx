@@ -1,6 +1,5 @@
-// BASED DATA v8.2 - Leaflet SimpleMap
-// Zero-token, zero-WebGL map that always works
-// Uses CARTO Dark Matter tiles (free, CORS-enabled)
+// BASED DATA v10.0 - Leaflet SimpleMap
+// LIGHT THEME - CARTO Positron tiles (clean, premium)
 
 import { useEffect, useRef, useCallback, useMemo } from 'react';
 import L from 'leaflet';
@@ -15,38 +14,39 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
 });
 
+// Brand blue as primary marker color
 const CATEGORY_COLORS: Record<string, string> = {
-  WILDLIFE: '#10B981',
-  WEATHER: '#F59E0B',
-  MARINE: '#06B6D4',
-  REGULATIONS: '#8B5CF6',
-  GEOSPATIAL: '#3B82F6',
-  RECREATION: '#22C55E',
-  GOVERNMENT: '#EC4899',
-  INFRASTRUCTURE: '#6366F1',
-  ENVIRONMENTAL: '#14B8A6',
-  AGRICULTURE: '#84CC16',
-  DEMOGRAPHICS: '#F97316',
-  ECONOMIC: '#EAB308',
-  HEALTH: '#EF4444',
-  EDUCATION: '#A855F7',
-  TRANSPORTATION: '#0EA5E9',
-  ENERGY: '#FACC15',
-  WATER: '#22D3EE',
-  LAND: '#A3E635',
-  CLIMATE: '#38BDF8',
-  BIODIVERSITY: '#4ADE80',
-  CULTURAL: '#E879F9',
-  SAFETY: '#FB7185',
-  SOCIAL: '#C084FC',
-  TECHNOLOGY: '#60A5FA',
-  LEGAL: '#F472B6',
-  HISTORICAL: '#FBBF24',
-  SCIENTIFIC: '#2DD4BF',
-  EMERGENCY: '#F87171',
-  UTILITIES: '#818CF8',
-  TOURISM: '#FB923C',
-  DEFAULT: '#6B7280',
+  WILDLIFE: '#10B981',      // Emerald
+  WEATHER: '#F59E0B',       // Amber
+  MARINE: '#06B6D4',        // Cyan
+  REGULATIONS: '#8B5CF6',   // Purple
+  GEOSPATIAL: '#3B82F6',    // Blue
+  RECREATION: '#22C55E',    // Green
+  GOVERNMENT: '#EC4899',    // Pink
+  INFRASTRUCTURE: '#6366F1', // Indigo
+  ENVIRONMENTAL: '#14B8A6', // Teal
+  AGRICULTURE: '#84CC16',   // Lime
+  DEMOGRAPHICS: '#F97316',  // Orange
+  ECONOMIC: '#EAB308',      // Yellow
+  HEALTH: '#EF4444',        // Red
+  EDUCATION: '#A855F7',     // Purple
+  TRANSPORTATION: '#0EA5E9', // Sky
+  ENERGY: '#FACC15',        // Yellow
+  WATER: '#22D3EE',         // Cyan
+  LAND: '#A3E635',          // Lime
+  CLIMATE: '#38BDF8',       // Sky
+  BIODIVERSITY: '#4ADE80',  // Green
+  CULTURAL: '#E879F9',      // Fuchsia
+  SAFETY: '#FB7185',        // Rose
+  SOCIAL: '#C084FC',        // Purple
+  TECHNOLOGY: '#60A5FA',    // Blue
+  LEGAL: '#F472B6',         // Pink
+  HISTORICAL: '#FBBF24',    // Amber
+  SCIENTIFIC: '#2DD4BF',    // Teal
+  EMERGENCY: '#F87171',     // Red
+  UTILITIES: '#818CF8',     // Indigo
+  TOURISM: '#FB923C',       // Orange
+  DEFAULT: '#3B82F6',       // Primary Blue
 };
 
 interface SimpleMapProps {
@@ -67,7 +67,7 @@ export function SimpleMap({
   features,
   layers,
   layerOpacities,
-  center, // [lng, lat] format
+  center,
   zoom = 11,
   selectedFeature,
   hoveredFeature,
@@ -76,7 +76,6 @@ export function SimpleMap({
   onCursorMove,
   className = '',
 }: SimpleMapProps) {
-  // Convert [lng, lat] to [lat, lng] for Leaflet and provide default - memoized for stable reference
   const leafletCenter = useMemo<[number, number]>(
     () => center ? [center[1], center[0]] : [39.8283, -98.5795],
     [center?.[0], center?.[1]]
@@ -86,7 +85,6 @@ export function SimpleMap({
   const layerRef = useRef<L.GeoJSON | null>(null);
   const selectedLayerRef = useRef<L.CircleMarker | null>(null);
 
-  // Get visible categories from layers
   const getVisibleCategories = useCallback((): Set<string> => {
     if (!layers?.length) return new Set(['ALL']);
     const visible = new Set<string>();
@@ -96,7 +94,6 @@ export function SimpleMap({
     return visible;
   }, [layers]);
 
-  // Filter features based on visible layers
   const getFilteredFeatures = useCallback((): GeoJSONFeatureCollection | undefined => {
     if (!features?.features?.length) return features;
     const visible = getVisibleCategories();
@@ -110,7 +107,7 @@ export function SimpleMap({
     };
   }, [features, getVisibleCategories]);
 
-  // Initialize map
+  // Initialize map with LIGHT tiles
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
@@ -121,20 +118,16 @@ export function SimpleMap({
       attributionControl: true,
     });
 
-    // CARTO Dark Matter tiles - free, CORS-enabled, always works
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    // CARTO Positron - Light, clean, premium aesthetic
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
       subdomains: 'abcd',
       maxZoom: 20,
     }).addTo(map);
 
-    // Add zoom control to top-right
     L.control.zoom({ position: 'topright' }).addTo(map);
-
-    // Add scale
     L.control.scale({ position: 'bottomleft', imperial: true, metric: true }).addTo(map);
 
-    // Track mouse position
     map.on('mousemove', (e) => {
       onCursorMove?.({ lng: e.latlng.lng, lat: e.latlng.lat });
     });
@@ -151,18 +144,17 @@ export function SimpleMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Update center/zoom when they change
+  // Update center/zoom
   useEffect(() => {
     if (mapRef.current && center) {
       mapRef.current.setView(leafletCenter, zoom, { animate: true, duration: 0.5 });
     }
-  }, [leafletCenter, zoom]);
+  }, [leafletCenter, zoom, center]);
 
-  // Add/update data layer when features or visibility changes
+  // Add/update data layer
   useEffect(() => {
     if (!mapRef.current) return;
 
-    // Remove old layer
     if (layerRef.current) {
       mapRef.current.removeLayer(layerRef.current);
       layerRef.current = null;
@@ -171,7 +163,6 @@ export function SimpleMap({
     const filtered = getFilteredFeatures();
     if (!filtered?.features?.length) return;
 
-    // Create new GeoJSON layer
     const layer = L.geoJSON(filtered as any, {
       pointToLayer: (feature, latlng) => {
         const category = String(feature.properties?.category || 'DEFAULT').toUpperCase();
@@ -182,23 +173,22 @@ export function SimpleMap({
           feature.properties?.id === selectedFeature.properties?.id;
 
         return L.circleMarker(latlng, {
-          radius: isSelected ? 14 : 8,
+          radius: isSelected ? 12 : 8,
           fillColor: color,
-          color: isSelected ? '#ffffff' : color,
-          weight: isSelected ? 3 : 2,
+          color: '#FFFFFF',
+          weight: 2,
           opacity: opacity,
-          fillOpacity: opacity * 0.8,
+          fillOpacity: opacity * 0.85,
         });
       },
       onEachFeature: (feature, featureLayer) => {
-        // Events
         featureLayer.on('click', () => {
           onFeatureClick?.(feature as GeoJSONFeature);
         });
         featureLayer.on('mouseover', () => {
           onFeatureHover?.(feature as GeoJSONFeature);
           if (featureLayer instanceof L.CircleMarker) {
-            featureLayer.setStyle({ fillOpacity: 1, weight: 3 });
+            featureLayer.setStyle({ fillOpacity: 1, weight: 3, radius: 10 });
           }
         });
         featureLayer.on('mouseout', () => {
@@ -207,7 +197,7 @@ export function SimpleMap({
             const category = String(feature.properties?.category || 'DEFAULT').toUpperCase();
             const layerId = category.toLowerCase();
             const opacity = layerOpacities?.[layerId] ?? 1;
-            featureLayer.setStyle({ fillOpacity: opacity * 0.8, weight: 2 });
+            featureLayer.setStyle({ fillOpacity: opacity * 0.85, weight: 2, radius: 8 });
           }
         });
       },
@@ -216,7 +206,6 @@ export function SimpleMap({
     layer.addTo(mapRef.current);
     layerRef.current = layer;
 
-    // Fit bounds if we have features
     if (filtered.features.length > 0) {
       const bounds = layer.getBounds();
       if (bounds.isValid()) {
@@ -225,11 +214,10 @@ export function SimpleMap({
     }
   }, [features, layers, layerOpacities, selectedFeature, getFilteredFeatures, onFeatureClick, onFeatureHover]);
 
-  // Handle selected feature highlight
+  // Selected feature highlight
   useEffect(() => {
     if (!mapRef.current) return;
 
-    // Remove old selected marker
     if (selectedLayerRef.current) {
       mapRef.current.removeLayer(selectedLayerRef.current);
       selectedLayerRef.current = null;
@@ -242,9 +230,8 @@ export function SimpleMap({
     const category = String(selectedFeature.properties?.category || 'DEFAULT').toUpperCase();
     const color = CATEGORY_COLORS[category] || CATEGORY_COLORS.DEFAULT;
 
-    // Create highlight ring
     const marker = L.circleMarker([lat, lng], {
-      radius: 18,
+      radius: 16,
       fillColor: 'transparent',
       color: color,
       weight: 4,
@@ -255,21 +242,14 @@ export function SimpleMap({
     marker.addTo(mapRef.current);
     selectedLayerRef.current = marker;
 
-    // Fly to selected
     mapRef.current.flyTo([lat, lng], Math.max(mapRef.current.getZoom(), 12), { duration: 0.5 });
   }, [selectedFeature]);
-
-  // Handle hovered feature visual feedback (optional ring)
-  useEffect(() => {
-    // The hover effect is already handled in the GeoJSON layer's onEachFeature
-    // This effect could add additional visual feedback if needed
-  }, [hoveredFeature]);
 
   return (
     <div 
       ref={containerRef} 
-      className={`leaflet-container-dark ${className}`}
-      style={{ width: '100%', height: '100%', background: '#0a0a0f' }}
+      className={`leaflet-container-light ${className}`}
+      style={{ width: '100%', height: '100%', background: '#F8FAFC' }}
     />
   );
 }

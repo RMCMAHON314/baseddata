@@ -1,22 +1,17 @@
-// BASED DATA v8.1 - Premium Results View
-// Bloomberg Terminal meets Apple Maps meets Palantir
-// Full three-column layout with glass morphism, 3D map, premium UI, two-way sync
+// BASED DATA v10.0 - Premium Results View
+// Light theme matching landing page - Bloomberg Terminal meets Apple Maps
 
-import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ArrowLeft, Table, Lightbulb, Share2, Database, 
-  CheckCircle2, Sparkles, Copy, Search, Download, Eye
+  CheckCircle2, Sparkles, Copy, Search, Download, Eye,
+  Filter, Layers, MapPin, ChevronDown, X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Logo } from '@/components/Logo';
 import { SimpleMap } from '@/components/map/SimpleMap';
-import { PremiumLayerPanel } from '@/components/map/PremiumLayerPanel';
-import { PremiumStatsBar } from '@/components/map/PremiumStatsBar';
-import { PremiumDetailPanel, PremiumHoverPopup } from '@/components/map/PremiumMapPopup';
-import { PremiumRecordCard } from '@/components/map/PremiumRecordCard';
 import { DataGrid } from '@/components/data/DataGrid';
 import type { GeoJSONFeature, GeoJSONFeatureCollection, CollectedData, OmniscientInsights, MapLayer } from '@/types/omniscient';
 import { CATEGORY_COLORS } from '@/lib/mapbox';
@@ -24,6 +19,7 @@ import { toast } from 'sonner';
 import { exportData, type ExportFormat } from '@/lib/export';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { deduplicateRecords, groupResults, getDataStats, type ProcessedRecord } from '@/lib/dataProcessing';
 
 interface PremiumOmniscientResultsProps {
   prompt: string;
@@ -36,6 +32,23 @@ interface PremiumOmniscientResultsProps {
   enrichments?: string[];
   onBack: () => void;
 }
+
+// Category icons for filter sidebar
+const CATEGORY_ICONS: Record<string, string> = {
+  WILDLIFE: '🦅',
+  WEATHER: '🌤️',
+  MARINE: '🌊',
+  REGULATIONS: '📜',
+  GOVERNMENT: '🏛️',
+  GEOSPATIAL: '🗺️',
+  TRANSPORTATION: '✈️',
+  HEALTH: '🏥',
+  ENERGY: '⚡',
+  ECONOMIC: '💰',
+  RECREATION: '🏕️',
+  DEMOGRAPHICS: '👥',
+  RESEARCH: '🔬',
+};
 
 export function PremiumOmniscientResults({
   prompt,
@@ -52,17 +65,31 @@ export function PremiumOmniscientResults({
   const [hoveredFeature, setHoveredFeature] = useState<GeoJSONFeature | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [cursorCoords, setCursorCoords] = useState<{ lng: number; lat: number } | null>(null);
-  const [showDetailPanel, setShowDetailPanel] = useState(false);
-  const [layerOpacities, setLayerOpacities] = useState<Record<string, number>>({});
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [viewMode, setViewMode] = useState<'cards' | 'grid'>('cards');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const dataScrollRef = useRef<HTMLDivElement>(null);
 
-  // Build layers
+  // Process and deduplicate data
+  const processedRecords = useMemo(() => {
+    if (!features?.features?.length) return [];
+    return deduplicateRecords(features.features);
+  }, [features]);
+
+  const groupedResults = useMemo(() => {
+    return groupResults(processedRecords);
+  }, [processedRecords]);
+
+  const dataStats = useMemo(() => {
+    return getDataStats(processedRecords);
+  }, [processedRecords]);
+
+  // Build layers from processed data
   const [layers, setLayers] = useState<MapLayer[]>(() => {
     if (!features?.features?.length) return [];
     const byCategory: Record<string, GeoJSONFeature[]> = {};
     for (const f of features.features) {
-      const cat = f.properties.category || 'UNKNOWN';
+      const cat = (f.properties as Record<string, unknown>)?.category as string || 'UNKNOWN';
       if (!byCategory[cat]) byCategory[cat] = [];
       byCategory[cat].push(f);
     }
@@ -75,6 +102,14 @@ export function PremiumOmniscientResults({
       color: CATEGORY_COLORS[cat] || '#3B82F6',
     }));
   });
+
+  // Filter by category
+  const filteredRecords = useMemo(() => {
+    if (!selectedCategory) return processedRecords;
+    return processedRecords.filter(r => 
+      String((r.properties as Record<string, unknown>)?.category || '').toUpperCase() === selectedCategory
+    );
+  }, [processedRecords, selectedCategory]);
 
   // Map center
   const mapCenter = useMemo((): [number, number] | undefined => {
@@ -92,10 +127,8 @@ export function PremiumOmniscientResults({
     return [sumLng / count, sumLat / count];
   }, [features]);
 
-  const totalRecords = features?.features?.length || 0;
+  const totalRecords = dataStats.totalRecords;
   const successSources = collectedData.filter(d => d.status === 'success').length;
-  const totalSources = collectedData.length;
-  const successRate = totalSources > 0 ? (successSources / totalSources) * 100 : 0;
 
   const handleLayerToggle = useCallback((layerId: string) => {
     setLayers(prev => prev.map(l =>
@@ -103,28 +136,15 @@ export function PremiumOmniscientResults({
     ));
   }, []);
 
-  const handleLayerOpacity = useCallback((layerId: string, opacity: number) => {
-    setLayerOpacities(prev => ({ ...prev, [layerId]: opacity }));
-  }, []);
-
   const handleFeatureClick = useCallback((feature: GeoJSONFeature) => {
     setSelectedFeature(feature);
-    setShowDetailPanel(true);
-    const cat = String(feature.properties?.category || '').toUpperCase();
+    const cat = String((feature.properties as Record<string, unknown>)?.category || '').toUpperCase();
     if (cat) setSelectedCategory(cat);
-    // Scroll corresponding card into view in data panel
-    const idx = features?.features?.findIndex(f => f === feature) ?? -1;
-    if (idx >= 0) {
-      setTimeout(() => {
-        const el = document.getElementById(`record-card-${idx}`);
-        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 100);
-    }
-  }, [features]);
+  }, []);
 
   const handleCopyQuery = () => {
     navigator.clipboard.writeText(prompt);
-    toast.success('Query copied');
+    toast.success('Query copied to clipboard');
   };
 
   const handleExport = async (format: ExportFormat) => {
@@ -151,40 +171,40 @@ export function PremiumOmniscientResults({
 
   return (
     <TooltipProvider delayDuration={200}>
-    <div className="h-screen flex flex-col bg-black text-white overflow-hidden">
-      {/* Top Header Bar */}
-      <header className="flex-none h-16 bg-black/80 backdrop-blur-xl border-b border-white/10 flex items-center px-6 gap-4 z-40">
+    <div className="h-screen flex flex-col bg-slate-50 text-slate-900 overflow-hidden">
+      {/* Header Bar - White */}
+      <header className="flex-none h-16 bg-white border-b border-slate-200 flex items-center px-6 gap-4 z-40 shadow-sm">
         <Button
           variant="ghost"
           size="icon"
           onClick={onBack}
-          className="text-white/70 hover:text-white hover:bg-white/10"
+          className="text-slate-500 hover:text-slate-900 hover:bg-slate-100"
         >
           <ArrowLeft className="w-5 h-5" />
         </Button>
 
         <div className="flex items-center gap-3">
           <Logo variant="compact" />
-          <div className="h-6 w-px bg-white/20" />
-          <span className="text-xs font-medium text-white/50 uppercase tracking-wider">Results</span>
+          <div className="h-6 w-px bg-slate-200" />
+          <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Results</span>
         </div>
 
         {/* Query Display */}
         <div className="flex-1 flex items-center gap-3 max-w-2xl mx-4">
-          <Search className="w-5 h-5 text-cyan-400 flex-shrink-0" />
+          <Search className="w-5 h-5 text-blue-500 flex-shrink-0" />
           <button
             onClick={handleCopyQuery}
-            className="flex-1 text-left text-white font-medium truncate hover:text-cyan-400 transition-colors group"
+            className="flex-1 text-left text-slate-800 font-medium truncate hover:text-blue-600 transition-colors group"
           >
             {prompt}
-            <Copy className="w-4 h-4 ml-2 inline opacity-0 group-hover:opacity-100 transition-opacity" />
+            <Copy className="w-4 h-4 ml-2 inline opacity-0 group-hover:opacity-100 transition-opacity text-blue-500" />
           </button>
           {enrichments.length > 0 && (
             <div className="flex items-center gap-2 ml-4">
-              <span className="px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-medium">
+              <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-medium">
                 ✓ Auto-enriched
               </span>
-              <span className="px-2 py-1 rounded-full bg-cyan-500/20 text-cyan-400 text-xs font-medium">
+              <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">
                 ✓ Cross-Referenced
               </span>
             </div>
@@ -197,11 +217,12 @@ export function PremiumOmniscientResults({
             <Button
               variant="outline"
               size="sm"
-              className="bg-white/10 hover:bg-white/20 border-white/20 text-white"
+              className="bg-white hover:bg-slate-50 border-slate-200 text-slate-700"
               onClick={() => setShowExportMenu(!showExportMenu)}
             >
               <Download className="w-4 h-4 mr-2" />
               Export
+              <ChevronDown className="w-4 h-4 ml-1" />
             </Button>
             <AnimatePresence>
               {showExportMenu && (
@@ -209,15 +230,15 @@ export function PremiumOmniscientResults({
                   initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 5 }}
-                  className="absolute right-0 top-full mt-1 bg-black/95 border border-white/20 rounded-lg p-2 min-w-[140px] z-50"
+                  className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl p-2 min-w-[160px] z-50 shadow-lg"
                 >
-                  {(['csv', 'xlsx', 'geojson', 'json'] as ExportFormat[]).map((fmt) => (
+                  {(['xlsx', 'csv', 'geojson', 'json'] as ExportFormat[]).map((fmt) => (
                     <button
                       key={fmt}
                       onClick={() => handleExport(fmt)}
-                      className="w-full text-left px-3 py-2 text-sm text-white/70 hover:text-white hover:bg-white/10 rounded transition-colors"
+                      className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                     >
-                      {fmt.toUpperCase()}
+                      Export as {fmt.toUpperCase()}
                     </button>
                   ))}
                 </motion.div>
@@ -226,7 +247,7 @@ export function PremiumOmniscientResults({
           </div>
           <Button
             size="sm"
-            className="bg-cyan-500 hover:bg-cyan-400 text-black"
+            className="bg-blue-600 hover:bg-blue-700 text-white"
           >
             <Share2 className="w-4 h-4 mr-2" />
             Share
@@ -234,192 +255,363 @@ export function PremiumOmniscientResults({
         </div>
       </header>
 
-      {/* Main Three-Column Layout */}
-      <div className="flex-1 flex min-h-0 overflow-hidden">
-        {/* Left Sidebar - Layer Panel */}
-        <PremiumLayerPanel
-          layers={layers}
-          onToggle={handleLayerToggle}
-          onOpacityChange={handleLayerOpacity}
-          totalFeatures={totalRecords}
-          sourcesCount={successSources}
-          className="hidden lg:flex flex-shrink-0"
-        />
-
-        {/* Center - Compact Map */}
-        <div className="w-[400px] flex flex-col min-h-0 flex-shrink-0">
-          {/* MAP CONTAINER - Compact size */}
-          <div className="flex-1 relative min-h-0">
-            <div className="absolute inset-0">
-              <SimpleMap
-                features={features}
-                layers={layers}
-                layerOpacities={layerOpacities}
-                center={mapCenter}
-                zoom={mapCenter ? 9 : 4}
-                selectedFeature={selectedFeature}
-                hoveredFeature={hoveredFeature}
-                onFeatureClick={handleFeatureClick}
-                onFeatureHover={setHoveredFeature}
-                onCursorMove={setCursorCoords}
-                className="w-full h-full"
-              />
-            </div>
-            
-            {/* Hover Popup */}
-            <AnimatePresence>
-              {hoveredFeature && !showDetailPanel && (
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
-                  <PremiumHoverPopup feature={hoveredFeature} />
-                </div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Stats Bar */}
-          <PremiumStatsBar
-            totalRecords={totalRecords}
-            sourcesCount={successSources}
-            successRate={successRate}
-            cursorCoords={cursorCoords}
-            queryTimeMs={processingTimeMs}
-          />
-        </div>
-
-        {/* Data Panels - All visible at once */}
-        <div className="flex-1 h-full flex min-w-0 border-l border-white/10">
-          {/* Data Cards Column */}
-          <div className="w-[280px] flex-shrink-0 flex flex-col map-panel-glass border-r border-white/10">
-            <div className="flex-none px-4 py-3 border-b border-white/10">
-              <div className="flex items-center gap-2">
-                <Eye className="w-4 h-4 text-cyan-400" />
-                <span className="text-sm font-medium text-white">Data</span>
-                <span className="text-xs text-white/50">({totalRecords})</span>
-              </div>
-            </div>
-            <ScrollArea className="flex-1">
-              <div ref={dataScrollRef} className="p-3 space-y-2">
-                {features?.features?.slice(0, 50).map((record, i) => (
-                  <PremiumRecordCard
-                    key={i}
-                    id={`record-card-${i}`}
-                    record={record}
-                    index={i}
-                    isSelected={selectedFeature === record}
-                    isHovered={hoveredFeature === record}
-                    onHover={() => setHoveredFeature(record)}
-                    onHoverEnd={() => hoveredFeature === record && setHoveredFeature(null)}
-                    onClick={() => handleFeatureClick(record)}
-                  />
-                ))}
-                {(!features?.features?.length) && (
-                  <div className="text-center py-8 text-white/50">
-                    <Database className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                    <p className="text-sm">No data</p>
-                  </div>
+      {/* Insights Summary Card */}
+      <div className="flex-none px-6 py-4 bg-white border-b border-slate-200">
+        <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-5 border border-blue-100">
+          <div className="flex items-start justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 mb-1">
+                {totalRecords} Results Found
+              </h2>
+              <p className="text-slate-600">
+                Aggregated from {successSources} sources across {dataStats.categories} categories
+                {dataStats.totalDuplicatesRemoved > 0 && (
+                  <span className="text-slate-400"> • {dataStats.totalDuplicatesRemoved} duplicates removed</span>
                 )}
-              </div>
-            </ScrollArea>
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
+                ✓ Deduplicated
+              </span>
+              <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                {dataStats.geoPercent}% Georeferenced
+              </span>
+            </div>
           </div>
-
-          {/* Insights Column */}
-          <div className="w-[260px] flex-shrink-0 flex flex-col map-panel-glass border-r border-white/10">
-            <div className="flex-none px-4 py-3 border-b border-white/10">
-              <div className="flex items-center gap-2">
-                <Lightbulb className="w-4 h-4 text-amber-400" />
-                <span className="text-sm font-medium text-white">Insights</span>
-              </div>
-            </div>
-            <ScrollArea className="flex-1">
-              <div className="p-3 space-y-3">
-                {insights ? (
-                  <>
-                    {/* AI Summary */}
-                    <div className="p-3 rounded-lg bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Sparkles className="w-3 h-3 text-cyan-400" />
-                        <span className="text-xs font-medium text-cyan-400">AI Summary</span>
-                      </div>
-                      <p className="text-white/80 text-xs leading-relaxed">{insights.summary}</p>
-                    </div>
-
-                    {/* Key Findings */}
-                    {insights.key_findings?.length > 0 && (
-                      <div className="space-y-1.5">
-                        <h4 className="text-white/50 text-[10px] font-medium uppercase tracking-wide">
-                          Key Findings
-                        </h4>
-                        {insights.key_findings.map((finding, i) => (
-                          <div key={i} className="flex items-start gap-2 p-2 rounded-md bg-white/5">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-400 mt-0.5 flex-shrink-0" />
-                            <p className="text-white/70 text-xs">{finding}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Recommendations */}
-                    {insights.recommendations?.length > 0 && (
-                      <div className="space-y-1.5">
-                        <h4 className="text-white/50 text-[10px] font-medium uppercase tracking-wide">
-                          Recommendations
-                        </h4>
-                        {insights.recommendations.map((rec, i) => (
-                          <div key={i} className="flex items-start gap-2 p-2 rounded-md bg-white/5">
-                            <Lightbulb className="w-3 h-3 text-amber-400 mt-0.5 flex-shrink-0" />
-                            <p className="text-white/70 text-xs">{rec}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="text-center py-8 text-white/50">
-                    <Lightbulb className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                    <p className="text-sm">No insights</p>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          </div>
-
-          {/* Grid Column - Expands */}
-          <div className="flex-1 flex flex-col min-w-0">
-            <div className="flex-none px-4 py-3 border-b border-white/10">
-              <div className="flex items-center gap-2">
-                <Table className="w-4 h-4 text-blue-400" />
-                <span className="text-sm font-medium text-white">Grid</span>
-              </div>
-            </div>
-            <div className="flex-1 overflow-hidden">
-              {features?.features?.length ? (
-                <DataGrid
-                  features={features.features}
-                  onExport={(fmt) => handleExport(fmt)}
-                  onRowClick={handleFeatureClick}
-                  className="h-full rounded-none border-0"
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full text-white/50">
-                  <Database className="w-10 h-10 mb-2 opacity-30" />
-                  <p className="text-sm">No data</p>
-                </div>
-              )}
-            </div>
+          
+          {/* Quick Stats */}
+          <div className="grid grid-cols-4 gap-4 mt-4 pt-4 border-t border-blue-200/50">
+            <QuickStat label="Categories" value={dataStats.categories} />
+            <QuickStat label="With Coordinates" value={`${dataStats.geoPercent}%`} />
+            <QuickStat label="High Confidence" value={dataStats.highConfidenceCount} />
+            <QuickStat label="Query Time" value={`${(processingTimeMs / 1000).toFixed(1)}s`} />
           </div>
         </div>
       </div>
 
-      {/* Detail Panel (slides in from right) */}
-      <AnimatePresence>
-        {showDetailPanel && selectedFeature && (
-          <PremiumDetailPanel
-            feature={selectedFeature}
-            onClose={() => setShowDetailPanel(false)}
-          />
-        )}
-      </AnimatePresence>
+      {/* Main Content */}
+      <div className="flex-1 flex min-h-0 overflow-hidden">
+        {/* Filter Sidebar */}
+        <aside className={cn(
+          "w-64 bg-white border-r border-slate-200 flex flex-col transition-all duration-300",
+          !sidebarOpen && "-ml-64"
+        )}>
+          <div className="p-4 border-b border-slate-200">
+            <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+              <Filter className="w-4 h-4 text-blue-500" />
+              Filters
+            </h3>
+          </div>
+          
+          <ScrollArea className="flex-1">
+            <div className="p-4 space-y-4">
+              {/* Categories */}
+              <div>
+                <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2">Categories</h4>
+                <div className="space-y-1">
+                  <button
+                    onClick={() => setSelectedCategory(null)}
+                    className={cn(
+                      "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors",
+                      !selectedCategory ? "bg-blue-50 text-blue-700" : "hover:bg-slate-50 text-slate-600"
+                    )}
+                  >
+                    <span>All Categories</span>
+                    <span className="ml-auto text-xs font-medium">{totalRecords}</span>
+                  </button>
+                  {layers.map(layer => (
+                    <button
+                      key={layer.id}
+                      onClick={() => setSelectedCategory(layer.category as string)}
+                      className={cn(
+                        "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors",
+                        selectedCategory === layer.category 
+                          ? "bg-blue-50 text-blue-700" 
+                          : "hover:bg-slate-50 text-slate-600"
+                      )}
+                    >
+                      <span>{CATEGORY_ICONS[layer.category as string] || '📊'}</span>
+                      <span className="truncate">{layer.name}</span>
+                      <span className="ml-auto text-xs font-medium">{layer.features?.length || 0}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Layer Visibility */}
+              <div>
+                <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2">Map Layers</h4>
+                <div className="space-y-1">
+                  {layers.map(layer => (
+                    <label
+                      key={layer.id}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-50 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={layer.visible}
+                        onChange={() => handleLayerToggle(layer.id)}
+                        className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: layer.color }}
+                      />
+                      <span className="text-sm text-slate-600">{layer.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </ScrollArea>
+        </aside>
+
+        {/* Map & Data Panel */}
+        <div className="flex-1 flex flex-col lg:flex-row min-w-0">
+          {/* Map */}
+          <div className="flex-1 relative min-h-[300px] lg:min-h-0">
+            <SimpleMap
+              features={features}
+              layers={layers}
+              center={mapCenter}
+              zoom={mapCenter ? 10 : 4}
+              selectedFeature={selectedFeature}
+              hoveredFeature={hoveredFeature}
+              onFeatureClick={handleFeatureClick}
+              onFeatureHover={setHoveredFeature}
+              onCursorMove={setCursorCoords}
+              className="w-full h-full"
+            />
+            
+            {/* Coordinates Display */}
+            <div className="absolute bottom-4 left-4 px-3 py-1.5 bg-white/90 backdrop-blur-sm rounded-lg border border-slate-200 text-xs text-slate-500 font-mono">
+              {cursorCoords 
+                ? `${cursorCoords.lat.toFixed(5)}°, ${cursorCoords.lng.toFixed(5)}°`
+                : 'Hover for coordinates'
+              }
+            </div>
+          </div>
+
+          {/* Data Cards / Grid Panel */}
+          <div className="w-full lg:w-[480px] flex flex-col bg-white border-l border-slate-200">
+            {/* Panel Header */}
+            <div className="flex-none px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => setViewMode('cards')}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
+                    viewMode === 'cards' ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:text-slate-700"
+                  )}
+                >
+                  <Eye className="w-4 h-4" />
+                  Cards
+                </button>
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
+                    viewMode === 'grid' ? "bg-blue-50 text-blue-700" : "text-slate-500 hover:text-slate-700"
+                  )}
+                >
+                  <Table className="w-4 h-4" />
+                  Grid
+                </button>
+              </div>
+              <span className="text-xs text-slate-400">{filteredRecords.length} records</span>
+            </div>
+
+            {/* Content */}
+            <ScrollArea className="flex-1">
+              {viewMode === 'cards' ? (
+                <div ref={dataScrollRef} className="p-4 space-y-6">
+                  {/* Grouped Results */}
+                  {Object.entries(groupedResults).map(([groupName, items]) => (
+                    <div key={groupName} className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+                          {groupName}
+                          <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
+                            {items.length}
+                          </span>
+                        </h3>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        {items.slice(0, 5).map((record, i) => (
+                          <ResultCard
+                            key={record.id}
+                            record={record}
+                            isSelected={selectedFeature === record}
+                            isHovered={hoveredFeature === record}
+                            onHover={() => setHoveredFeature(record)}
+                            onHoverEnd={() => hoveredFeature === record && setHoveredFeature(null)}
+                            onClick={() => handleFeatureClick(record)}
+                          />
+                        ))}
+                        {items.length > 5 && (
+                          <button className="w-full py-2 text-sm text-blue-600 hover:text-blue-700 font-medium">
+                            View all {items.length} {groupName.toLowerCase()} →
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* AI Insights */}
+                  {insights && (
+                    <div className="mt-6 pt-6 border-t border-slate-200">
+                      <h3 className="font-semibold text-slate-900 flex items-center gap-2 mb-4">
+                        <Sparkles className="w-4 h-4 text-amber-500" />
+                        AI Insights
+                      </h3>
+                      
+                      <div className="p-4 rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-100">
+                        <p className="text-slate-700 text-sm leading-relaxed">{insights.summary}</p>
+                      </div>
+
+                      {insights.key_findings?.length > 0 && (
+                        <div className="mt-4 space-y-2">
+                          <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wide">Key Findings</h4>
+                          {insights.key_findings.map((finding, i) => (
+                            <div key={i} className="flex items-start gap-2 p-3 rounded-lg bg-slate-50">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />
+                              <p className="text-slate-600 text-sm">{finding}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {insights.recommendations?.length > 0 && (
+                        <div className="mt-4 space-y-2">
+                          <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wide">Recommendations</h4>
+                          {insights.recommendations.map((rec, i) => (
+                            <div key={i} className="flex items-start gap-2 p-3 rounded-lg bg-slate-50">
+                              <Lightbulb className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                              <p className="text-slate-600 text-sm">{rec}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <DataGrid
+                  features={filteredRecords}
+                  onExport={(fmt) => handleExport(fmt)}
+                  onRowClick={handleFeatureClick}
+                  className="h-full rounded-none border-0"
+                />
+              )}
+            </ScrollArea>
+          </div>
+        </div>
+      </div>
     </div>
     </TooltipProvider>
+  );
+}
+
+// Quick Stat Component
+function QuickStat({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="text-center">
+      <div className="text-lg font-bold text-slate-900">{value}</div>
+      <div className="text-xs text-slate-500">{label}</div>
+    </div>
+  );
+}
+
+// Result Card Component - Light Theme
+function ResultCard({ 
+  record, 
+  isSelected, 
+  isHovered, 
+  onHover, 
+  onHoverEnd, 
+  onClick 
+}: {
+  record: ProcessedRecord;
+  isSelected?: boolean;
+  isHovered?: boolean;
+  onHover?: () => void;
+  onHoverEnd?: () => void;
+  onClick?: () => void;
+}) {
+  const props = (record.properties || {}) as Record<string, unknown>;
+  const category = String(props.category || 'OTHER').toUpperCase();
+  const color = CATEGORY_COLORS[category] || '#3B82F6';
+  const title = record.displayName;
+  const source = String(props.source || '');
+  const quality = record.bestConfidence;
+  const address = props.address ? String(props.address) : undefined;
+  const description = props.description ? String(props.description) : undefined;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={cn(
+        "bg-white rounded-2xl border border-slate-200 hover:border-blue-300 hover:shadow-lg transition-all duration-200 overflow-hidden cursor-pointer",
+        isSelected && "ring-2 ring-blue-500 border-blue-500",
+        isHovered && !isSelected && "border-blue-200 shadow-md"
+      )}
+      onMouseEnter={onHover}
+      onMouseLeave={onHoverEnd}
+      onClick={onClick}
+    >
+      {/* Category Header */}
+      <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          {category}
+        </span>
+        <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+          {source}
+        </span>
+      </div>
+      
+      {/* Content */}
+      <div className="p-4">
+        <h3 className="font-semibold text-slate-900 text-lg mb-1 line-clamp-2">
+          {title}
+        </h3>
+        {(description || address) && (
+          <p className="text-sm text-slate-500 mb-3 line-clamp-2">
+            {address || description}
+          </p>
+        )}
+        
+        {/* Duplicate indicator */}
+        {record.duplicateCount > 1 && (
+          <div className="flex flex-wrap gap-2 mb-3">
+            <span className="text-xs px-2 py-1 bg-slate-100 text-slate-600 rounded-full">
+              Found in {record.duplicateCount} records
+            </span>
+            <span className="text-xs px-2 py-1 bg-slate-100 text-slate-600 rounded-full">
+              {record.sources.length} sources
+            </span>
+          </div>
+        )}
+        
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+          <div className="flex items-center gap-1 text-xs text-slate-400">
+            <MapPin className="w-3 h-3" />
+            <span>Georeferenced</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-1.5 w-16 bg-slate-200 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-emerald-500 rounded-full"
+                style={{ width: `${quality * 100}%` }}
+              />
+            </div>
+            <span className="text-xs text-slate-500">{Math.round(quality * 100)}%</span>
+          </div>
+        </div>
+      </div>
+    </motion.div>
   );
 }
