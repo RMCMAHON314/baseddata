@@ -1,14 +1,20 @@
-// BASED DATA - Adaptive Results Data Table
-// Schema-adaptive table that displays appropriate columns based on data type
+// BASED DATA v10.1 - Maximum Data Density Results Table
+// Adaptive schema with full property display, expandable deep-dive, and comprehensive stats
 
-import { useState, useMemo } from 'react';
-import { ChevronDown, ChevronUp, ExternalLink, MapPin, Building2, DollarSign, Calendar, Tag, Star } from 'lucide-react';
+import { useState, useMemo, useCallback } from 'react';
+import { 
+  ChevronDown, ChevronUp, ExternalLink, MapPin, Building2, DollarSign, 
+  Calendar, Tag, Star, Braces, Copy, Download, Maximize2, List,
+  Eye, Database, AlertCircle, CheckCircle2, Clock, Globe, Hash
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import type { ProcessedRecord } from '@/lib/dataProcessing';
 
 interface ResultsDataTableProps {
   records: ProcessedRecord[];
   onRowClick?: (record: ProcessedRecord) => void;
+  onOpenDossier?: (record: ProcessedRecord) => void;
 }
 
 // Data schema types
@@ -48,14 +54,59 @@ function detectSchema(records: ProcessedRecord[]): DataSchema {
   return 'mixed';
 }
 
-export function ResultsDataTable({ records, onRowClick }: ResultsDataTableProps) {
+// Flatten all properties for full display
+function flattenProperties(obj: Record<string, any>, prefix = ''): Record<string, any> {
+  const result: Record<string, any> = {};
+  
+  for (const [key, value] of Object.entries(obj)) {
+    const fullKey = prefix ? `${prefix}.${key}` : key;
+    
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      Object.assign(result, flattenProperties(value, fullKey));
+    } else {
+      result[fullKey] = value;
+    }
+  }
+  
+  return result;
+}
+
+// Count all unique fields across records
+function analyzeAllFields(records: ProcessedRecord[]): { field: string; count: number; sample: any }[] {
+  const fieldCounts: Record<string, { count: number; sample: any }> = {};
+  
+  for (const record of records) {
+    const allProps = flattenProperties(record.properties || {});
+    
+    for (const [key, value] of Object.entries(allProps)) {
+      if (value !== null && value !== undefined && value !== '') {
+        if (!fieldCounts[key]) {
+          fieldCounts[key] = { count: 0, sample: value };
+        }
+        fieldCounts[key].count++;
+      }
+    }
+  }
+  
+  return Object.entries(fieldCounts)
+    .map(([field, data]) => ({ field, ...data }))
+    .sort((a, b) => b.count - a.count);
+}
+
+export function ResultsDataTable({ records, onRowClick, onOpenDossier }: ResultsDataTableProps) {
   const schema = useMemo(() => detectSchema(records), [records]);
   const [sortField, setSortField] = useState<string>(schema === 'contracts' ? 'award_amount' : 'relevance_score');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [showAllProps, setShowAllProps] = useState(false);
+  const [pageSize, setPageSize] = useState(50);
+  const [currentPage, setCurrentPage] = useState(0);
+
+  // Analyze all fields in dataset
+  const allFields = useMemo(() => analyzeAllFields(records), [records]);
 
   // Get nested value from object
-  const getNestedValue = (obj: any, path: string): any => {
+  const getNestedValue = useCallback((obj: any, path: string): any => {
     const parts = path.split('.');
     let value = obj;
     for (const part of parts) {
@@ -63,7 +114,7 @@ export function ResultsDataTable({ records, onRowClick }: ResultsDataTableProps)
       value = value[part] ?? value.properties?.[part] ?? value.attributes?.[part];
     }
     return value;
-  };
+  }, []);
 
   // Sort records
   const sorted = useMemo(() => {
@@ -83,7 +134,15 @@ export function ResultsDataTable({ records, onRowClick }: ResultsDataTableProps)
       const cmp = aVal > bVal ? 1 : -1;
       return sortDir === 'desc' ? -cmp : cmp;
     });
-  }, [records, sortField, sortDir]);
+  }, [records, sortField, sortDir, getNestedValue]);
+
+  // Paginate
+  const paginatedRecords = useMemo(() => {
+    const start = currentPage * pageSize;
+    return sorted.slice(start, start + pageSize);
+  }, [sorted, currentPage, pageSize]);
+
+  const totalPages = Math.ceil(sorted.length / pageSize);
 
   const handleSort = (field: string) => {
     if (sortField === field) {
@@ -94,14 +153,94 @@ export function ResultsDataTable({ records, onRowClick }: ResultsDataTableProps)
     }
   };
 
+  const copyRecordJSON = (record: ProcessedRecord) => {
+    navigator.clipboard.writeText(JSON.stringify(record, null, 2));
+    toast.success('Record JSON copied to clipboard');
+  };
+
+  const exportAsCSV = () => {
+    const headers = ['Name', 'Category', 'Source', 'Latitude', 'Longitude', ...allFields.slice(0, 50).map(f => f.field)];
+    const rows = sorted.map(r => {
+      const props = flattenProperties(r.properties || {});
+      // Extract coordinates from geometry
+      const coords = r.geometry?.type === 'Point' ? r.geometry.coordinates as number[] : [0, 0];
+      return [
+        r.displayName || props.name || '',
+        props.category || '',
+        props.source || '',
+        coords[1],
+        coords[0],
+        ...allFields.slice(0, 50).map(f => {
+          const val = props[f.field];
+          return typeof val === 'object' ? JSON.stringify(val) : String(val ?? '');
+        })
+      ];
+    });
+    
+    const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `data-export-${Date.now()}.csv`;
+    a.click();
+    toast.success('CSV exported');
+  };
+
+  // Helper to get coordinates from record
+  const getCoords = (r: ProcessedRecord): [number, number] => {
+    if (r.geometry?.type === 'Point') {
+      const coords = r.geometry.coordinates as number[];
+      return [coords[0], coords[1]];
+    }
+    return [0, 0];
+  };
+
   return (
-    <div className="bg-card rounded-lg border border-border overflow-hidden">
+    <div className="bg-card rounded-lg border border-border overflow-hidden flex flex-col h-full">
       {/* Adaptive Stats Bar */}
-      <StatsBar records={records} schema={schema} />
+      <StatsBar records={records} schema={schema} allFields={allFields} />
       
-      <div className="overflow-x-auto">
+      {/* Toolbar */}
+      <div className="px-4 py-2 border-b border-border bg-muted/20 flex items-center gap-2 flex-wrap">
+        <button 
+          onClick={() => setShowAllProps(!showAllProps)}
+          className={cn(
+            "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
+            showAllProps ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-muted/80 text-foreground"
+          )}
+        >
+          <Braces className="w-3.5 h-3.5" />
+          {showAllProps ? 'Hide Full Data' : 'Show All Properties'}
+        </button>
+        <button 
+          onClick={exportAsCSV}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-muted hover:bg-muted/80 text-foreground transition-colors"
+        >
+          <Download className="w-3.5 h-3.5" />
+          Quick CSV
+        </button>
+        <div className="flex-1" />
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span>Show</span>
+          <select 
+            value={pageSize} 
+            onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(0); }}
+            className="px-2 py-1 rounded border border-border bg-background text-foreground"
+          >
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+            <option value={250}>250</option>
+            <option value={500}>500</option>
+          </select>
+          <span>records</span>
+        </div>
+      </div>
+      
+      <div className="overflow-auto flex-1">
         <table className="w-full">
-          <thead className="bg-muted/50 border-b border-border">
+          <thead className="bg-muted/50 border-b border-border sticky top-0 z-10">
             {schema === 'contracts' ? (
               <ContractHeaders sortField={sortField} sortDir={sortDir} onSort={handleSort} />
             ) : (
@@ -109,22 +248,28 @@ export function ResultsDataTable({ records, onRowClick }: ResultsDataTableProps)
             )}
           </thead>
           <tbody className="divide-y divide-border/50">
-            {sorted.map((record) => (
+            {paginatedRecords.map((record) => (
               schema === 'contracts' ? (
                 <ContractRow 
                   key={record.id} 
                   record={record} 
                   isExpanded={expandedId === record.id}
+                  showAllProps={showAllProps}
                   onToggle={() => setExpandedId(expandedId === record.id ? null : record.id)}
                   onRowClick={onRowClick}
+                  onOpenDossier={onOpenDossier}
+                  onCopyJSON={copyRecordJSON}
                 />
               ) : (
                 <POIRow 
                   key={record.id} 
                   record={record} 
                   isExpanded={expandedId === record.id}
+                  showAllProps={showAllProps}
                   onToggle={() => setExpandedId(expandedId === record.id ? null : record.id)}
                   onRowClick={onRowClick}
+                  onOpenDossier={onOpenDossier}
+                  onCopyJSON={copyRecordJSON}
                 />
               )
             ))}
@@ -137,13 +282,55 @@ export function ResultsDataTable({ records, onRowClick }: ResultsDataTableProps)
           No records to display
         </div>
       )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="px-4 py-3 border-t border-border bg-muted/20 flex items-center justify-between">
+          <div className="text-xs text-muted-foreground">
+            Showing {currentPage * pageSize + 1}–{Math.min((currentPage + 1) * pageSize, sorted.length)} of {sorted.length} records
+          </div>
+          <div className="flex items-center gap-1">
+            <button 
+              onClick={() => setCurrentPage(0)}
+              disabled={currentPage === 0}
+              className="px-2 py-1 text-xs rounded border border-border bg-background disabled:opacity-50 hover:bg-muted"
+            >
+              First
+            </button>
+            <button 
+              onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+              disabled={currentPage === 0}
+              className="px-2 py-1 text-xs rounded border border-border bg-background disabled:opacity-50 hover:bg-muted"
+            >
+              Prev
+            </button>
+            <span className="px-3 text-xs text-muted-foreground">
+              Page {currentPage + 1} of {totalPages}
+            </span>
+            <button 
+              onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
+              disabled={currentPage >= totalPages - 1}
+              className="px-2 py-1 text-xs rounded border border-border bg-background disabled:opacity-50 hover:bg-muted"
+            >
+              Next
+            </button>
+            <button 
+              onClick={() => setCurrentPage(totalPages - 1)}
+              disabled={currentPage >= totalPages - 1}
+              className="px-2 py-1 text-xs rounded border border-border bg-background disabled:opacity-50 hover:bg-muted"
+            >
+              Last
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 // ============ STATS BAR ============
 
-function StatsBar({ records, schema }: { records: ProcessedRecord[]; schema: DataSchema }) {
+function StatsBar({ records, schema, allFields }: { records: ProcessedRecord[]; schema: DataSchema; allFields: { field: string; count: number }[] }) {
   const stats = useMemo(() => {
     if (schema === 'contracts') {
       const totalValue = records.reduce((sum, r) => {
@@ -166,21 +353,31 @@ function StatsBar({ records, schema }: { records: ProcessedRecord[]; schema: Dat
         const props = (r.properties || {}) as Record<string, any>;
         return props.awarding_agency || props.attributes?.awarding_agency;
       }).filter(Boolean)).size;
+
+      const states = new Set(records.map(r => {
+        const props = (r.properties || {}) as Record<string, any>;
+        return props.state || props.attributes?.performance_state;
+      }).filter(Boolean)).size;
       
-      return { type: 'contracts' as const, totalValue, contracts, grants, agencies };
+      return { type: 'contracts' as const, totalValue, contracts, grants, agencies, states };
     }
     
     // POI stats
     const categories = new Set<string>();
     const sources = new Set<string>();
     let avgRelevance = 0;
+    let withCoords = 0;
     let withAddress = 0;
+    let highConfidence = 0;
     
     records.forEach(r => {
       const props = (r.properties || {}) as Record<string, any>;
       if (props.category) categories.add(String(props.category).toUpperCase());
       if (props.source) sources.add(String(props.source));
-      avgRelevance += props.relevance_score || r.bestConfidence || 0.5;
+      const rel = props.relevance_score || r.bestConfidence || 0.5;
+      avgRelevance += rel;
+      if (rel >= 0.8) highConfidence++;
+      if (r.geometry?.type === 'Point') withCoords++;
       if (props.address || props.city || props.state) withAddress++;
     });
     
@@ -189,14 +386,17 @@ function StatsBar({ records, schema }: { records: ProcessedRecord[]; schema: Dat
       categories: categories.size,
       sources: sources.size,
       avgRelevance: records.length > 0 ? avgRelevance / records.length : 0,
-      withAddress
+      withCoords,
+      withAddress,
+      highConfidence
     };
   }, [records, schema]);
   
   return (
-    <div className="px-4 py-3 border-b border-border bg-muted/30">
-      <div className="flex items-center gap-6 text-sm flex-wrap">
-        <StatItem label="Records" value={records.length} icon={<Tag className="w-3.5 h-3.5" />} />
+    <div className="px-4 py-3 border-b border-border bg-gradient-to-r from-muted/30 to-muted/10">
+      <div className="flex items-center gap-4 text-sm flex-wrap">
+        <StatItem label="Total Records" value={records.length} highlight icon={<Database className="w-3.5 h-3.5" />} />
+        <div className="h-4 w-px bg-border" />
         
         {stats.type === 'contracts' ? (
           <>
@@ -204,15 +404,20 @@ function StatsBar({ records, schema }: { records: ProcessedRecord[]; schema: Dat
             <StatItem label="Contracts" value={stats.contracts} />
             <StatItem label="Grants" value={stats.grants} />
             <StatItem label="Agencies" value={stats.agencies} icon={<Building2 className="w-3.5 h-3.5" />} />
+            <StatItem label="States" value={stats.states} icon={<Globe className="w-3.5 h-3.5" />} />
           </>
         ) : (
           <>
-            <StatItem label="Categories" value={stats.categories} />
+            <StatItem label="Categories" value={stats.categories} icon={<Tag className="w-3.5 h-3.5" />} />
             <StatItem label="Sources" value={stats.sources} />
             <StatItem label="Avg Relevance" value={`${Math.round(stats.avgRelevance * 100)}%`} highlight icon={<Star className="w-3.5 h-3.5" />} />
-            <StatItem label="With Address" value={stats.withAddress} icon={<MapPin className="w-3.5 h-3.5" />} />
+            <StatItem label="Georeferenced" value={`${Math.round((stats.withCoords / Math.max(1, records.length)) * 100)}%`} icon={<MapPin className="w-3.5 h-3.5" />} />
+            <StatItem label="High Confidence" value={stats.highConfidence} icon={<CheckCircle2 className="w-3.5 h-3.5" />} />
           </>
         )}
+        
+        <div className="h-4 w-px bg-border" />
+        <StatItem label="Data Points" value={allFields.length} icon={<Hash className="w-3.5 h-3.5" />} />
       </div>
     </div>
   );
@@ -221,7 +426,7 @@ function StatsBar({ records, schema }: { records: ProcessedRecord[]; schema: Dat
 function StatItem({ label, value, highlight = false, icon }: { label: string; value: string | number; highlight?: boolean; icon?: React.ReactNode }) {
   return (
     <div className="flex items-center gap-1.5">
-      {icon && <span className="text-muted-foreground">{icon}</span>}
+      {icon && <span className={highlight ? "text-primary" : "text-muted-foreground"}>{icon}</span>}
       <span className="text-muted-foreground">{label}:</span>
       <span className={cn("font-semibold", highlight ? "text-primary" : "text-foreground")}>
         {value}
@@ -245,10 +450,13 @@ function POIHeaders({ sortField, sortDir, onSort }: { sortField: string; sortDir
   );
 }
 
-function POIRow({ record, isExpanded, onToggle, onRowClick }: { 
-  record: ProcessedRecord; isExpanded: boolean; onToggle: () => void; onRowClick?: (r: ProcessedRecord) => void 
+function POIRow({ record, isExpanded, showAllProps, onToggle, onRowClick, onOpenDossier, onCopyJSON }: { 
+  record: ProcessedRecord; isExpanded: boolean; showAllProps: boolean; onToggle: () => void; 
+  onRowClick?: (r: ProcessedRecord) => void; onOpenDossier?: (r: ProcessedRecord) => void;
+  onCopyJSON: (r: ProcessedRecord) => void;
 }) {
   const props = (record.properties || {}) as Record<string, any>;
+  const flatProps = useMemo(() => flattenProperties(props), [props]);
   
   const name = record.displayName || props.name || props.title || 'Unknown';
   const category = String(props.category || record.group || 'OTHER').toUpperCase();
@@ -320,9 +528,29 @@ function POIRow({ record, isExpanded, onToggle, onRowClick }: {
                     ))}
                   </div>
                 )}
+
+                {/* All Properties Grid */}
+                {showAllProps && (
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <div className="text-xs font-semibold text-muted-foreground uppercase mb-2 flex items-center gap-1">
+                      <Braces className="w-3 h-3" />
+                      All Properties ({Object.keys(flatProps).length})
+                    </div>
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1 text-xs max-h-[300px] overflow-auto">
+                      {Object.entries(flatProps).map(([key, value]) => (
+                        <div key={key} className="flex gap-1 py-0.5">
+                          <span className="text-muted-foreground truncate">{key}:</span>
+                          <span className="text-foreground font-medium truncate">
+                            {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               <div>
-                <div className="text-xs font-semibold text-muted-foreground uppercase mb-1">Contact</div>
+                <div className="text-xs font-semibold text-muted-foreground uppercase mb-1">Contact & Actions</div>
                 <div className="space-y-1 text-sm">
                   {phone && <div><span className="text-muted-foreground">Phone:</span> {phone}</div>}
                   {website && (
@@ -330,12 +558,27 @@ function POIRow({ record, isExpanded, onToggle, onRowClick }: {
                       Website <ExternalLink className="w-3 h-3" />
                     </a>
                   )}
+                  {record.geometry?.type === 'Point' && (
+                    <div className="text-xs text-muted-foreground font-mono">
+                      {(record.geometry.coordinates as number[])[1].toFixed(5)}, {(record.geometry.coordinates as number[])[0].toFixed(5)}
+                    </div>
+                  )}
                 </div>
-                {onRowClick && (
-                  <button onClick={(e) => { e.stopPropagation(); onRowClick(record); }} className="mt-3 inline-flex items-center gap-1 text-sm text-primary hover:text-primary/80">
-                    View on Map <MapPin className="w-3 h-3" />
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <button onClick={(e) => { e.stopPropagation(); onCopyJSON(record); }} className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80 px-2 py-1 rounded bg-primary/10">
+                    <Copy className="w-3 h-3" /> Copy JSON
                   </button>
-                )}
+                  {onOpenDossier && (
+                    <button onClick={(e) => { e.stopPropagation(); onOpenDossier(record); }} className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80 px-2 py-1 rounded bg-primary/10">
+                      <Maximize2 className="w-3 h-3" /> 10x Dossier
+                    </button>
+                  )}
+                  {onRowClick && (
+                    <button onClick={(e) => { e.stopPropagation(); onRowClick(record); }} className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80 px-2 py-1 rounded bg-primary/10">
+                      <MapPin className="w-3 h-3" /> View on Map
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </td>
@@ -362,11 +605,14 @@ function ContractHeaders({ sortField, sortDir, onSort }: { sortField: string; so
   );
 }
 
-function ContractRow({ record, isExpanded, onToggle, onRowClick }: { 
-  record: ProcessedRecord; isExpanded: boolean; onToggle: () => void; onRowClick?: (r: ProcessedRecord) => void 
+function ContractRow({ record, isExpanded, showAllProps, onToggle, onRowClick, onOpenDossier, onCopyJSON }: { 
+  record: ProcessedRecord; isExpanded: boolean; showAllProps: boolean; onToggle: () => void; 
+  onRowClick?: (r: ProcessedRecord) => void; onOpenDossier?: (r: ProcessedRecord) => void;
+  onCopyJSON: (r: ProcessedRecord) => void;
 }) {
   const props = (record.properties || {}) as Record<string, any>;
   const attrs = props.attributes || {};
+  const flatProps = useMemo(() => flattenProperties(props), [props]);
   
   const name = record.displayName || props.name || props.recipient_name || 'Unknown';
   const city = props.city || attrs.performance_city || '';
@@ -437,24 +683,52 @@ function ContractRow({ record, isExpanded, onToggle, onRowClick }: {
               <div className="md:col-span-2">
                 <div className="text-xs font-semibold text-muted-foreground uppercase mb-1">Description</div>
                 <p className="text-sm text-foreground">{description || 'No description available'}</p>
+
+                {/* All Properties Grid */}
+                {showAllProps && (
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <div className="text-xs font-semibold text-muted-foreground uppercase mb-2 flex items-center gap-1">
+                      <Braces className="w-3 h-3" />
+                      All Properties ({Object.keys(flatProps).length})
+                    </div>
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1 text-xs max-h-[300px] overflow-auto">
+                      {Object.entries(flatProps).map(([key, value]) => (
+                        <div key={key} className="flex gap-1 py-0.5">
+                          <span className="text-muted-foreground truncate">{key}:</span>
+                          <span className="text-foreground font-medium truncate">
+                            {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               <div>
-                <div className="text-xs font-semibold text-muted-foreground uppercase mb-1">Details</div>
+                <div className="text-xs font-semibold text-muted-foreground uppercase mb-1">Details & Actions</div>
                 <div className="space-y-1 text-sm">
                   {awardId && <div><span className="text-muted-foreground">Award ID:</span> <span className="font-mono text-xs">{awardId}</span></div>}
                   {awardType && <div><span className="text-muted-foreground">Award Type:</span> {awardType}</div>}
                   {endDate && <div><span className="text-muted-foreground">End Date:</span> {formatDate(endDate)}</div>}
                   {pscCode && <div><span className="text-muted-foreground">PSC:</span> {pscCode}</div>}
                 </div>
-                <div className="flex gap-2 mt-3">
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <button onClick={(e) => { e.stopPropagation(); onCopyJSON(record); }} className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80 px-2 py-1 rounded bg-primary/10">
+                    <Copy className="w-3 h-3" /> Copy JSON
+                  </button>
                   {sourceUrl && (
-                    <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-primary hover:text-primary/80" onClick={e => e.stopPropagation()}>
-                      View Source <ExternalLink className="w-3 h-3" />
+                    <a href={sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80 px-2 py-1 rounded bg-primary/10" onClick={e => e.stopPropagation()}>
+                      <ExternalLink className="w-3 h-3" /> Source
                     </a>
                   )}
+                  {onOpenDossier && (
+                    <button onClick={(e) => { e.stopPropagation(); onOpenDossier(record); }} className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80 px-2 py-1 rounded bg-primary/10">
+                      <Maximize2 className="w-3 h-3" /> 10x Dossier
+                    </button>
+                  )}
                   {onRowClick && (
-                    <button onClick={e => { e.stopPropagation(); onRowClick(record); }} className="inline-flex items-center gap-1 text-sm text-primary hover:text-primary/80">
-                      View on Map <MapPin className="w-3 h-3" />
+                    <button onClick={e => { e.stopPropagation(); onRowClick(record); }} className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80 px-2 py-1 rounded bg-primary/10">
+                      <MapPin className="w-3 h-3" /> Map
                     </button>
                   )}
                 </div>
@@ -471,7 +745,6 @@ function ContractRow({ record, isExpanded, onToggle, onRowClick }: {
 
 function RelevanceBadge({ score }: { score: number }) {
   const pct = Math.round(score * 100);
-  // Using semantic tokens with opacity variants for relevance levels
   const color = pct >= 80 ? 'text-primary bg-primary/10' :
                 pct >= 60 ? 'text-accent-foreground bg-accent' :
                 pct >= 40 ? 'text-foreground bg-muted' :

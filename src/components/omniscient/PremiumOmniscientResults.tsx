@@ -449,6 +449,7 @@ export function PremiumOmniscientResults({
                   <ResultsDataTable 
                     records={filteredRecords}
                     onRowClick={handleFeatureClick}
+                    onOpenDossier={handleOpenDossier}
                   />
                 </div>
               ) : viewMode === 'cards' ? (
