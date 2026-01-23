@@ -122,6 +122,51 @@ export type Database = {
         }
         Relationships: []
       }
+      api_sources: {
+        Row: {
+          api_type: string | null
+          auth_type: string | null
+          base_url: string
+          categories: string[]
+          created_at: string | null
+          description: string | null
+          geographic_coverage: string | null
+          id: string
+          keywords: string[] | null
+          name: string
+          slug: string
+          status: string | null
+        }
+        Insert: {
+          api_type?: string | null
+          auth_type?: string | null
+          base_url: string
+          categories: string[]
+          created_at?: string | null
+          description?: string | null
+          geographic_coverage?: string | null
+          id?: string
+          keywords?: string[] | null
+          name: string
+          slug: string
+          status?: string | null
+        }
+        Update: {
+          api_type?: string | null
+          auth_type?: string | null
+          base_url?: string
+          categories?: string[]
+          created_at?: string | null
+          description?: string | null
+          geographic_coverage?: string | null
+          id?: string
+          keywords?: string[] | null
+          name?: string
+          slug?: string
+          status?: string | null
+        }
+        Relationships: []
+      }
       api_usage_logs: {
         Row: {
           api_key_id: string | null
