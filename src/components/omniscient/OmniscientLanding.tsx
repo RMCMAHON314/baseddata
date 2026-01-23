@@ -71,12 +71,13 @@ const CATEGORY_ICONS: Record<string, React.ElementType> = {
   'RECREATION': Globe,
 };
 
-// Platform stats - emphasizing value proposition
+// Platform stats - accurate values from database
+// Database: 62 active sources, 68 categories, 36 dynamic collectors, 1100+ records
 const STATS = [
-  { value: '70+', label: 'Live APIs' },
-  { value: '50+', label: 'Data Categories' },
+  { value: '60+', label: 'Live APIs' },
+  { value: '65+', label: 'Data Categories' },
   { value: '<10s', label: 'Query Speed' },
-  { value: '∞', label: 'Dynamic Genesis' },
+  { value: '36+', label: 'Auto-Collectors' },
 ];
 
 // Use forwardRef to fix AnimatePresence warning
@@ -157,7 +158,7 @@ export const OmniscientLanding = forwardRef<HTMLDivElement, OmniscientLandingPro
             </h1>
             
             <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed text-balance">
-              Ask in plain English. Get instant answers from {DATA_SOURCE_REGISTRY.length}+ government APIs — 
+              Ask in plain English. Get instant answers from 60+ government APIs — 
               federal contracts, healthcare payments, environmental data, and more.
             </p>
           </motion.div>
