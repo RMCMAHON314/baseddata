@@ -15,6 +15,7 @@ import Pricing from "./pages/Pricing";
 import Analytics from "./pages/Analytics";
 import ApiDocs from "./pages/ApiDocs";
 import EntityProfilePage from "./pages/EntityProfilePage";
+import EntityDetail from "./pages/EntityDetail";
 import Admin from "./pages/Admin";
 import Onboarding from "./pages/Onboarding";
 import Diagnostic from "./pages/Diagnostic";
@@ -41,7 +42,7 @@ const App = () => (
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/api-docs" element={<ApiDocs />} />
-            <Route path="/entity/:id" element={<EntityProfilePage />} />
+            <Route path="/entity/:id" element={<EntityDetail />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/diagnostic" element={<Diagnostic />} />
