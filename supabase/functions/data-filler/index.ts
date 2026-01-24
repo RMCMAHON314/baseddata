@@ -345,14 +345,14 @@ async function ingestNIHGrants(supabase: any, results: FillerResults) {
         recipient_entity_id: entityId,
         recipient_name: org.org_name,
         awarding_agency: 'Department of Health and Human Services',
-        awarding_sub_agency: project.ic?.ic_name,
+        funding_agency: project.ic?.ic_name,
         award_amount: project.award_amount || 0,
         project_title: project.project_title,
         description: project.abstract_text?.substring(0, 5000),
         start_date: project.project_start_date,
         end_date: project.project_end_date,
-        pop_state: org.org_state,
-        pop_city: org.org_city,
+        recipient_state: org.org_state,
+        recipient_city: org.org_city,
         source: 'nih_reporter'
       }, { onConflict: 'grant_id', ignoreDuplicates: true });
 
@@ -395,8 +395,8 @@ async function ingestNSFAwards(supabase: any, results: FillerResults) {
         description: award.abstractText?.substring(0, 5000),
         start_date: award.startDate,
         end_date: award.expDate,
-        pop_state: award.awardeeStateCode,
-        pop_city: award.awardeeCity,
+        recipient_state: award.awardeeStateCode,
+        recipient_city: award.awardeeCity,
         source: 'nsf_awards'
       }, { onConflict: 'grant_id', ignoreDuplicates: true });
 
