@@ -726,6 +726,44 @@ export type Database = {
           },
         ]
       }
+      contract_classifications: {
+        Row: {
+          capabilities: string[] | null
+          classified_at: string | null
+          confidence: number | null
+          contract_id: string | null
+          id: string
+          primary_category: string
+          secondary_categories: string[] | null
+        }
+        Insert: {
+          capabilities?: string[] | null
+          classified_at?: string | null
+          confidence?: number | null
+          contract_id?: string | null
+          id?: string
+          primary_category: string
+          secondary_categories?: string[] | null
+        }
+        Update: {
+          capabilities?: string[] | null
+          classified_at?: string | null
+          confidence?: number | null
+          contract_id?: string | null
+          id?: string
+          primary_category?: string
+          secondary_categories?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_classifications_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: true
+            referencedRelation: "contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contracts: {
         Row: {
           award_amount: number | null
@@ -1440,6 +1478,7 @@ export type Database = {
           is_active: boolean | null
           relationship_type: string
           start_date: string | null
+          state: string | null
           strength: number | null
           to_entity_id: string | null
           updated_at: string | null
@@ -1454,6 +1493,7 @@ export type Database = {
           is_active?: boolean | null
           relationship_type: string
           start_date?: string | null
+          state?: string | null
           strength?: number | null
           to_entity_id?: string | null
           updated_at?: string | null
@@ -1468,6 +1508,7 @@ export type Database = {
           is_active?: boolean | null
           relationship_type?: string
           start_date?: string | null
+          state?: string | null
           strength?: number | null
           to_entity_id?: string | null
           updated_at?: string | null
@@ -2257,6 +2298,71 @@ export type Database = {
           },
         ]
       }
+      entity_health_scores: {
+        Row: {
+          calculated_at: string | null
+          contract_velocity: number | null
+          entity_id: string | null
+          grant_success: number | null
+          id: string
+          market_diversification: number | null
+          overall_score: number
+          relationship_density: number | null
+          trend_direction: string | null
+        }
+        Insert: {
+          calculated_at?: string | null
+          contract_velocity?: number | null
+          entity_id?: string | null
+          grant_success?: number | null
+          id?: string
+          market_diversification?: number | null
+          overall_score: number
+          relationship_density?: number | null
+          trend_direction?: string | null
+        }
+        Update: {
+          calculated_at?: string | null
+          contract_velocity?: number | null
+          entity_id?: string | null
+          grant_success?: number | null
+          id?: string
+          market_diversification?: number | null
+          overall_score?: number
+          relationship_density?: number | null
+          trend_direction?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_health_scores_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: true
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_health_scores_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: true
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_health_scores_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: true
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_health_scores_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: true
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       entity_identifiers: {
         Row: {
           created_at: string | null
@@ -3018,6 +3124,7 @@ export type Database = {
           status: string | null
           target_query: Json
           target_source: string
+          target_type: string | null
         }
         Insert: {
           completed_at?: string | null
@@ -3032,6 +3139,7 @@ export type Database = {
           status?: string | null
           target_query: Json
           target_source: string
+          target_type?: string | null
         }
         Update: {
           completed_at?: string | null
@@ -3046,6 +3154,7 @@ export type Database = {
           status?: string | null
           target_query?: Json
           target_source?: string
+          target_type?: string | null
         }
         Relationships: []
       }
@@ -4424,6 +4533,96 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      portfolio_members: {
+        Row: {
+          added_at: string | null
+          entity_id: string | null
+          id: string
+          notes: string | null
+          portfolio_id: string | null
+        }
+        Insert: {
+          added_at?: string | null
+          entity_id?: string | null
+          id?: string
+          notes?: string | null
+          portfolio_id?: string | null
+        }
+        Update: {
+          added_at?: string | null
+          entity_id?: string | null
+          id?: string
+          notes?: string | null
+          portfolio_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_members_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_members_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_members_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_members_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_members_portfolio_id_fkey"
+            columns: ["portfolio_id"]
+            isOneToOne: false
+            referencedRelation: "portfolios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolios: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_public: boolean | null
+          name: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          name: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          name?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
