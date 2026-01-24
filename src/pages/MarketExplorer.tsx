@@ -5,7 +5,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Filter, Grid3X3, List, Download, ChevronDown, X, Building2,
-  MapPin, DollarSign, FileText, TrendingUp, BarChart3, Loader2, SlidersHorizontal
+  MapPin, DollarSign, FileText, TrendingUp, BarChart3, Loader2, SlidersHorizontal, Network, BookmarkPlus
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +19,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { supabase } from '@/integrations/supabase/client';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { NetworkGraph } from '@/components/visualizations/NetworkGraph';
+import { SavedSearchManager } from '@/components/saved-searches/SavedSearchManager';
 
 interface Entity {
   id: string;
@@ -89,6 +91,9 @@ export default function MarketExplorer() {
     topContractors: [] as { name: string; value: number }[],
     stateBreakdown: [] as { name: string; value: number }[],
   });
+
+  // Advanced analytics state
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   useEffect(() => {
     loadEntities();
@@ -224,6 +229,14 @@ export default function MarketExplorer() {
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}>
                   {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid3X3 className="h-4 w-4" />}
+                </Button>
+                <Button 
+                  variant={showAdvanced ? "secondary" : "outline"} 
+                  size="sm" 
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                >
+                  <Network className="h-4 w-4 mr-2" />
+                  {showAdvanced ? 'Hide' : 'Show'} Network
                 </Button>
                 <Button variant="outline" size="sm" onClick={exportCSV}>
                   <Download className="h-4 w-4 mr-2" />
@@ -508,6 +521,44 @@ export default function MarketExplorer() {
                   >
                     Next
                   </Button>
+                </div>
+              )}
+
+              {/* Advanced Analytics Section */}
+              {showAdvanced && (
+                <div className="mt-8 space-y-6">
+                  {/* Network Graph */}
+                  <Card className="p-4">
+                    <CardHeader className="px-0 pt-0">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Network className="h-5 w-5 text-primary" />
+                        Entity Relationship Network
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="px-0">
+                      <NetworkGraph height={500} />
+                    </CardContent>
+                  </Card>
+
+                  {/* Saved Searches */}
+                  <SavedSearchManager
+                    currentFilters={{
+                      states: filters.states,
+                      businessTypes: filters.businessTypes,
+                      minValue: filters.minValue,
+                      search: filters.search
+                    }}
+                    onLoadSearch={(loadedFilters) => {
+                      setFilters(f => ({
+                        ...f,
+                        states: (loadedFilters.states as string[]) || f.states,
+                        businessTypes: (loadedFilters.businessTypes as string[]) || f.businessTypes,
+                        minValue: (loadedFilters.minValue as number) || f.minValue,
+                        search: (loadedFilters.search as string) || f.search
+                      }));
+                      setPage(0);
+                    }}
+                  />
                 </div>
               )}
             </div>

@@ -1,11 +1,11 @@
 // BASED DATA - Entities List Page
-// Searchable list of all entities with quick navigation
+// Searchable list of all entities with quick navigation and portfolio management
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Building2, Search, Filter, Download, Grid3X3, List, 
-  MapPin, DollarSign, FileText, TrendingUp, ChevronRight, ChevronLeft
+  MapPin, DollarSign, FileText, TrendingUp, ChevronRight, ChevronLeft, Briefcase
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
+import { PortfolioManager } from '@/components/portfolio/PortfolioManager';
 
 interface Entity {
   id: string;
@@ -36,6 +37,7 @@ export default function EntitiesList() {
   const [sortBy, setSortBy] = useState('total_contract_value');
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
+  const [view, setView] = useState<'list' | 'portfolios'>('list');
   const pageSize = 50;
 
   useEffect(() => {
@@ -97,36 +99,62 @@ export default function EntitiesList() {
                 </h1>
                 <p className="text-muted-foreground">{totalCount.toLocaleString()} government contractors tracked</p>
               </div>
+
+              {/* View Toggle */}
+              <div className="flex gap-2">
+                <Button 
+                  variant={view === 'list' ? 'default' : 'outline'}
+                  onClick={() => setView('list')}
+                  className="gap-2"
+                >
+                  <Building2 className="h-4 w-4" />
+                  Directory
+                </Button>
+                <Button 
+                  variant={view === 'portfolios' ? 'default' : 'outline'}
+                  onClick={() => setView('portfolios')}
+                  className="gap-2"
+                >
+                  <Briefcase className="h-4 w-4" />
+                  Portfolios
+                </Button>
+              </div>
             </div>
 
-            {/* Search & Filters */}
-            <div className="flex flex-col sm:flex-row gap-4 mt-6">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
-                  value={searchQuery}
-                  onChange={(e) => handleSearch(e.target.value)}
-                  placeholder="Search by name, UEI, or keyword..."
-                  className="pl-10 h-12"
-                />
+            {/* Search & Filters - Only show in list view */}
+            {view === 'list' && (
+              <div className="flex flex-col sm:flex-row gap-4 mt-6">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Input
+                    value={searchQuery}
+                    onChange={(e) => handleSearch(e.target.value)}
+                    placeholder="Search by name, UEI, or keyword..."
+                    className="pl-10 h-12"
+                  />
+                </div>
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="total_contract_value">Contract Value</SelectItem>
+                    <SelectItem value="contract_count">Contract Count</SelectItem>
+                    <SelectItem value="opportunity_score">Opportunity Score</SelectItem>
+                    <SelectItem value="canonical_name">Name (A-Z)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="total_contract_value">Contract Value</SelectItem>
-                  <SelectItem value="contract_count">Contract Count</SelectItem>
-                  <SelectItem value="opportunity_score">Opportunity Score</SelectItem>
-                  <SelectItem value="canonical_name">Name (A-Z)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            )}
           </div>
         </div>
 
         <div className="container py-6">
-          {/* Results */}
+          {view === 'portfolios' ? (
+            <PortfolioManager />
+          ) : (
+            <>
+              {/* Results */}
           {loading ? (
             <div className="space-y-3">
               {[...Array(10)].map((_, i) => <Skeleton key={i} className="h-20" />)}
@@ -219,7 +247,9 @@ export default function EntitiesList() {
                   <ChevronRight className="h-4 w-4 ml-1" />
                 </Button>
               </div>
-            </div>
+              </div>
+            )}
+            </>
           )}
         </div>
       </div>
