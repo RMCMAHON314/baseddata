@@ -1361,6 +1361,123 @@ export type Database = {
         }
         Relationships: []
       }
+      flywheel_collection_log: {
+        Row: {
+          collected_at: string | null
+          id: string
+          merged_entities: number | null
+          new_entities: number | null
+          pattern_signature: string | null
+          query_params: Json | null
+          records_collected: number | null
+          source_name: string
+        }
+        Insert: {
+          collected_at?: string | null
+          id?: string
+          merged_entities?: number | null
+          new_entities?: number | null
+          pattern_signature?: string | null
+          query_params?: Json | null
+          records_collected?: number | null
+          source_name: string
+        }
+        Update: {
+          collected_at?: string | null
+          id?: string
+          merged_entities?: number | null
+          new_entities?: number | null
+          pattern_signature?: string | null
+          query_params?: Json | null
+          records_collected?: number | null
+          source_name?: string
+        }
+        Relationships: []
+      }
+      flywheel_crawl_log: {
+        Row: {
+          crawled_at: string | null
+          crawler_type: string
+          duration_ms: number | null
+          entities_created: number | null
+          errors: Json | null
+          facts_extracted: number | null
+          id: string
+          metadata: Json | null
+          records_collected: number | null
+          relationships_created: number | null
+        }
+        Insert: {
+          crawled_at?: string | null
+          crawler_type: string
+          duration_ms?: number | null
+          entities_created?: number | null
+          errors?: Json | null
+          facts_extracted?: number | null
+          id?: string
+          metadata?: Json | null
+          records_collected?: number | null
+          relationships_created?: number | null
+        }
+        Update: {
+          crawled_at?: string | null
+          crawler_type?: string
+          duration_ms?: number | null
+          entities_created?: number | null
+          errors?: Json | null
+          facts_extracted?: number | null
+          id?: string
+          metadata?: Json | null
+          records_collected?: number | null
+          relationships_created?: number | null
+        }
+        Relationships: []
+      }
+      flywheel_discovery_queue: {
+        Row: {
+          completed_at: string | null
+          context: Json | null
+          created_at: string | null
+          discovery_type: string
+          error_message: string | null
+          id: string
+          priority: number | null
+          records_collected: number | null
+          started_at: string | null
+          status: string | null
+          target_query: Json
+          target_source: string
+        }
+        Insert: {
+          completed_at?: string | null
+          context?: Json | null
+          created_at?: string | null
+          discovery_type: string
+          error_message?: string | null
+          id?: string
+          priority?: number | null
+          records_collected?: number | null
+          started_at?: string | null
+          status?: string | null
+          target_query: Json
+          target_source: string
+        }
+        Update: {
+          completed_at?: string | null
+          context?: Json | null
+          created_at?: string | null
+          discovery_type?: string
+          error_message?: string | null
+          id?: string
+          priority?: number | null
+          records_collected?: number | null
+          started_at?: string | null
+          status?: string | null
+          target_query?: Json
+          target_source?: string
+        }
+        Relationships: []
+      }
       flywheel_metrics: {
         Row: {
           dimensions: Json | null
@@ -1385,6 +1502,51 @@ export type Database = {
           metric_type?: string
           metric_value?: number
           recorded_at?: string
+        }
+        Relationships: []
+      }
+      flywheel_source_health: {
+        Row: {
+          avg_response_ms: number | null
+          failure_count: number | null
+          id: string
+          last_failure_at: string | null
+          last_success_at: string | null
+          notes: string | null
+          rate_limit_remaining: number | null
+          rate_limit_reset_at: string | null
+          source_name: string
+          status: string | null
+          success_count: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          avg_response_ms?: number | null
+          failure_count?: number | null
+          id?: string
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          notes?: string | null
+          rate_limit_remaining?: number | null
+          rate_limit_reset_at?: string | null
+          source_name: string
+          status?: string | null
+          success_count?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          avg_response_ms?: number | null
+          failure_count?: number | null
+          id?: string
+          last_failure_at?: string | null
+          last_success_at?: string | null
+          notes?: string | null
+          rate_limit_remaining?: number | null
+          rate_limit_reset_at?: string | null
+          source_name?: string
+          status?: string | null
+          success_count?: number | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -2618,6 +2780,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      count_unresolved_records: { Args: never; Returns: number }
       create_record_relationship: {
         Args: {
           p_confidence?: number
@@ -2639,6 +2802,14 @@ export type Database = {
         Returns: boolean
       }
       execute_nl_query: { Args: { p_sql: string }; Returns: Json }
+      find_low_coverage_areas: {
+        Args: never
+        Returns: {
+          area_name: string
+          categories: string[]
+          record_count: number
+        }[]
+      }
       find_nearby_entities_by_name: {
         Args: {
           p_lat: number
@@ -2666,6 +2837,15 @@ export type Database = {
           similarity: number
         }[]
       }
+      find_underexplored_areas: {
+        Args: never
+        Returns: {
+          entity_count: number
+          missing_categories: string[]
+          name: string
+          query_count: number
+        }[]
+      }
       get_flywheel_health: { Args: never; Returns: Json }
       get_matched_sources: {
         Args: { p_query: string }
@@ -2683,6 +2863,19 @@ export type Database = {
       increment_query_access_count: {
         Args: { query_uuid: string }
         Returns: number
+      }
+      log_kraken_crawl: {
+        Args: {
+          p_crawler_type: string
+          p_duration_ms?: number
+          p_entities?: number
+          p_errors?: Json
+          p_facts?: number
+          p_metadata?: Json
+          p_records?: number
+          p_relationships?: number
+        }
+        Returns: string
       }
       log_query: {
         Args: {
@@ -2724,6 +2917,16 @@ export type Database = {
         }
         Returns: string
       }
+      queue_kraken_discovery: {
+        Args: {
+          p_context?: Json
+          p_discovery_type: string
+          p_priority?: number
+          p_target_query: Json
+          p_target_source: string
+        }
+        Returns: string
+      }
       record_circuit_result: {
         Args: { p_domain: string; p_success: boolean }
         Returns: string
@@ -2752,6 +2955,14 @@ export type Database = {
       }
       update_intelligence_metrics: { Args: never; Returns: undefined }
       update_query_stats: { Args: { p_query_id: string }; Returns: undefined }
+      update_source_health: {
+        Args: {
+          p_response_ms?: number
+          p_source_name: string
+          p_success: boolean
+        }
+        Returns: undefined
+      }
       update_source_performance: {
         Args: {
           p_error_message?: string
