@@ -342,17 +342,17 @@ export function PremiumOmniscientResults({
           {showInsightsPanel && (
             <motion.div
               initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 320, opacity: 1 }}
+              animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden"
+              className="overflow-visible"
             >
-              <div className="mt-4 pt-4 border-t border-slate-200 h-full">
-                <ScrollArea className="h-[280px]">
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <div className="max-h-[320px] overflow-y-auto">
                   <InsightsPanel
                     insights={insights}
                     records={processedRecords}
                   />
-                </ScrollArea>
+                </div>
               </div>
             </motion.div>
           )}
@@ -561,8 +561,8 @@ export function PremiumOmniscientResults({
               <span className="text-xs text-slate-400">{filteredRecords.length} records</span>
             </div>
 
-            {/* Content */}
-            <ScrollArea className="flex-1">
+            {/* Content - use native overflow for better scrolling */}
+            <div className="flex-1 overflow-y-auto">
               {viewMode === 'table' ? (
                 <div className="p-4">
                   <ResultsDataTable 
@@ -653,7 +653,7 @@ export function PremiumOmniscientResults({
                   className="h-full rounded-none border-0"
                 />
               )}
-            </ScrollArea>
+            </div>
           </div>
         </div>
       </div>
