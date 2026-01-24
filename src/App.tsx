@@ -10,6 +10,8 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Omniscient from "./pages/Omniscient";
 import Health from "./pages/Health";
 import GapFixer from "./pages/GapFixer";
+import Dashboard from "./pages/Dashboard";
+import Pricing from "./pages/Pricing";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,6 +27,8 @@ const App = () => (
             <Route path="/" element={<Omniscient />} />
             <Route path="/health" element={<Health />} />
             <Route path="/gap-fixer" element={<GapFixer />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/pricing" element={<Pricing />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
