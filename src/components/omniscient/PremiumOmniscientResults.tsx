@@ -24,7 +24,8 @@ import { EntityDeepDive } from '@/components/entity/EntityDeepDive';
 import { HistorySidebar } from '@/components/history/HistorySidebar';
 import { InsightsPanel } from '@/components/insights/InsightsPanel';
 import { CriticalInsightsBanner } from '@/components/insights/CriticalInsightsBanner';
-import { LiveDashboardStats } from '@/components/insights/LiveDashboardStats';
+import { LiveDashboardStats, type DashboardStat } from '@/components/insights/LiveDashboardStats';
+import { BreakdownSheet, type BreakdownFilter } from '@/components/breakdown/BreakdownSheet';
 import type { GeoJSONFeature, GeoJSONFeatureCollection, CollectedData, OmniscientInsights, MapLayer } from '@/types/omniscient';
 import { CATEGORY_COLORS } from '@/lib/mapbox';
 import { toast } from 'sonner';
@@ -92,6 +93,11 @@ export function PremiumOmniscientResults({
   const [showInsightsPanel, setShowInsightsPanel] = useState(true); // Default open for NUCLEAR
   const [showCriticalBanner, setShowCriticalBanner] = useState(true);
   const dataScrollRef = useRef<HTMLDivElement>(null);
+  
+  // Breakdown Sheet state
+  const [breakdownOpen, setBreakdownOpen] = useState(false);
+  const [breakdownFilter, setBreakdownFilter] = useState<BreakdownFilter>({ type: 'all', label: 'All Records' });
+  const [breakdownRecords, setBreakdownRecords] = useState<ProcessedRecord[]>([]);
 
   // Process and deduplicate data
   const processedRecords = useMemo(() => {
@@ -196,6 +202,18 @@ export function PremiumOmniscientResults({
       toast.error('Export failed');
     }
   };
+
+  // Handle stat click for breakdown drill-down
+  const handleStatClick = useCallback((stat: DashboardStat, records: ProcessedRecord[]) => {
+    setBreakdownFilter({
+      type: stat.filterType || 'all',
+      value: stat.filterValue,
+      label: stat.label,
+      icon: stat.icon,
+    });
+    setBreakdownRecords(records);
+    setBreakdownOpen(true);
+  }, []);
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -318,8 +336,8 @@ export function PremiumOmniscientResults({
             </span>
           </div>
         </div>
-        {/* NUCLEAR: Live Dashboard Stats */}
-        <LiveDashboardStats records={processedRecords} />
+        {/* NUCLEAR: Live Dashboard Stats - Clickable for drill-down */}
+        <LiveDashboardStats records={processedRecords} onStatClick={handleStatClick} />
         
         {/* NUCLEAR: Critical Insights Banner */}
         {showCriticalBanner && processedRecords.length > 0 && (
@@ -678,6 +696,19 @@ export function PremiumOmniscientResults({
           />
         )}
       </AnimatePresence>
+      
+      {/* Granular Breakdown Sheet */}
+      <BreakdownSheet
+        open={breakdownOpen}
+        onOpenChange={setBreakdownOpen}
+        records={breakdownRecords}
+        filter={breakdownFilter}
+        title={`${breakdownFilter.label} Breakdown`}
+        onRecordClick={(record) => {
+          setBreakdownOpen(false);
+          handleFeatureClick(record);
+        }}
+      />
     </div>
     </TooltipProvider>
   );
