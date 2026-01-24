@@ -5,13 +5,17 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Building2, MapPin, Calendar, TrendingUp, AlertTriangle, 
   ArrowLeft, Star, Bell, Download, Share2, ExternalLink,
-  FileText, Users, DollarSign, Shield, Clock, Activity
+  FileText, Users, DollarSign, Shield, Clock, Activity,
+  Award, Briefcase, ChevronRight
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/Logo';
+import { EntityLink } from '@/components/EntityLink';
+import { formatCurrency, formatRelativeDate, getScoreColor } from '@/lib/formatters';
 
 interface EntityData {
   id: string;
@@ -58,8 +62,19 @@ export default function EntityProfilePage() {
   const [entity, setEntity] = useState<EntityData | null>(null);
   const [facts, setFacts] = useState<EntityFact[]>([]);
   const [relationships, setRelationships] = useState<EntityRelationship[]>([]);
+  const [records, setRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isWatched, setIsWatched] = useState(false);
+
+  // Computed stats
+  const contractFacts = facts.filter(f => f.fact_type === 'contract_awarded');
+  const grantFacts = facts.filter(f => f.fact_type === 'grant_received');
+  const totalContractValue = contractFacts.reduce((sum, f) => 
+    sum + (Number(f.fact_value?.amount) || Number(f.fact_value?.award_amount) || 0), 0
+  );
+  const totalGrantValue = grantFacts.reduce((sum, f) => 
+    sum + (Number(f.fact_value?.amount) || 0), 0
+  );
 
   useEffect(() => {
     if (id) loadEntity();
@@ -68,13 +83,14 @@ export default function EntityProfilePage() {
   const loadEntity = async () => {
     setLoading(true);
     
-    const [entityRes, factsRes, relsRes] = await Promise.all([
+    const [entityRes, factsRes, relsRes, recordsRes] = await Promise.all([
       supabase.from('core_entities').select('*').eq('id', id).single(),
-      supabase.from('core_facts').select('*').eq('entity_id', id).order('created_at', { ascending: false }).limit(50),
+      supabase.from('core_facts').select('*').eq('entity_id', id).order('created_at', { ascending: false }).limit(100),
       supabase.from('core_relationships').select(`
         id, relationship_type, confidence,
         to_entity:core_entities!core_relationships_to_entity_id_fkey(id, canonical_name, entity_type)
-      `).eq('from_entity_id', id).limit(20)
+      `).eq('from_entity_id', id).limit(50),
+      supabase.from('records').select('*').eq('entity_id', id).limit(50)
     ]);
 
     if (entityRes.data) setEntity(entityRes.data as EntityData);
@@ -87,6 +103,7 @@ export default function EntityProfilePage() {
         related_entity: r.to_entity
       })));
     }
+    if (recordsRes.data) setRecords(recordsRes.data);
     
     setLoading(false);
   };
@@ -101,13 +118,6 @@ export default function EntityProfilePage() {
       await supabase.from('entity_watchlist').insert({ entity_id: id, user_id: user.id });
     }
     setIsWatched(!isWatched);
-  };
-
-  const getScoreColor = (score: number | null) => {
-    if (!score) return 'text-muted-foreground';
-    if (score >= 80) return 'text-green-400';
-    if (score >= 50) return 'text-yellow-400';
-    return 'text-red-400';
   };
 
   if (loading) {
@@ -181,18 +191,24 @@ export default function EntityProfilePage() {
             </div>
           </div>
 
-          {/* Score Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mt-6">
-            <ScoreCard 
-              label="Data Quality" 
-              value={entity.data_quality_score} 
-              icon={<Activity className="w-5 h-5" />}
-            />
-            <ScoreCard 
-              label="Health Score" 
-              value={entity.health_score} 
-              icon={<Shield className="w-5 h-5" />}
-            />
+          {/* Score Cards - Enhanced with Contract Values */}
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mt-6">
+            {/* Total Contract Value - PROMINENT */}
+            <Card className="bg-card border-success/30 col-span-2 md:col-span-2">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-muted-foreground text-sm">Total Contract Value</span>
+                  <DollarSign className="w-5 h-5 text-success" />
+                </div>
+                <p className="text-3xl font-bold text-success font-mono">
+                  {formatCurrency(totalContractValue)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {contractFacts.length} contracts + {grantFacts.length} grants
+                </p>
+              </CardContent>
+            </Card>
+
             <ScoreCard 
               label="Opportunity" 
               value={entity.opportunity_score} 
@@ -203,6 +219,11 @@ export default function EntityProfilePage() {
               value={entity.risk_score} 
               icon={<AlertTriangle className="w-5 h-5" />}
               inverted
+            />
+            <ScoreCard 
+              label="Data Quality" 
+              value={entity.data_quality_score} 
+              icon={<Activity className="w-5 h-5" />}
             />
             <ScoreCard 
               label="Sources" 
@@ -345,12 +366,131 @@ export default function EntityProfilePage() {
           </TabsContent>
 
           <TabsContent value="contracts">
-            <Card className="bg-card border-border">
-              <CardContent className="p-6 text-center text-muted-foreground">
-                <DollarSign className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Contract data will appear here when available.</p>
-              </CardContent>
-            </Card>
+            <div className="space-y-6">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="bg-success/5 border-success/30">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 text-success mb-1">
+                      <DollarSign className="w-4 h-4" />
+                      <span className="text-xs">Total Contracts</span>
+                    </div>
+                    <p className="text-2xl font-bold text-success font-mono">
+                      {formatCurrency(totalContractValue)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{contractFacts.length} awards</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-purple-500/5 border-purple-500/30">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 text-purple-400 mb-1">
+                      <Award className="w-4 h-4" />
+                      <span className="text-xs">Total Grants</span>
+                    </div>
+                    <p className="text-2xl font-bold text-purple-400 font-mono">
+                      {formatCurrency(totalGrantValue)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{grantFacts.length} grants</p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-primary/5 border-primary/30">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 text-primary mb-1">
+                      <Briefcase className="w-4 h-4" />
+                      <span className="text-xs">Combined Value</span>
+                    </div>
+                    <p className="text-2xl font-bold text-primary font-mono">
+                      {formatCurrency(totalContractValue + totalGrantValue)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">All financial data</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Contract List */}
+              <Card className="bg-card border-border">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="w-5 h-5 text-success" />
+                    Contract Awards ({contractFacts.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {contractFacts.length > 0 ? (
+                    <ScrollArea className="h-[400px]">
+                      <div className="space-y-4">
+                        {contractFacts.map(fact => (
+                          <div key={fact.id} className="p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium truncate">
+                                  {String(fact.fact_value?.description || fact.fact_value?.title || 'Contract Award')}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {String(fact.fact_value?.awarding_agency || fact.fact_value?.agency || 'Unknown Agency')}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  ID: {String(fact.fact_value?.award_id || fact.fact_value?.contract_id || 'N/A')}
+                                </p>
+                              </div>
+                              <div className="text-right ml-4">
+                                <p className="text-2xl font-bold text-success font-mono">
+                                  {formatCurrency(Number(fact.fact_value?.amount) || Number(fact.fact_value?.award_amount) || 0)}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {formatRelativeDate(fact.created_at)}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <DollarSign className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                      <p>No contract data available yet</p>
+                      <p className="text-sm">Contract data is pulled from USASpending, SAM.gov, and FPDS</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Grant List */}
+              {grantFacts.length > 0 && (
+                <Card className="bg-card border-border">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Award className="w-5 h-5 text-purple-400" />
+                      Grants Received ({grantFacts.length})
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {grantFacts.map(fact => (
+                        <div key={fact.id} className="p-4 bg-muted/30 rounded-lg">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate">
+                                {String(fact.fact_value?.project_title || fact.fact_value?.title || 'Grant Award')}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {String(fact.fact_value?.agency || 'Unknown Agency')}
+                              </p>
+                            </div>
+                            <div className="text-right ml-4">
+                              <p className="text-2xl font-bold text-purple-400 font-mono">
+                                {formatCurrency(Number(fact.fact_value?.amount) || 0)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </TabsContent>
         </Tabs>
       </main>
