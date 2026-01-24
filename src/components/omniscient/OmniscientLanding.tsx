@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { DATA_SOURCE_REGISTRY } from '@/types/omniscient';
+import { InfiniteAlgorithmWidget } from '@/components/infinite/InfiniteAlgorithmWidget';
 
 interface OmniscientLandingProps {
   onSubmit: (prompt: string) => void;
@@ -392,6 +393,11 @@ export const OmniscientLanding = forwardRef<HTMLDivElement, OmniscientLandingPro
               })}
             </div>
           </div>
+        </section>
+
+        {/* Infinite Algorithm Status */}
+        <section className="max-w-7xl mx-auto px-6 py-8">
+          <InfiniteAlgorithmWidget />
         </section>
 
         {/* Quantum Features Grid */}

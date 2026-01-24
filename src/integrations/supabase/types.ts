@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      algorithm_metrics: {
+        Row: {
+          created_at: string | null
+          cycle_timestamp: string | null
+          duration_ms: number | null
+          entities_expanded: number | null
+          facts_enriched: number | null
+          id: string
+          insights_generated: number | null
+          queue_additions: number | null
+          queue_processed: number | null
+          relationships_discovered: number | null
+          sources_discovered: number | null
+          total_entities: number | null
+          total_facts: number | null
+          total_relationships: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          cycle_timestamp?: string | null
+          duration_ms?: number | null
+          entities_expanded?: number | null
+          facts_enriched?: number | null
+          id?: string
+          insights_generated?: number | null
+          queue_additions?: number | null
+          queue_processed?: number | null
+          relationships_discovered?: number | null
+          sources_discovered?: number | null
+          total_entities?: number | null
+          total_facts?: number | null
+          total_relationships?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          cycle_timestamp?: string | null
+          duration_ms?: number | null
+          entities_expanded?: number | null
+          facts_enriched?: number | null
+          id?: string
+          insights_generated?: number | null
+          queue_additions?: number | null
+          queue_processed?: number | null
+          relationships_discovered?: number | null
+          sources_discovered?: number | null
+          total_entities?: number | null
+          total_facts?: number | null
+          total_relationships?: number | null
+        }
+        Relationships: []
+      }
       api_circuit_breakers: {
         Row: {
           api_domain: string
@@ -2996,6 +3047,25 @@ export type Database = {
         }
         Relationships: []
       }
+      infinite_algorithm_status: {
+        Row: {
+          avg_opportunity_score: number | null
+          completed_24h: number | null
+          entities_expanded_24h: number | null
+          facts_enriched_24h: number | null
+          insights_generated_24h: number | null
+          last_cycle: string | null
+          last_cycle_duration: number | null
+          queue_pending: number | null
+          queue_processing: number | null
+          relationships_discovered_24h: number | null
+          total_entities: number | null
+          total_facts: number | null
+          total_insights: number | null
+          total_relationships: number | null
+        }
+        Relationships: []
+      }
       realtime_dashboard: {
         Row: {
           metric: string | null
@@ -3108,6 +3178,27 @@ export type Database = {
         }
         Returns: boolean
       }
+      detect_anomalies: {
+        Args: { lookback_days?: number; threshold_multiplier?: number }
+        Returns: {
+          anomaly_type: string
+          confidence: number
+          description: string
+          details: Json
+          entity_id: string
+          entity_name: string
+        }[]
+      }
+      discover_transitive_relationships: {
+        Args: { limit_count?: number; min_strength?: number }
+        Returns: {
+          from_entity_id: string
+          inferred_strength: number
+          to_entity_id: string
+          via_entity_id: string
+          via_type: string
+        }[]
+      }
       execute_nl_query: { Args: { p_sql: string }; Returns: Json }
       find_competitors: {
         Args: { p_entity_id: string; p_limit?: number }
@@ -3173,9 +3264,32 @@ export type Database = {
         Returns: string
       }
       generate_intelligence_alerts: { Args: never; Returns: number }
+      generate_market_insights: {
+        Args: never
+        Returns: {
+          data: Json
+          description: string
+          market_category: string
+          market_state: string
+        }[]
+      }
       get_entity_network: {
         Args: { p_depth?: number; p_entity_id: string; p_min_strength?: number }
         Returns: Json
+      }
+      get_fact_poor_entities: {
+        Args: {
+          limit_count?: number
+          min_facts?: number
+          min_opportunity_score?: number
+        }
+        Returns: {
+          canonical_name: string
+          entity_type: string
+          fact_count: number
+          id: string
+          opportunity_score: number
+        }[]
       }
       get_flywheel_health: { Args: never; Returns: Json }
       get_matched_sources: {
@@ -3189,6 +3303,18 @@ export type Database = {
           name: string
           priority: number
           slug: string
+        }[]
+      }
+      get_under_explored_entities: {
+        Args: { limit_count?: number; min_relationships?: number }
+        Returns: {
+          canonical_name: string
+          entity_type: string
+          fact_count: number
+          id: string
+          opportunity_score: number
+          relationship_count: number
+          state: string
         }[]
       }
       increment_query_access_count: {
@@ -3257,6 +3383,10 @@ export type Database = {
           p_target_source: string
         }
         Returns: string
+      }
+      recalculate_opportunity_scores: {
+        Args: { lookback_days?: number }
+        Returns: number
       }
       record_circuit_result: {
         Args: { p_domain: string; p_success: boolean }
