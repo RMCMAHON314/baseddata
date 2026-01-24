@@ -17,6 +17,7 @@ import ApiDocs from "./pages/ApiDocs";
 import EntityProfilePage from "./pages/EntityProfilePage";
 import Admin from "./pages/Admin";
 import Onboarding from "./pages/Onboarding";
+import Diagnostic from "./pages/Diagnostic";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/entity/:id" element={<EntityProfilePage />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/diagnostic" element={<Diagnostic />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
