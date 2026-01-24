@@ -25,6 +25,7 @@ import DataSources from "./pages/DataSources";
 import RelationshipGraph from "./pages/RelationshipGraph";
 import Search from "./pages/Search";
 import Architecture from "./pages/Architecture";
+import SemanTX from "./pages/SemanTX";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -54,6 +55,7 @@ const App = () => (
             <Route path="/graph" element={<RelationshipGraph />} />
             <Route path="/search" element={<Search />} />
             <Route path="/architecture" element={<Architecture />} />
+            <Route path="/semantx" element={<SemanTX />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

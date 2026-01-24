@@ -648,6 +648,8 @@ export type Database = {
           recipient_entity_id: string | null
           recipient_name: string
           recipient_uei: string | null
+          search_text: string | null
+          search_vector: unknown
           set_aside_type: string | null
           source: string | null
           source_url: string | null
@@ -692,6 +694,8 @@ export type Database = {
           recipient_entity_id?: string | null
           recipient_name: string
           recipient_uei?: string | null
+          search_text?: string | null
+          search_vector?: unknown
           set_aside_type?: string | null
           source?: string | null
           source_url?: string | null
@@ -736,6 +740,8 @@ export type Database = {
           recipient_entity_id?: string | null
           recipient_name?: string
           recipient_uei?: string | null
+          search_text?: string | null
+          search_vector?: unknown
           set_aside_type?: string | null
           source?: string | null
           source_url?: string | null
@@ -862,6 +868,8 @@ export type Database = {
           phone: string | null
           psc_codes: string[] | null
           risk_score: number | null
+          search_text: string | null
+          search_vector: unknown
           source_count: number | null
           source_records: Json
           state: string | null
@@ -902,6 +910,8 @@ export type Database = {
           phone?: string | null
           psc_codes?: string[] | null
           risk_score?: number | null
+          search_text?: string | null
+          search_vector?: unknown
           source_count?: number | null
           source_records?: Json
           state?: string | null
@@ -942,6 +952,8 @@ export type Database = {
           phone?: string | null
           psc_codes?: string[] | null
           risk_score?: number | null
+          search_text?: string | null
+          search_vector?: unknown
           source_count?: number | null
           source_records?: Json
           state?: string | null
@@ -3332,6 +3344,8 @@ export type Database = {
           raw_data: Json | null
           resource_links: Json | null
           response_deadline: string | null
+          search_text: string | null
+          search_vector: unknown
           set_aside: string | null
           solicitation_number: string | null
           status: string | null
@@ -3362,6 +3376,8 @@ export type Database = {
           raw_data?: Json | null
           resource_links?: Json | null
           response_deadline?: string | null
+          search_text?: string | null
+          search_vector?: unknown
           set_aside?: string | null
           solicitation_number?: string | null
           status?: string | null
@@ -3392,6 +3408,8 @@ export type Database = {
           raw_data?: Json | null
           resource_links?: Json | null
           response_deadline?: string | null
+          search_text?: string | null
+          search_vector?: unknown
           set_aside?: string | null
           solicitation_number?: string | null
           status?: string | null
@@ -5354,6 +5372,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      derive_relationships: { Args: never; Returns: number }
       detect_anomalies: {
         Args: { lookback_days?: number; threshold_multiplier?: number }
         Returns: {
@@ -5460,6 +5479,7 @@ export type Database = {
         Args: { p_entity_id: string }
         Returns: string
       }
+      generate_insights: { Args: never; Returns: number }
       generate_intelligence_alerts: { Args: never; Returns: number }
       generate_market_insights: {
         Args: never
@@ -5655,6 +5675,28 @@ export type Database = {
       record_master_dataset_stats: { Args: never; Returns: string }
       refresh_all_materialized_views: { Args: never; Returns: undefined }
       reset_monthly_search_counts: { Args: never; Returns: undefined }
+      semantx_search: {
+        Args: {
+          p_limit?: number
+          p_max_value?: number
+          p_min_value?: number
+          p_query: string
+          p_states?: string[]
+          p_types?: string[]
+        }
+        Returns: {
+          city: string
+          description: string
+          entity_type: string
+          id: string
+          name: string
+          relevance: number
+          result_type: string
+          score: number
+          state: string
+          value: number
+        }[]
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       sync_entity_contract_stats: {
