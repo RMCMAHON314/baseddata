@@ -80,7 +80,7 @@ export function useUltimateFlywheel() {
   const [lastResult, setLastResult] = useState<FlywheelRunResult | null>(null);
 
   // ============================================================================
-  // HEALTH CHECK QUERY
+  // HEALTH CHECK QUERY - More aggressive refresh
   // ============================================================================
   
   const { data: health, isLoading: healthLoading, refetch: refetchHealth } = useQuery({
@@ -99,8 +99,8 @@ export function useUltimateFlywheel() {
         target_score: data.target_score || 95,
       };
     },
-    refetchInterval: 60000, // Refresh every minute
-    staleTime: 30000,
+    refetchInterval: 30000, // Refresh every 30s for faster updates
+    staleTime: 15000,
   });
 
   // ============================================================================

@@ -38,6 +38,7 @@ interface Discovery {
 
 interface HuntResult {
   discoveries: number;
+  targets_queued: number;
   trigger_type: string;
   trigger_id?: string;
 }
@@ -468,7 +469,16 @@ Deno.serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    const { trigger_type, data } = await req.json().catch(() => ({ trigger_type: 'scheduled', data: {} }));
+    const body = await req.json().catch(() => ({}));
+    const { trigger_type = 'scheduled', data = {}, query_id, entity_id, batch_size } = body;
+    
+    // Support both nested data object and flat parameters
+    const resolvedData = {
+      query_id: data.query_id || query_id,
+      entity_id: data.entity_id || entity_id,
+      relationship_id: data.relationship_id,
+      ...data,
+    };
     
     console.log(`🎯 [KRAKEN HUNTERS] Triggered: ${trigger_type}`);
     const startTime = Date.now();
@@ -477,28 +487,36 @@ Deno.serve(async (req) => {
 
     switch (trigger_type) {
       case 'query_completed':
-        if (data.query_id) {
-          discoveries = await huntFromQueryResults(data.query_id, supabase);
+        if (resolvedData.query_id) {
+          discoveries = await huntFromQueryResults(resolvedData.query_id, supabase);
+        } else {
+          // Fallback: hunt trending topics if no query_id
+          discoveries = await huntTrendingTopics(supabase);
         }
         break;
         
       case 'entity_created':
-        if (data.entity_id) {
-          discoveries = await huntForEntityData(data.entity_id, supabase);
+        if (resolvedData.entity_id) {
+          discoveries = await huntForEntityData(resolvedData.entity_id, supabase);
         }
         break;
         
       case 'relationship_found':
-        if (data.relationship_id) {
-          discoveries = await huntFromRelationship(data.relationship_id, supabase);
+        if (resolvedData.relationship_id) {
+          discoveries = await huntFromRelationship(resolvedData.relationship_id, supabase);
         }
         break;
         
+      case 'flywheel_scheduled':
       case 'scheduled':
       default:
         discoveries = await huntTrendingTopics(supabase);
         break;
     }
+    
+    // Apply batch size limit if specified
+    const maxResults = batch_size || HUNTING_CONFIG.MAX_DISCOVERIES_PER_QUERY;
+    discoveries = discoveries.slice(0, maxResults);
 
     // Queue all discoveries
     if (discoveries.length > 0) {
@@ -522,18 +540,23 @@ Deno.serve(async (req) => {
     const processingTime = Date.now() - startTime;
     console.log(`🎯 [KRAKEN HUNTERS] Found ${discoveries.length} targets in ${processingTime}ms`);
 
-    // Log the hunt
-    await supabase.rpc('log_kraken_crawl', {
-      p_crawler_type: `hunter_${trigger_type}`,
-      p_records: discoveries.length,
-      p_duration_ms: processingTime,
-      p_metadata: { trigger_type, trigger_data: data }
-    });
+    // Log the hunt (non-blocking)
+    try {
+      await supabase.rpc('log_kraken_crawl', {
+        p_crawler_type: `hunter_${trigger_type}`,
+        p_records: discoveries.length,
+        p_duration_ms: processingTime,
+        p_metadata: { trigger_type, resolved_data: resolvedData }
+      });
+    } catch (logErr) {
+      console.log('Log error:', logErr);
+    }
 
     const result: HuntResult = {
       discoveries: discoveries.length,
+      targets_queued: discoveries.length,  // Add this for flywheel compatibility
       trigger_type,
-      trigger_id: data.query_id || data.entity_id || data.relationship_id
+      trigger_id: resolvedData.query_id || resolvedData.entity_id || resolvedData.relationship_id
     };
 
     return new Response(

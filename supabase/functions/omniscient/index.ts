@@ -2244,84 +2244,122 @@ serve(async (req) => {
       
       // Non-blocking: Trigger entity resolution for new records
       if (persistedRecordIds.length > 0) {
-        console.log('   🧠 Triggering Core pipelines...');
+        console.log('   🧠 Triggering Core pipelines (5 parallel streams)...');
+        
+        const pipelinePromises: Promise<void>[] = [];
         
         // 1. Entity Resolution - merge records into unified entities
-        fetch(`${supabaseUrl}/functions/v1/entity-resolver`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${supabaseServiceKey}`,
-          },
-          body: JSON.stringify({
-            record_ids: persistedRecordIds.slice(0, 20),
-            query_id: queryId,
-            entity_type: intent.core_entity.type,
-            location: intent.where,
-          }),
-        }).then(res => res.json())
-          .then(data => console.log(`   ✓ Entity resolver: ${data.new_entities || 0} new, ${data.merged_entities || 0} merged, ${data.new_facts || 0} facts`))
-          .catch(err => console.log(`   ⚠ Entity resolver error: ${err.message}`));
+        pipelinePromises.push(
+          fetch(`${supabaseUrl}/functions/v1/entity-resolver`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabaseServiceKey}`,
+            },
+            body: JSON.stringify({
+              record_ids: persistedRecordIds.slice(0, 25),
+              query_id: queryId,
+              entity_type: intent.core_entity.type,
+              location: intent.where,
+            }),
+          }).then(res => res.json())
+            .then(data => console.log(`   ✓ Entity resolver: ${data.new_entities || 0} new, ${data.merged_entities || 0} merged`))
+            .catch(err => console.log(`   ⚠ Entity resolver: ${err.message}`))
+        );
         
         // 2. Fact Extraction - extract temporal facts from records
-        fetch(`${supabaseUrl}/functions/v1/core-extract-facts`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${supabaseServiceKey}`,
-          },
-          body: JSON.stringify({
-            record_ids: persistedRecordIds.slice(0, 30),
-            query_id: queryId,
-          }),
-        }).then(res => res.json())
-          .then(data => console.log(`   ✓ Fact extraction: ${data.facts_created || 0} facts created`))
-          .catch(err => console.log(`   ⚠ Fact extraction error: ${err.message}`));
+        pipelinePromises.push(
+          fetch(`${supabaseUrl}/functions/v1/core-extract-facts`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabaseServiceKey}`,
+            },
+            body: JSON.stringify({
+              record_ids: persistedRecordIds.slice(0, 40),
+              query_id: queryId,
+              batch_size: 40,
+            }),
+          }).then(res => res.json())
+            .then(data => console.log(`   ✓ Fact extraction: ${data.facts_created || 0} facts`))
+            .catch(err => console.log(`   ⚠ Fact extraction: ${err.message}`))
+        );
 
         // 3. Insight Generation - generate actionable insights
-        fetch(`${supabaseUrl}/functions/v1/core-generate-insights`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${supabaseServiceKey}`,
-          },
-          body: JSON.stringify({
-            query_id: queryId,
-            prompt,
-            features: features.slice(0, 100),
-            intent: {
-              entity_type: intent.core_entity.type,
-              category: intent.what.category,
-              location: intent.where,
+        pipelinePromises.push(
+          fetch(`${supabaseUrl}/functions/v1/core-generate-insights`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabaseServiceKey}`,
             },
-          }),
-        }).then(res => res.json())
-          .then(data => console.log(`   ✓ Insights: ${data.insights_created || 0} insights generated`))
-          .catch(err => console.log(`   ⚠ Insight generation error: ${err.message}`));
+            body: JSON.stringify({
+              query_id: queryId,
+              prompt,
+              features: features.slice(0, 100),
+              intent: {
+                entity_type: intent.core_entity.type,
+                category: intent.what.category,
+                location: intent.where,
+              },
+            }),
+          }).then(res => res.json())
+            .then(data => console.log(`   ✓ Insights: ${data.insights_created || 0} generated`))
+            .catch(err => console.log(`   ⚠ Insight generation: ${err.message}`))
+        );
         
-        // 4. Core Learning - update query patterns and boost relevance
-        fetch(`${supabaseUrl}/functions/v1/core-learning`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${supabaseServiceKey}`,
-          },
-          body: JSON.stringify({
-            query_id: queryId,
-            prompt,
-            intent: {
-              entity_type: intent.core_entity.type,
-              category: intent.what.category,
-              location: intent.where,
-              keywords: intent.core_entity.keywords,
+        // 4. Core Learning - update query patterns
+        pipelinePromises.push(
+          fetch(`${supabaseUrl}/functions/v1/core-learning`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabaseServiceKey}`,
             },
-            result_count: features.length,
-            avg_relevance: avgRelevance,
-            sources_used: sources.filter(s => s.status === 'success').map(s => s.name),
-          }),
-        }).then(res => res.json())
-          .then(data => console.log(`   ✓ Core learning: pattern=${data.pattern_id || 'new'}`))
-          .catch(err => console.log(`   ⚠ Core learning error: ${err.message}`));
+            body: JSON.stringify({
+              query_id: queryId,
+              prompt,
+              intent: {
+                entity_type: intent.core_entity.type,
+                category: intent.what.category,
+                location: intent.where,
+                keywords: intent.core_entity.keywords,
+              },
+              result_count: features.length,
+              avg_relevance: avgRelevance,
+              sources_used: sources.filter(s => s.status === 'success').map(s => s.name),
+            }),
+          }).then(res => res.json())
+            .then(data => console.log(`   ✓ Core learning: pattern=${data.pattern_id || 'new'}`))
+            .catch(err => console.log(`   ⚠ Core learning: ${err.message}`))
+        );
+        
+        // 5. Kraken Hunters - discover new data targets from this query
+        pipelinePromises.push(
+          fetch(`${supabaseUrl}/functions/v1/kraken-hunters`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabaseServiceKey}`,
+            },
+            body: JSON.stringify({
+              trigger_type: 'query_completed',
+              query_id: queryId,
+              prompt,
+              location: intent.where,
+              category: intent.what.category,
+              result_count: features.length,
+            }),
+          }).then(res => res.json())
+            .then(data => console.log(`   ✓ Kraken hunters: ${data.targets_queued || 0} targets queued`))
+            .catch(err => console.log(`   ⚠ Kraken hunters: ${err.message}`))
+        );
+        
+        // Await all pipelines with timeout safety (don't block response)
+        Promise.race([
+          Promise.allSettled(pipelinePromises),
+          new Promise(r => setTimeout(r, 5000)) // 5s max wait
+        ]).then(() => console.log('   ✓ Core pipelines complete'));
       }
     }
 
