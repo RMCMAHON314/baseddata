@@ -27,6 +27,8 @@ import Search from "./pages/Search";
 import Architecture from "./pages/Architecture";
 import SemanTX from "./pages/SemanTX";
 import OceanDashboard from "./pages/OceanDashboard";
+import Showcase from "./pages/Showcase";
+import Explore from "./pages/Explore";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,7 +41,10 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Omniscient />} />
+            <Route path="/" element={<Showcase />} />
+            <Route path="/omniscient" element={<Omniscient />} />
+            <Route path="/showcase" element={<Showcase />} />
+            <Route path="/explore" element={<Explore />} />
             <Route path="/health" element={<Health />} />
             <Route path="/gap-fixer" element={<GapFixer />} />
             <Route path="/dashboard" element={<Dashboard />} />
