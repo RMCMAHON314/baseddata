@@ -44,3 +44,6 @@ verify_jwt = false
 
 [functions.unified-intelligence]
 verify_jwt = false
+
+[functions.infinite-algorithm]
+verify_jwt = false
