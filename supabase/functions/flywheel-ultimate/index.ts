@@ -12,37 +12,40 @@ const corsHeaders = {
 };
 
 // ============================================================================
-// ULTIMATE CONFIGURATION - AGGRESSIVE MODE 🔥
+// ULTIMATE CONFIGURATION - MAXIMUM AGGRESSION 🔥🔥🔥
+// Audit v10.0 - Optimized for rapid growth to 95/100 health
 // ============================================================================
 
 const ULTIMATE_CONFIG = {
-  // Processing limits per invocation
-  DISCOVERY_BATCH_SIZE: 5,
-  CRAWLER_BATCH_SIZE: 3,
-  ENTITY_BATCH_SIZE: 50,
-  FACT_BATCH_SIZE: 100,
-  INSIGHT_BATCH_SIZE: 25,
-  SCORING_BATCH_SIZE: 50,
+  // Processing limits per invocation - DOUBLED for faster growth
+  DISCOVERY_BATCH_SIZE: 20,
+  CRAWLER_BATCH_SIZE: 8,
+  ENTITY_BATCH_SIZE: 100,  // More aggressive resolution
+  FACT_BATCH_SIZE: 200,    // Extract more facts per run
+  INSIGHT_BATCH_SIZE: 40,
+  SCORING_BATCH_SIZE: 100,
+  KRAKEN_BATCH_SIZE: 15,   // New: Kraken targets per run
   
-  // Timing
-  MAX_RUN_TIME_MS: 55000, // 55s safety margin for 60s timeout
-  PHASE_TIMEOUT_MS: 10000, // Max time per phase
+  // Timing - Optimized for 60s timeout
+  MAX_RUN_TIME_MS: 52000, // 52s safety (8s buffer)
+  PHASE_TIMEOUT_MS: 8000, // 8s per phase for faster cycling
   
-  // Scheduling intervals
-  GAP_ANALYSIS_INTERVAL_HOURS: 4, // Aggressive gap hunting
-  CIRCUIT_RESET_INTERVAL_HOURS: 12,
-  INSIGHT_REGEN_INTERVAL_HOURS: 6,
-  SCORING_INTERVAL_HOURS: 8,
+  // Scheduling intervals - MORE FREQUENT
+  GAP_ANALYSIS_INTERVAL_HOURS: 2,    // Hunt gaps every 2h
+  CIRCUIT_RESET_INTERVAL_HOURS: 8,   // Faster recovery
+  INSIGHT_REGEN_INTERVAL_HOURS: 3,   // Fresher insights
+  SCORING_INTERVAL_HOURS: 4,         // More current scores
+  KRAKEN_INTERVAL_HOURS: 1,          // Hunt every hour
   
-  // Thresholds
-  MIN_UNRESOLVED_FOR_BACKFILL: 10,
-  MIN_ORPHAN_FACTS_FOR_LINKING: 5,
-  MIN_ENTITIES_FOR_SCORING: 5,
+  // Thresholds - LOWER for more action
+  MIN_UNRESOLVED_FOR_BACKFILL: 5,    // Lower threshold
+  MIN_ORPHAN_FACTS_FOR_LINKING: 2,
+  MIN_ENTITIES_FOR_SCORING: 3,
   
-  // Health score targets
-  TARGET_RESOLUTION_RATE: 0.6,
-  TARGET_FACT_DENSITY: 0.5,
-  TARGET_INSIGHT_FRESHNESS_HOURS: 24,
+  // Health score targets - AMBITIOUS
+  TARGET_RESOLUTION_RATE: 0.60,   // 60% entity resolution
+  TARGET_FACT_DENSITY: 0.50,      // 0.5 facts per entity
+  TARGET_INSIGHT_FRESHNESS_HOURS: 12, // Fresher insights
 };
 
 // ============================================================================
@@ -437,6 +440,43 @@ async function runGapAnalysisPhase(supabase: any, state: FlywheelState): Promise
 }
 
 // ============================================================================
+// PHASE 7.5: KRAKEN HUNTERS (Autonomous Data Expansion)
+// ============================================================================
+
+async function runKrakenPhase(supabase: any, state: FlywheelState): Promise<void> {
+  state.phase = 'kraken';
+  
+  try {
+    // Check if Kraken should hunt
+    const currentHour = new Date().getHours();
+    if (currentHour % ULTIMATE_CONFIG.KRAKEN_INTERVAL_HOURS !== 0) {
+      return;
+    }
+    
+    console.log('[flywheel] Unleashing Kraken hunters...');
+    
+    const { data, error } = await supabase.functions.invoke('kraken-hunters', {
+      body: { 
+        trigger_type: 'flywheel_scheduled',
+        batch_size: ULTIMATE_CONFIG.KRAKEN_BATCH_SIZE,
+      },
+    });
+    
+    if (error) {
+      state.errors.push(`Kraken: ${error.message}`);
+      return;
+    }
+    
+    const targetsQueued = data?.targets_queued || 0;
+    state.metrics.discoveries_queued += targetsQueued;
+    
+    console.log(`[flywheel] Kraken: ${targetsQueued} targets queued for crawling`);
+  } catch (e) {
+    state.errors.push(`Kraken phase: ${e instanceof Error ? e.message : 'Unknown'}`);
+  }
+}
+
+// ============================================================================
 // PHASE 8: DEAD LETTER RECOVERY (Self-Healing)
 // ============================================================================
 
@@ -744,6 +784,11 @@ Deno.serve(async (req) => {
     // Phase 7: Gap Analysis
     if (hasTimeRemaining(state)) {
       await runGapAnalysisPhase(supabase, state);
+    }
+    
+    // Phase 7.5: Kraken Hunters - Autonomous data expansion
+    if (hasTimeRemaining(state)) {
+      await runKrakenPhase(supabase, state);
     }
 
     // Phase 8: Dead Letter Recovery
