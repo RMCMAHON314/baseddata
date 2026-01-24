@@ -9,6 +9,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Omniscient from "./pages/Omniscient";
 import Health from "./pages/Health";
+import GapFixer from "./pages/GapFixer";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +24,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Omniscient />} />
             <Route path="/health" element={<Health />} />
+            <Route path="/gap-fixer" element={<GapFixer />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

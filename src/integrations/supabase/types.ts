@@ -3136,6 +3136,16 @@ export type Database = {
         Args: { p_attempt: number; p_base_delay?: number }
         Returns: unknown
       }
+      calculate_state_market_concentration: {
+        Args: never
+        Returns: {
+          category: string
+          entity_count: number
+          hhi: number
+          state: string
+          total_value: number
+        }[]
+      }
       check_circuit_breaker: {
         Args: { p_domain: string }
         Returns: {
@@ -3246,6 +3256,23 @@ export type Database = {
           similarity: number
         }[]
       }
+      find_unconnected_same_city_entities: {
+        Args: { limit_count?: number }
+        Returns: {
+          city: string
+          entity1_id: string
+          entity2_id: string
+        }[]
+      }
+      find_unconnected_same_type_state: {
+        Args: { limit_count?: number }
+        Returns: {
+          entity_type: string
+          entity1_id: string
+          entity2_id: string
+          state: string
+        }[]
+      }
       find_underexplored_areas: {
         Args: never
         Returns: {
@@ -3303,6 +3330,20 @@ export type Database = {
           name: string
           priority: number
           slug: string
+        }[]
+      }
+      get_system_stats: {
+        Args: never
+        Returns: {
+          active_sources: number
+          entities_with_facts: number
+          pending_queue: number
+          resolution_rate: number
+          total_entities: number
+          total_facts: number
+          total_insights: number
+          total_records: number
+          total_relationships: number
         }[]
       }
       get_under_explored_entities: {

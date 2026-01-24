@@ -147,6 +147,15 @@ export const OmniscientLanding = forwardRef<HTMLDivElement, OmniscientLandingPro
               <Activity className="w-4 h-4 mr-2" />
               System Health
             </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="hidden sm:flex border-border hover:border-orange-500/50 hover:bg-orange-500/5"
+              onClick={() => window.location.href = '/gap-fixer'}
+            >
+              <Flame className="w-4 h-4 mr-2 text-orange-500" />
+              Gap Fixer
+            </Button>
             <Button variant="outline" size="sm" className="hidden sm:flex border-border hover:border-primary/50 hover:bg-primary/5">
               <ExternalLink className="w-4 h-4 mr-2" />
               API Docs
