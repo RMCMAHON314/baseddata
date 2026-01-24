@@ -245,6 +245,45 @@ export type Database = {
         }
         Relationships: []
       }
+      api_usage: {
+        Row: {
+          api_key: string | null
+          created_at: string | null
+          endpoint: string
+          id: string
+          method: string
+          request_size: number | null
+          response_size: number | null
+          response_time_ms: number | null
+          status_code: number | null
+          user_id: string | null
+        }
+        Insert: {
+          api_key?: string | null
+          created_at?: string | null
+          endpoint: string
+          id?: string
+          method: string
+          request_size?: number | null
+          response_size?: number | null
+          response_time_ms?: number | null
+          status_code?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          api_key?: string | null
+          created_at?: string | null
+          endpoint?: string
+          id?: string
+          method?: string
+          request_size?: number | null
+          response_size?: number | null
+          response_time_ms?: number | null
+          status_code?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       api_usage_logs: {
         Row: {
           api_key_id: string | null
@@ -1483,6 +1522,61 @@ export type Database = {
           },
         ]
       }
+      entity_watchlist: {
+        Row: {
+          added_at: string | null
+          entity_id: string | null
+          id: string
+          notes: string | null
+          priority: string | null
+          status: string | null
+          tags: string[] | null
+          user_id: string | null
+        }
+        Insert: {
+          added_at?: string | null
+          entity_id?: string | null
+          id?: string
+          notes?: string | null
+          priority?: string | null
+          status?: string | null
+          tags?: string[] | null
+          user_id?: string | null
+        }
+        Update: {
+          added_at?: string | null
+          entity_id?: string | null
+          id?: string
+          notes?: string | null
+          priority?: string | null
+          status?: string | null
+          tags?: string[] | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_watchlist_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_watchlist_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_watchlist_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expansion_rules: {
         Row: {
           created_at: string
@@ -1829,6 +1923,70 @@ export type Database = {
           },
         ]
       }
+      generated_reports: {
+        Row: {
+          content: Json
+          created_at: string | null
+          entity_id: string | null
+          id: string
+          is_public: boolean | null
+          pdf_url: string | null
+          public_slug: string | null
+          report_type: string
+          title: string
+          user_id: string | null
+          view_count: number | null
+        }
+        Insert: {
+          content: Json
+          created_at?: string | null
+          entity_id?: string | null
+          id?: string
+          is_public?: boolean | null
+          pdf_url?: string | null
+          public_slug?: string | null
+          report_type: string
+          title: string
+          user_id?: string | null
+          view_count?: number | null
+        }
+        Update: {
+          content?: Json
+          created_at?: string | null
+          entity_id?: string | null
+          id?: string
+          is_public?: boolean | null
+          pdf_url?: string | null
+          public_slug?: string | null
+          report_type?: string
+          title?: string
+          user_id?: string | null
+          view_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_reports_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_reports_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_reports_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       health_checks: {
         Row: {
           checked_at: string | null
@@ -2151,6 +2309,129 @@ export type Database = {
             columns: ["api_key_id"]
             isOneToOne: false
             referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          alert_id: string | null
+          created_at: string | null
+          data: Json | null
+          id: string
+          message: string
+          read: boolean | null
+          read_at: string | null
+          title: string
+          type: string | null
+          user_id: string | null
+        }
+        Insert: {
+          alert_id?: string | null
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          message: string
+          read?: boolean | null
+          read_at?: string | null
+          title: string
+          type?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          alert_id?: string | null
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          message?: string
+          read?: boolean | null
+          read_at?: string | null
+          title?: string
+          type?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "user_alerts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      opportunity_pipeline: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          entity_id: string | null
+          estimated_value: number | null
+          expected_close_date: string | null
+          id: string
+          next_action: string | null
+          next_action_date: string | null
+          notes: string | null
+          probability: number | null
+          source: string | null
+          stage: string | null
+          title: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          entity_id?: string | null
+          estimated_value?: number | null
+          expected_close_date?: string | null
+          id?: string
+          next_action?: string | null
+          next_action_date?: string | null
+          notes?: string | null
+          probability?: number | null
+          source?: string | null
+          stage?: string | null
+          title: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          entity_id?: string | null
+          estimated_value?: number | null
+          expected_close_date?: string | null
+          id?: string
+          next_action?: string | null
+          next_action_date?: string | null
+          notes?: string | null
+          probability?: number | null
+          source?: string | null
+          stage?: string | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_pipeline_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_pipeline_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_pipeline_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
             referencedColumns: ["id"]
           },
         ]
@@ -2709,6 +2990,54 @@ export type Database = {
           },
         ]
       }
+      saved_searches: {
+        Row: {
+          created_at: string | null
+          filters: Json | null
+          id: string
+          is_public: boolean | null
+          last_result_count: number | null
+          last_run: string | null
+          name: string
+          notify_on_change: boolean | null
+          public_slug: string | null
+          query: string
+          schedule: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          filters?: Json | null
+          id?: string
+          is_public?: boolean | null
+          last_result_count?: number | null
+          last_run?: string | null
+          name: string
+          notify_on_change?: boolean | null
+          public_slug?: string | null
+          query: string
+          schedule?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          filters?: Json | null
+          id?: string
+          is_public?: boolean | null
+          last_result_count?: number | null
+          last_run?: string | null
+          name?: string
+          notify_on_change?: boolean | null
+          public_slug?: string | null
+          query?: string
+          schedule?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       scheduled_pipelines: {
         Row: {
           config: Json | null
@@ -2793,6 +3122,36 @@ export type Database = {
           sample_queries?: string[] | null
           table_name?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      search_history: {
+        Row: {
+          created_at: string | null
+          duration_ms: number | null
+          filters: Json | null
+          id: string
+          query: string
+          result_count: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          duration_ms?: number | null
+          filters?: Json | null
+          id?: string
+          query: string
+          result_count?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          duration_ms?: number | null
+          filters?: Json | null
+          id?: string
+          query?: string
+          result_count?: number | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -2948,6 +3307,66 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_plans: {
+        Row: {
+          alerts_limit: number | null
+          api_access: boolean | null
+          custom_integrations: boolean | null
+          description: string | null
+          export_pdf: boolean | null
+          features: Json | null
+          id: string
+          is_active: boolean | null
+          name: string
+          price_monthly: number | null
+          price_yearly: number | null
+          priority_support: boolean | null
+          saved_searches_limit: number | null
+          searches_per_month: number | null
+          stripe_price_id_monthly: string | null
+          stripe_price_id_yearly: string | null
+          team_members: number | null
+        }
+        Insert: {
+          alerts_limit?: number | null
+          api_access?: boolean | null
+          custom_integrations?: boolean | null
+          description?: string | null
+          export_pdf?: boolean | null
+          features?: Json | null
+          id: string
+          is_active?: boolean | null
+          name: string
+          price_monthly?: number | null
+          price_yearly?: number | null
+          priority_support?: boolean | null
+          saved_searches_limit?: number | null
+          searches_per_month?: number | null
+          stripe_price_id_monthly?: string | null
+          stripe_price_id_yearly?: string | null
+          team_members?: number | null
+        }
+        Update: {
+          alerts_limit?: number | null
+          api_access?: boolean | null
+          custom_integrations?: boolean | null
+          description?: string | null
+          export_pdf?: boolean | null
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          price_monthly?: number | null
+          price_yearly?: number | null
+          priority_support?: boolean | null
+          saved_searches_limit?: number | null
+          searches_per_month?: number | null
+          stripe_price_id_monthly?: string | null
+          stripe_price_id_yearly?: string | null
+          team_members?: number | null
+        }
+        Relationships: []
+      }
       system_logs: {
         Row: {
           component: string
@@ -2998,6 +3417,130 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_alerts: {
+        Row: {
+          alert_type: string
+          channels: Json | null
+          conditions: Json
+          created_at: string | null
+          entity_id: string | null
+          id: string
+          is_active: boolean | null
+          last_triggered: string | null
+          trigger_count: number | null
+          user_id: string | null
+        }
+        Insert: {
+          alert_type: string
+          channels?: Json | null
+          conditions: Json
+          created_at?: string | null
+          entity_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_triggered?: string | null
+          trigger_count?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          alert_type?: string
+          channels?: Json | null
+          conditions?: Json
+          created_at?: string | null
+          entity_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_triggered?: string | null
+          trigger_count?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_alerts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_alerts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_alerts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_profiles: {
+        Row: {
+          api_key: string | null
+          avatar_url: string | null
+          company: string | null
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          job_title: string | null
+          onboarding_completed: boolean | null
+          phone: string | null
+          preferences: Json | null
+          searches_limit: number | null
+          searches_this_month: number | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          subscription_status: string | null
+          subscription_tier: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          api_key?: string | null
+          avatar_url?: string | null
+          company?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id: string
+          job_title?: string | null
+          onboarding_completed?: boolean | null
+          phone?: string | null
+          preferences?: Json | null
+          searches_limit?: number | null
+          searches_this_month?: number | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string | null
+          subscription_tier?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          api_key?: string | null
+          avatar_url?: string | null
+          company?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          job_title?: string | null
+          onboarding_completed?: boolean | null
+          phone?: string | null
+          preferences?: Json | null
+          searches_limit?: number | null
+          searches_this_month?: number | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string | null
+          subscription_tier?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {
@@ -3358,10 +3901,12 @@ export type Database = {
           state: string
         }[]
       }
+      get_user_dashboard: { Args: { p_user_id: string }; Returns: Json }
       increment_query_access_count: {
         Args: { query_uuid: string }
         Returns: number
       }
+      increment_search_count: { Args: { p_user_id: string }; Returns: boolean }
       log_kraken_crawl: {
         Args: {
           p_crawler_type: string
@@ -3443,6 +3988,7 @@ export type Database = {
         Returns: string
       }
       record_master_dataset_stats: { Args: never; Returns: string }
+      reset_monthly_search_counts: { Args: never; Returns: undefined }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       update_discovery_status: {
