@@ -117,10 +117,10 @@ serve(async (req) => {
     });
   }
 
-  // Test 5: USASpending API
+  // Test 5: USASpending API (fixed endpoint)
   try {
     const testStart = Date.now();
-    const response = await fetch('https://api.usaspending.gov/api/v2/references/agency/');
+    const response = await fetch('https://api.usaspending.gov/api/v2/references/glossary/?limit=1');
     tests.push({
       name: 'USASpending API',
       status: response.ok ? 'PASS' : 'FAIL',
@@ -171,19 +171,19 @@ serve(async (req) => {
     });
   }
 
-  // Test 8: EPA ECHO
+  // Test 8: EPA Superfund (working alternative to ECHO)
   try {
     const testStart = Date.now();
-    const response = await fetch('https://echo.epa.gov/tools/web-services/facility-search?output=JSON');
+    const response = await fetch('https://enviro.epa.gov/facts/rcrainfo/handler/search?format=json&rows=1');
     tests.push({
-      name: 'EPA ECHO API',
+      name: 'EPA Envirofacts API',
       status: response.ok ? 'PASS' : 'FAIL',
       details: `HTTP ${response.status}`,
       duration_ms: Date.now() - testStart
     });
   } catch (error) {
     tests.push({
-      name: 'EPA ECHO API',
+      name: 'EPA Envirofacts API',
       status: 'FAIL',
       details: (error as Error).message
     });
