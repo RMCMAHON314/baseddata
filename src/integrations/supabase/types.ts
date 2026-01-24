@@ -5735,6 +5735,7 @@ export type Database = {
         }[]
       }
       analyze_query_intent: { Args: { p_query: string }; Returns: Json }
+      auto_merge_duplicates: { Args: never; Returns: number }
       build_unified_context: { Args: { p_query: string }; Returns: Json }
       cache_location: {
         Args: {
@@ -5773,6 +5774,7 @@ export type Database = {
           total_value: number
         }[]
       }
+      capture_health_snapshot: { Args: never; Returns: string }
       capture_ocean_health: { Args: never; Returns: string }
       check_circuit_breaker: {
         Args: { p_domain: string }
@@ -5841,6 +5843,7 @@ export type Database = {
       discover_competitors: { Args: never; Returns: number }
       discover_geographic_clusters: { Args: never; Returns: number }
       discover_industry_clusters: { Args: never; Returns: number }
+      discover_relationships: { Args: never; Returns: number }
       discover_transitive_relationships: {
         Args: { limit_count?: number; min_strength?: number }
         Returns: {
@@ -5883,6 +5886,16 @@ export type Database = {
           distance_km: number
           id: string
           similarity: number
+        }[]
+      }
+      find_potential_duplicates: {
+        Args: { p_entity_id: string; p_threshold?: number }
+        Returns: {
+          duplicate_id: string
+          duplicate_name: string
+          score: number
+          state: string
+          uei: string
         }[]
       }
       find_similar_entities: {
@@ -6083,6 +6096,17 @@ export type Database = {
           total_value: number
         }[]
       }
+      ml_duplicate_score: {
+        Args: {
+          p_name_a: string
+          p_name_b: string
+          p_state_a: string
+          p_state_b: string
+          p_uei_a: string
+          p_uei_b: string
+        }
+        Returns: number
+      }
       move_to_dead_letter: {
         Args: { p_discovery_id: string; p_reason: string }
         Returns: string
@@ -6174,6 +6198,7 @@ export type Database = {
         }
         Returns: string
       }
+      sync_all_entity_stats: { Args: never; Returns: number }
       sync_entity_contract_stats: {
         Args: { p_entity_id: string }
         Returns: undefined
