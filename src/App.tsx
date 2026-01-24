@@ -19,6 +19,7 @@ import Admin from "./pages/Admin";
 import Onboarding from "./pages/Onboarding";
 import Diagnostic from "./pages/Diagnostic";
 import Explorer from "./pages/Explorer";
+import FileExplorer from "./pages/FileExplorer";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,7 @@ const App = () => (
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/diagnostic" element={<Diagnostic />} />
             <Route path="/explorer" element={<Explorer />} />
+            <Route path="/files" element={<FileExplorer />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
