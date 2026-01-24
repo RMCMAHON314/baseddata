@@ -26,12 +26,12 @@ interface Opportunity {
   response_deadline: string | null;
   posted_date: string | null;
   award_ceiling: number | null;
-  set_aside_code: string | null;
+  set_aside: string | null;
   naics_code: string | null;
   psc_code: string | null;
-  place_of_performance_state: string | null;
+  pop_state: string | null;
   notice_id: string | null;
-  sam_url: string | null;
+  ui_link: string | null;
   is_active: boolean | null;
 }
 
@@ -134,7 +134,7 @@ export default function OpportunityCommandCenter() {
     }
 
     // Set-aside filter
-    if (filterSetAside !== 'all' && opp.set_aside_code !== filterSetAside) {
+    if (filterSetAside !== 'all' && opp.set_aside !== filterSetAside) {
       return false;
     }
 
@@ -311,10 +311,10 @@ export default function OpportunityCommandCenter() {
                   {/* Details */}
                   <div className="space-y-3">
                     <DetailRow label="Department" value={selectedOpp.department} />
-                    <DetailRow label="Set-Aside" value={selectedOpp.set_aside_code} />
+                    <DetailRow label="Set-Aside" value={selectedOpp.set_aside} />
                     <DetailRow label="NAICS" value={selectedOpp.naics_code} />
                     <DetailRow label="PSC" value={selectedOpp.psc_code} />
-                    <DetailRow label="Location" value={selectedOpp.place_of_performance_state} />
+                    <DetailRow label="Location" value={selectedOpp.pop_state} />
                     <DetailRow label="Posted" value={formatDate(selectedOpp.posted_date)} />
                     <DetailRow label="Notice ID" value={selectedOpp.notice_id} />
                   </div>
@@ -329,8 +329,8 @@ export default function OpportunityCommandCenter() {
 
                   {/* Actions */}
                   <div className="flex gap-2">
-                    {selectedOpp.sam_url && (
-                      <a href={selectedOpp.sam_url} target="_blank" rel="noopener noreferrer" className="flex-1">
+                    {selectedOpp.ui_link && (
+                      <a href={selectedOpp.ui_link} target="_blank" rel="noopener noreferrer" className="flex-1">
                         <Button className="w-full btn-omni">
                           <ExternalLink className="h-4 w-4 mr-2" />
                           View on SAM.gov
@@ -380,8 +380,8 @@ function OpportunityCard({ opportunity, index, onClick, getUrgencyLevel, getDays
             <Timer className="h-3 w-3 mr-1" />
             {getDaysUntil(opportunity.response_deadline)}
           </Badge>
-          {opportunity.set_aside_code && (
-            <Badge variant="outline">{opportunity.set_aside_code}</Badge>
+          {opportunity.set_aside && (
+            <Badge variant="outline">{opportunity.set_aside}</Badge>
           )}
         </div>
 

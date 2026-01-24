@@ -610,6 +610,122 @@ export type Database = {
         }
         Relationships: []
       }
+      clinical_trials: {
+        Row: {
+          completion_date: string | null
+          conditions: string[] | null
+          created_at: string | null
+          drug_names: string[] | null
+          enrollment: number | null
+          enrollment_type: string | null
+          id: string
+          intervention_names: string[] | null
+          intervention_type: string | null
+          keywords: string[] | null
+          lead_sponsor_name: string | null
+          lead_sponsor_type: string | null
+          location_countries: string[] | null
+          location_states: string[] | null
+          nct_id: string
+          official_title: string | null
+          overall_status: string | null
+          phase: string | null
+          raw_data: Json | null
+          source: string | null
+          sponsor_entity_id: string | null
+          start_date: string | null
+          study_type: string | null
+          title: string
+          updated_at: string | null
+          url: string | null
+        }
+        Insert: {
+          completion_date?: string | null
+          conditions?: string[] | null
+          created_at?: string | null
+          drug_names?: string[] | null
+          enrollment?: number | null
+          enrollment_type?: string | null
+          id?: string
+          intervention_names?: string[] | null
+          intervention_type?: string | null
+          keywords?: string[] | null
+          lead_sponsor_name?: string | null
+          lead_sponsor_type?: string | null
+          location_countries?: string[] | null
+          location_states?: string[] | null
+          nct_id: string
+          official_title?: string | null
+          overall_status?: string | null
+          phase?: string | null
+          raw_data?: Json | null
+          source?: string | null
+          sponsor_entity_id?: string | null
+          start_date?: string | null
+          study_type?: string | null
+          title: string
+          updated_at?: string | null
+          url?: string | null
+        }
+        Update: {
+          completion_date?: string | null
+          conditions?: string[] | null
+          created_at?: string | null
+          drug_names?: string[] | null
+          enrollment?: number | null
+          enrollment_type?: string | null
+          id?: string
+          intervention_names?: string[] | null
+          intervention_type?: string | null
+          keywords?: string[] | null
+          lead_sponsor_name?: string | null
+          lead_sponsor_type?: string | null
+          location_countries?: string[] | null
+          location_states?: string[] | null
+          nct_id?: string
+          official_title?: string | null
+          overall_status?: string | null
+          phase?: string | null
+          raw_data?: Json | null
+          source?: string | null
+          sponsor_entity_id?: string | null
+          start_date?: string | null
+          study_type?: string | null
+          title?: string
+          updated_at?: string | null
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_trials_sponsor_entity_id_fkey"
+            columns: ["sponsor_entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_trials_sponsor_entity_id_fkey"
+            columns: ["sponsor_entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_trials_sponsor_entity_id_fkey"
+            columns: ["sponsor_entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_trials_sponsor_entity_id_fkey"
+            columns: ["sponsor_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contracts: {
         Row: {
           award_amount: number | null
@@ -2575,6 +2691,178 @@ export type Database = {
         }
         Relationships: []
       }
+      fda_devices: {
+        Row: {
+          applicant: string | null
+          applicant_entity_id: string | null
+          created_at: string | null
+          decision: string | null
+          decision_date: string | null
+          device_class: string | null
+          device_name: string
+          id: string
+          k_number: string | null
+          medical_specialty: string | null
+          pma_number: string | null
+          product_code: string | null
+          raw_data: Json | null
+          source: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          applicant?: string | null
+          applicant_entity_id?: string | null
+          created_at?: string | null
+          decision?: string | null
+          decision_date?: string | null
+          device_class?: string | null
+          device_name: string
+          id?: string
+          k_number?: string | null
+          medical_specialty?: string | null
+          pma_number?: string | null
+          product_code?: string | null
+          raw_data?: Json | null
+          source?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          applicant?: string | null
+          applicant_entity_id?: string | null
+          created_at?: string | null
+          decision?: string | null
+          decision_date?: string | null
+          device_class?: string | null
+          device_name?: string
+          id?: string
+          k_number?: string | null
+          medical_specialty?: string | null
+          pma_number?: string | null
+          product_code?: string | null
+          raw_data?: Json | null
+          source?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fda_devices_applicant_entity_id_fkey"
+            columns: ["applicant_entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fda_devices_applicant_entity_id_fkey"
+            columns: ["applicant_entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fda_devices_applicant_entity_id_fkey"
+            columns: ["applicant_entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fda_devices_applicant_entity_id_fkey"
+            columns: ["applicant_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fda_drugs: {
+        Row: {
+          active_ingredients: string[] | null
+          application_number: string | null
+          application_type: string | null
+          approval_date: string | null
+          brand_name: string | null
+          created_at: string | null
+          dosage_form: string | null
+          generic_name: string | null
+          id: string
+          market_status: string | null
+          raw_data: Json | null
+          route: string | null
+          source: string | null
+          sponsor_entity_id: string | null
+          sponsor_name: string | null
+          therapeutic_class: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          active_ingredients?: string[] | null
+          application_number?: string | null
+          application_type?: string | null
+          approval_date?: string | null
+          brand_name?: string | null
+          created_at?: string | null
+          dosage_form?: string | null
+          generic_name?: string | null
+          id?: string
+          market_status?: string | null
+          raw_data?: Json | null
+          route?: string | null
+          source?: string | null
+          sponsor_entity_id?: string | null
+          sponsor_name?: string | null
+          therapeutic_class?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          active_ingredients?: string[] | null
+          application_number?: string | null
+          application_type?: string | null
+          approval_date?: string | null
+          brand_name?: string | null
+          created_at?: string | null
+          dosage_form?: string | null
+          generic_name?: string | null
+          id?: string
+          market_status?: string | null
+          raw_data?: Json | null
+          route?: string | null
+          source?: string | null
+          sponsor_entity_id?: string | null
+          sponsor_name?: string | null
+          therapeutic_class?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fda_drugs_sponsor_entity_id_fkey"
+            columns: ["sponsor_entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fda_drugs_sponsor_entity_id_fkey"
+            columns: ["sponsor_entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fda_drugs_sponsor_entity_id_fkey"
+            columns: ["sponsor_entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fda_drugs_sponsor_entity_id_fkey"
+            columns: ["sponsor_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feature_flags: {
         Row: {
           created_at: string | null
@@ -3513,6 +3801,190 @@ export type Database = {
           total_categories?: number
           total_records?: number
           total_sources?: number
+        }
+        Relationships: []
+      }
+      md_education_institutions: {
+        Row: {
+          annual_budget: number | null
+          city: string | null
+          county: string | null
+          created_at: string | null
+          enrollment: number | null
+          entity_id: string | null
+          id: string
+          institution_name: string
+          institution_type: string | null
+          meec_member: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          annual_budget?: number | null
+          city?: string | null
+          county?: string | null
+          created_at?: string | null
+          enrollment?: number | null
+          entity_id?: string | null
+          id?: string
+          institution_name: string
+          institution_type?: string | null
+          meec_member?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          annual_budget?: number | null
+          city?: string | null
+          county?: string | null
+          created_at?: string | null
+          enrollment?: number | null
+          entity_id?: string | null
+          id?: string
+          institution_name?: string
+          institution_type?: string | null
+          meec_member?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "md_education_institutions_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "md_education_institutions_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "md_education_institutions_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "md_education_institutions_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      md_education_spending: {
+        Row: {
+          county: string
+          created_at: string | null
+          fiscal_year: number
+          id: string
+          payee_entity_id: string | null
+          payee_name: string
+          purpose: string | null
+          source: string | null
+          total_payment: number
+        }
+        Insert: {
+          county: string
+          created_at?: string | null
+          fiscal_year: number
+          id?: string
+          payee_entity_id?: string | null
+          payee_name: string
+          purpose?: string | null
+          source?: string | null
+          total_payment: number
+        }
+        Update: {
+          county?: string
+          created_at?: string | null
+          fiscal_year?: number
+          id?: string
+          payee_entity_id?: string | null
+          payee_name?: string
+          purpose?: string | null
+          source?: string | null
+          total_payment?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "md_education_spending_payee_entity_id_fkey"
+            columns: ["payee_entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "md_education_spending_payee_entity_id_fkey"
+            columns: ["payee_entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "md_education_spending_payee_entity_id_fkey"
+            columns: ["payee_entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "md_education_spending_payee_entity_id_fkey"
+            columns: ["payee_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meec_contracts: {
+        Row: {
+          categories: string[] | null
+          contract_name: string
+          contract_number: string | null
+          contract_type: string | null
+          created_at: string | null
+          eligible_members: string[] | null
+          end_date: string | null
+          estimated_value: number | null
+          id: string
+          prime_contractors: string[] | null
+          source: string | null
+          start_date: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          categories?: string[] | null
+          contract_name: string
+          contract_number?: string | null
+          contract_type?: string | null
+          created_at?: string | null
+          eligible_members?: string[] | null
+          end_date?: string | null
+          estimated_value?: number | null
+          id?: string
+          prime_contractors?: string[] | null
+          source?: string | null
+          start_date?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          categories?: string[] | null
+          contract_name?: string
+          contract_number?: string | null
+          contract_type?: string | null
+          created_at?: string | null
+          eligible_members?: string[] | null
+          end_date?: string | null
+          estimated_value?: number | null
+          id?: string
+          prime_contractors?: string[] | null
+          source?: string | null
+          start_date?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
