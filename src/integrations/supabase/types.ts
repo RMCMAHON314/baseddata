@@ -131,6 +131,66 @@ export type Database = {
         }
         Relationships: []
       }
+      analytics_daily: {
+        Row: {
+          contracts_by_agency: Json | null
+          contracts_by_state: Json | null
+          created_at: string | null
+          date: string
+          entities_by_state: Json | null
+          entities_by_type: Json | null
+          new_contract_value: number | null
+          new_contracts: number | null
+          new_entities: number | null
+          new_facts: number | null
+          new_grants: number | null
+          total_contract_value: number | null
+          total_contracts: number | null
+          total_entities: number | null
+          total_facts: number | null
+          total_grant_value: number | null
+          total_grants: number | null
+        }
+        Insert: {
+          contracts_by_agency?: Json | null
+          contracts_by_state?: Json | null
+          created_at?: string | null
+          date: string
+          entities_by_state?: Json | null
+          entities_by_type?: Json | null
+          new_contract_value?: number | null
+          new_contracts?: number | null
+          new_entities?: number | null
+          new_facts?: number | null
+          new_grants?: number | null
+          total_contract_value?: number | null
+          total_contracts?: number | null
+          total_entities?: number | null
+          total_facts?: number | null
+          total_grant_value?: number | null
+          total_grants?: number | null
+        }
+        Update: {
+          contracts_by_agency?: Json | null
+          contracts_by_state?: Json | null
+          created_at?: string | null
+          date?: string
+          entities_by_state?: Json | null
+          entities_by_type?: Json | null
+          new_contract_value?: number | null
+          new_contracts?: number | null
+          new_entities?: number | null
+          new_facts?: number | null
+          new_grants?: number | null
+          total_contract_value?: number | null
+          total_contracts?: number | null
+          total_entities?: number | null
+          total_facts?: number | null
+          total_grant_value?: number | null
+          total_grants?: number | null
+        }
+        Relationships: []
+      }
       announcements: {
         Row: {
           created_at: string | null
@@ -550,6 +610,170 @@ export type Database = {
         }
         Relationships: []
       }
+      contracts: {
+        Row: {
+          award_amount: number | null
+          award_date: string | null
+          award_id: string | null
+          award_type: string | null
+          awarding_agency: string | null
+          awarding_sub_agency: string | null
+          base_and_all_options: number | null
+          competition_type: string | null
+          contract_type: string | null
+          created_at: string | null
+          description: string | null
+          end_date: string | null
+          funding_agency: string | null
+          id: string
+          is_minority_owned: boolean | null
+          is_small_business: boolean | null
+          is_veteran_owned: boolean | null
+          is_women_owned: boolean | null
+          last_modified: string | null
+          modification_number: string | null
+          naics_code: string | null
+          naics_description: string | null
+          parent_award_id: string | null
+          piid: string | null
+          pop_city: string | null
+          pop_congressional_district: string | null
+          pop_country: string | null
+          pop_state: string | null
+          pop_zip: string | null
+          psc_code: string | null
+          psc_description: string | null
+          raw_data: Json | null
+          recipient_duns: string | null
+          recipient_entity_id: string | null
+          recipient_name: string
+          recipient_uei: string | null
+          set_aside_type: string | null
+          source: string | null
+          source_url: string | null
+          start_date: string | null
+          total_obligation: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          award_amount?: number | null
+          award_date?: string | null
+          award_id?: string | null
+          award_type?: string | null
+          awarding_agency?: string | null
+          awarding_sub_agency?: string | null
+          base_and_all_options?: number | null
+          competition_type?: string | null
+          contract_type?: string | null
+          created_at?: string | null
+          description?: string | null
+          end_date?: string | null
+          funding_agency?: string | null
+          id?: string
+          is_minority_owned?: boolean | null
+          is_small_business?: boolean | null
+          is_veteran_owned?: boolean | null
+          is_women_owned?: boolean | null
+          last_modified?: string | null
+          modification_number?: string | null
+          naics_code?: string | null
+          naics_description?: string | null
+          parent_award_id?: string | null
+          piid?: string | null
+          pop_city?: string | null
+          pop_congressional_district?: string | null
+          pop_country?: string | null
+          pop_state?: string | null
+          pop_zip?: string | null
+          psc_code?: string | null
+          psc_description?: string | null
+          raw_data?: Json | null
+          recipient_duns?: string | null
+          recipient_entity_id?: string | null
+          recipient_name: string
+          recipient_uei?: string | null
+          set_aside_type?: string | null
+          source?: string | null
+          source_url?: string | null
+          start_date?: string | null
+          total_obligation?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          award_amount?: number | null
+          award_date?: string | null
+          award_id?: string | null
+          award_type?: string | null
+          awarding_agency?: string | null
+          awarding_sub_agency?: string | null
+          base_and_all_options?: number | null
+          competition_type?: string | null
+          contract_type?: string | null
+          created_at?: string | null
+          description?: string | null
+          end_date?: string | null
+          funding_agency?: string | null
+          id?: string
+          is_minority_owned?: boolean | null
+          is_small_business?: boolean | null
+          is_veteran_owned?: boolean | null
+          is_women_owned?: boolean | null
+          last_modified?: string | null
+          modification_number?: string | null
+          naics_code?: string | null
+          naics_description?: string | null
+          parent_award_id?: string | null
+          piid?: string | null
+          pop_city?: string | null
+          pop_congressional_district?: string | null
+          pop_country?: string | null
+          pop_state?: string | null
+          pop_zip?: string | null
+          psc_code?: string | null
+          psc_description?: string | null
+          raw_data?: Json | null
+          recipient_duns?: string | null
+          recipient_entity_id?: string | null
+          recipient_name?: string
+          recipient_uei?: string | null
+          set_aside_type?: string | null
+          source?: string | null
+          source_url?: string | null
+          start_date?: string | null
+          total_obligation?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contracts_recipient_entity_id_fkey"
+            columns: ["recipient_entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_recipient_entity_id_fkey"
+            columns: ["recipient_entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_recipient_entity_id_fkey"
+            columns: ["recipient_entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_recipient_entity_id_fkey"
+            columns: ["recipient_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       core_derived_insights: {
         Row: {
           action_count: number | null
@@ -609,13 +833,22 @@ export type Database = {
       }
       core_entities: {
         Row: {
+          annual_revenue: number | null
+          business_types: string[] | null
+          cage_code: string | null
           canonical_name: string
           city: string | null
           clusters: string[] | null
+          contract_count: number | null
           country: string | null
           created_at: string | null
           data_quality_score: number | null
+          description: string | null
+          duns: string | null
+          ein: string | null
+          employee_count: number | null
           entity_type: string
+          grant_count: number | null
           health_score: number | null
           id: string
           identifiers: Json
@@ -624,22 +857,38 @@ export type Database = {
           latitude: number | null
           longitude: number | null
           merged_data: Json
+          naics_codes: string[] | null
           opportunity_score: number | null
+          phone: string | null
+          psc_codes: string[] | null
           risk_score: number | null
           source_count: number | null
           source_records: Json
           state: string | null
           tags: string[] | null
+          total_contract_value: number | null
+          total_grant_value: number | null
+          uei: string | null
           updated_at: string | null
+          website: string | null
         }
         Insert: {
+          annual_revenue?: number | null
+          business_types?: string[] | null
+          cage_code?: string | null
           canonical_name: string
           city?: string | null
           clusters?: string[] | null
+          contract_count?: number | null
           country?: string | null
           created_at?: string | null
           data_quality_score?: number | null
+          description?: string | null
+          duns?: string | null
+          ein?: string | null
+          employee_count?: number | null
           entity_type: string
+          grant_count?: number | null
           health_score?: number | null
           id?: string
           identifiers?: Json
@@ -648,22 +897,38 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           merged_data?: Json
+          naics_codes?: string[] | null
           opportunity_score?: number | null
+          phone?: string | null
+          psc_codes?: string[] | null
           risk_score?: number | null
           source_count?: number | null
           source_records?: Json
           state?: string | null
           tags?: string[] | null
+          total_contract_value?: number | null
+          total_grant_value?: number | null
+          uei?: string | null
           updated_at?: string | null
+          website?: string | null
         }
         Update: {
+          annual_revenue?: number | null
+          business_types?: string[] | null
+          cage_code?: string | null
           canonical_name?: string
           city?: string | null
           clusters?: string[] | null
+          contract_count?: number | null
           country?: string | null
           created_at?: string | null
           data_quality_score?: number | null
+          description?: string | null
+          duns?: string | null
+          ein?: string | null
+          employee_count?: number | null
           entity_type?: string
+          grant_count?: number | null
           health_score?: number | null
           id?: string
           identifiers?: Json
@@ -672,13 +937,20 @@ export type Database = {
           latitude?: number | null
           longitude?: number | null
           merged_data?: Json
+          naics_codes?: string[] | null
           opportunity_score?: number | null
+          phone?: string | null
+          psc_codes?: string[] | null
           risk_score?: number | null
           source_count?: number | null
           source_records?: Json
           state?: string | null
           tags?: string[] | null
+          total_contract_value?: number | null
+          total_grant_value?: number | null
+          uei?: string | null
           updated_at?: string | null
+          website?: string | null
         }
         Relationships: []
       }
@@ -736,6 +1008,13 @@ export type Database = {
             columns: ["entity_id"]
             isOneToOne: false
             referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "core_entity_history_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
             referencedColumns: ["id"]
           },
         ]
@@ -797,6 +1076,13 @@ export type Database = {
             columns: ["entity_id"]
             isOneToOne: false
             referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "core_facts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
             referencedColumns: ["id"]
           },
         ]
@@ -861,6 +1147,13 @@ export type Database = {
             columns: ["entity_id"]
             isOneToOne: false
             referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "core_feedback_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
             referencedColumns: ["id"]
           },
           {
@@ -1062,6 +1355,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "core_relationships_from_entity_id_fkey"
+            columns: ["from_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "core_relationships_to_entity_id_fkey"
             columns: ["to_entity_id"]
             isOneToOne: false
@@ -1080,6 +1380,13 @@ export type Database = {
             columns: ["to_entity_id"]
             isOneToOne: false
             referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "core_relationships_to_entity_id_fkey"
+            columns: ["to_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
             referencedColumns: ["id"]
           },
         ]
@@ -1786,6 +2093,13 @@ export type Database = {
             referencedRelation: "high_value_opportunities"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "entity_profiles_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: true
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
         ]
       }
       entity_timeline: {
@@ -1841,6 +2155,13 @@ export type Database = {
             referencedRelation: "high_value_opportunities"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "entity_timeline_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
         ]
       }
       entity_watchlist: {
@@ -1894,6 +2215,13 @@ export type Database = {
             columns: ["entity_id"]
             isOneToOne: false
             referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_watchlist_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
             referencedColumns: ["id"]
           },
         ]
@@ -2375,6 +2703,126 @@ export type Database = {
             referencedRelation: "high_value_opportunities"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "generated_reports_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      grants: {
+        Row: {
+          assistance_type: string | null
+          award_amount: number | null
+          award_date: string | null
+          awarding_agency: string | null
+          cfda_number: string | null
+          cfda_title: string | null
+          created_at: string | null
+          description: string | null
+          end_date: string | null
+          fain: string | null
+          funding_agency: string | null
+          grant_id: string | null
+          grant_type: string | null
+          id: string
+          project_title: string | null
+          raw_data: Json | null
+          recipient_city: string | null
+          recipient_entity_id: string | null
+          recipient_name: string
+          recipient_state: string | null
+          recipient_uei: string | null
+          recipient_zip: string | null
+          source: string | null
+          start_date: string | null
+          total_funding: number | null
+        }
+        Insert: {
+          assistance_type?: string | null
+          award_amount?: number | null
+          award_date?: string | null
+          awarding_agency?: string | null
+          cfda_number?: string | null
+          cfda_title?: string | null
+          created_at?: string | null
+          description?: string | null
+          end_date?: string | null
+          fain?: string | null
+          funding_agency?: string | null
+          grant_id?: string | null
+          grant_type?: string | null
+          id?: string
+          project_title?: string | null
+          raw_data?: Json | null
+          recipient_city?: string | null
+          recipient_entity_id?: string | null
+          recipient_name: string
+          recipient_state?: string | null
+          recipient_uei?: string | null
+          recipient_zip?: string | null
+          source?: string | null
+          start_date?: string | null
+          total_funding?: number | null
+        }
+        Update: {
+          assistance_type?: string | null
+          award_amount?: number | null
+          award_date?: string | null
+          awarding_agency?: string | null
+          cfda_number?: string | null
+          cfda_title?: string | null
+          created_at?: string | null
+          description?: string | null
+          end_date?: string | null
+          fain?: string | null
+          funding_agency?: string | null
+          grant_id?: string | null
+          grant_type?: string | null
+          id?: string
+          project_title?: string | null
+          raw_data?: Json | null
+          recipient_city?: string | null
+          recipient_entity_id?: string | null
+          recipient_name?: string
+          recipient_state?: string | null
+          recipient_uei?: string | null
+          recipient_zip?: string | null
+          source?: string | null
+          start_date?: string | null
+          total_funding?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "grants_recipient_entity_id_fkey"
+            columns: ["recipient_entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grants_recipient_entity_id_fkey"
+            columns: ["recipient_entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grants_recipient_entity_id_fkey"
+            columns: ["recipient_entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grants_recipient_entity_id_fkey"
+            columns: ["recipient_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
         ]
       }
       health_checks: {
@@ -2478,6 +2926,13 @@ export type Database = {
             columns: ["entity_id"]
             isOneToOne: false
             referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intelligence_alerts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
             referencedColumns: ["id"]
           },
         ]
@@ -2750,6 +3205,99 @@ export type Database = {
           },
         ]
       }
+      opportunities: {
+        Row: {
+          archive_date: string | null
+          award_ceiling: number | null
+          award_floor: number | null
+          created_at: string | null
+          department: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          naics_code: string | null
+          notice_id: string | null
+          notice_type: string | null
+          office: string | null
+          point_of_contact: Json | null
+          pop_city: string | null
+          pop_state: string | null
+          pop_zip: string | null
+          posted_date: string | null
+          psc_code: string | null
+          raw_data: Json | null
+          resource_links: Json | null
+          response_deadline: string | null
+          set_aside: string | null
+          solicitation_number: string | null
+          status: string | null
+          sub_tier: string | null
+          title: string
+          ui_link: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          archive_date?: string | null
+          award_ceiling?: number | null
+          award_floor?: number | null
+          created_at?: string | null
+          department?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          naics_code?: string | null
+          notice_id?: string | null
+          notice_type?: string | null
+          office?: string | null
+          point_of_contact?: Json | null
+          pop_city?: string | null
+          pop_state?: string | null
+          pop_zip?: string | null
+          posted_date?: string | null
+          psc_code?: string | null
+          raw_data?: Json | null
+          resource_links?: Json | null
+          response_deadline?: string | null
+          set_aside?: string | null
+          solicitation_number?: string | null
+          status?: string | null
+          sub_tier?: string | null
+          title: string
+          ui_link?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          archive_date?: string | null
+          award_ceiling?: number | null
+          award_floor?: number | null
+          created_at?: string | null
+          department?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          naics_code?: string | null
+          notice_id?: string | null
+          notice_type?: string | null
+          office?: string | null
+          point_of_contact?: Json | null
+          pop_city?: string | null
+          pop_state?: string | null
+          pop_zip?: string | null
+          posted_date?: string | null
+          psc_code?: string | null
+          raw_data?: Json | null
+          resource_links?: Json | null
+          response_deadline?: string | null
+          set_aside?: string | null
+          solicitation_number?: string | null
+          status?: string | null
+          sub_tier?: string | null
+          title?: string
+          ui_link?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       opportunity_pipeline: {
         Row: {
           created_at: string | null
@@ -2822,6 +3370,13 @@ export type Database = {
             columns: ["entity_id"]
             isOneToOne: false
             referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_pipeline_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
             referencedColumns: ["id"]
           },
         ]
@@ -3372,6 +3927,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "records_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "records_query_id_fkey"
             columns: ["query_id"]
             isOneToOne: false
@@ -3672,6 +4234,36 @@ export type Database = {
           filters?: Json | null
           id?: string
           query?: string
+          result_count?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      search_logs: {
+        Row: {
+          created_at: string | null
+          filters: Json | null
+          id: string
+          query: string | null
+          response_time_ms: number | null
+          result_count: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          filters?: Json | null
+          id?: string
+          query?: string | null
+          response_time_ms?: number | null
+          result_count?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          filters?: Json | null
+          id?: string
+          query?: string | null
+          response_time_ms?: number | null
           result_count?: number | null
           user_id?: string | null
         }
@@ -4169,6 +4761,13 @@ export type Database = {
             referencedRelation: "high_value_opportunities"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_alerts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_feedback: {
@@ -4479,6 +5078,42 @@ export type Database = {
         }
         Relationships: []
       }
+      mv_agency_spending: {
+        Row: {
+          avg_value: number | null
+          awarding_agency: string | null
+          contract_count: number | null
+          states: string[] | null
+          total_value: number | null
+          unique_vendors: number | null
+        }
+        Relationships: []
+      }
+      mv_state_spending: {
+        Row: {
+          agencies: number | null
+          avg_value: number | null
+          contract_count: number | null
+          state: string | null
+          total_value: number | null
+          unique_vendors: number | null
+        }
+        Relationships: []
+      }
+      mv_top_contractors: {
+        Row: {
+          avg_contract_value: number | null
+          canonical_name: string | null
+          city: string | null
+          contract_count: number | null
+          entity_type: string | null
+          id: string | null
+          opportunity_score: number | null
+          state: string | null
+          total_value: number | null
+        }
+        Relationships: []
+      }
       realtime_dashboard: {
         Row: {
           active_sources: number | null
@@ -4732,6 +5367,7 @@ export type Database = {
         }[]
       }
       get_admin_stats: { Args: never; Returns: Json }
+      get_entity_360: { Args: { p_entity_id: string }; Returns: Json }
       get_entity_network: {
         Args: { p_depth?: number; p_entity_id: string; p_min_strength?: number }
         Returns: Json
@@ -4845,6 +5481,26 @@ export type Database = {
         Returns: string
       }
       mark_duplicates: { Args: { p_query_id: string }; Returns: number }
+      mega_search: {
+        Args: {
+          p_entity_types?: string[]
+          p_limit?: number
+          p_max_amount?: number
+          p_min_amount?: number
+          p_query: string
+          p_states?: string[]
+        }
+        Returns: {
+          description: string
+          entity_type: string
+          id: string
+          name: string
+          opportunity_score: number
+          result_type: string
+          state: string
+          total_value: number
+        }[]
+      }
       move_to_dead_letter: {
         Args: { p_discovery_id: string; p_reason: string }
         Returns: string
@@ -4892,9 +5548,14 @@ export type Database = {
         Returns: string
       }
       record_master_dataset_stats: { Args: never; Returns: string }
+      refresh_all_materialized_views: { Args: never; Returns: undefined }
       reset_monthly_search_counts: { Args: never; Returns: undefined }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      sync_entity_contract_stats: {
+        Args: { p_entity_id: string }
+        Returns: undefined
+      }
       update_discovery_status: {
         Args: {
           p_discovery_id: string
