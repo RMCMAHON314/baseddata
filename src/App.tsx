@@ -12,6 +12,11 @@ import Health from "./pages/Health";
 import GapFixer from "./pages/GapFixer";
 import Dashboard from "./pages/Dashboard";
 import Pricing from "./pages/Pricing";
+import Analytics from "./pages/Analytics";
+import ApiDocs from "./pages/ApiDocs";
+import EntityProfilePage from "./pages/EntityProfilePage";
+import Admin from "./pages/Admin";
+import Onboarding from "./pages/Onboarding";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +34,11 @@ const App = () => (
             <Route path="/gap-fixer" element={<GapFixer />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/pricing" element={<Pricing />} />
+            <Route path="/analytics" element={<Analytics />} />
+            <Route path="/api-docs" element={<ApiDocs />} />
+            <Route path="/entity/:id" element={<EntityProfilePage />} />
+            <Route path="/admin" element={<Admin />} />
+            <Route path="/onboarding" element={<Onboarding />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
