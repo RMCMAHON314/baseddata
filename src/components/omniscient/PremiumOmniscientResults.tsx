@@ -342,15 +342,17 @@ export function PremiumOmniscientResults({
           {showInsightsPanel && (
             <motion.div
               initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
+              animate={{ height: 320, opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               className="overflow-hidden"
             >
-              <div className="mt-4 pt-4 border-t border-slate-200">
-                <InsightsPanel
-                  insights={insights}
-                  records={processedRecords}
-                />
+              <div className="mt-4 pt-4 border-t border-slate-200 h-full">
+                <ScrollArea className="h-[280px]">
+                  <InsightsPanel
+                    insights={insights}
+                    records={processedRecords}
+                  />
+                </ScrollArea>
               </div>
             </motion.div>
           )}
