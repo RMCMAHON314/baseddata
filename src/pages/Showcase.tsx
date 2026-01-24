@@ -8,8 +8,9 @@ import { Input } from '@/components/ui/input';
 import {
   Search, Building2, FileText, Award, Briefcase, TrendingUp,
   Zap, Globe, Database, GitBranch, Sparkles, ArrowRight,
-  Play, ChevronRight, Star, Shield, Lightbulb, Waves
+  Play, ChevronRight, Star, Shield, Lightbulb
 } from 'lucide-react';
+import { Logo } from '@/components/Logo';
 
 // Animated counter hook with easing
 function useAnimatedCounter(target: number, duration: number = 2000) {
@@ -224,14 +225,9 @@ export default function Showcase() {
 
         {/* Nav */}
         <nav className="relative z-10 flex items-center justify-between px-6 md:px-12 py-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-cyan-500 flex items-center justify-center">
-              <Waves className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-2xl font-black bg-gradient-to-r from-primary to-cyan-400 bg-clip-text text-transparent">
-              BASED DATA
-            </span>
-          </div>
+          <Link to="/" className="flex items-center gap-3">
+            <Logo variant="compact" className="text-2xl" />
+          </Link>
           <div className="flex items-center gap-4">
             <Link to="/semantx">
               <Button variant="ghost" className="text-muted-foreground hover:text-foreground">Search</Button>
@@ -610,10 +606,7 @@ export default function Showcase() {
       <footer className="border-t border-border py-12 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-cyan-500 flex items-center justify-center">
-              <Waves className="w-4 h-4 text-white" />
-            </div>
-            <span className="font-bold text-muted-foreground">Based Data</span>
+            <Logo variant="compact" />
           </div>
           <div className="flex items-center gap-6 text-sm text-muted-foreground">
             <span>{stats.entities.toLocaleString()} entities</span>
