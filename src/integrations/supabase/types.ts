@@ -2872,6 +2872,110 @@ export type Database = {
           },
         ]
       }
+      ingestion_queue: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error: string | null
+          id: string
+          priority: number
+          records_fetched: number | null
+          scheduled_for: string
+          source_slug: string
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          priority?: number
+          records_fetched?: number | null
+          scheduled_for?: string
+          source_slug: string
+          started_at?: string | null
+          status?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          priority?: number
+          records_fetched?: number | null
+          scheduled_for?: string
+          source_slug?: string
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingestion_queue_source_slug_fkey"
+            columns: ["source_slug"]
+            isOneToOne: false
+            referencedRelation: "ingestion_sources"
+            referencedColumns: ["slug"]
+          },
+        ]
+      }
+      ingestion_sources: {
+        Row: {
+          base_url: string
+          category: string
+          consecutive_failures: number
+          created_at: string
+          fetch_config: Json
+          fetch_interval_hours: number
+          id: string
+          is_active: boolean
+          last_error: string | null
+          last_fetched_at: string | null
+          last_success_at: string | null
+          name: string
+          priority: number
+          slug: string
+          total_records_fetched: number
+          updated_at: string
+        }
+        Insert: {
+          base_url: string
+          category: string
+          consecutive_failures?: number
+          created_at?: string
+          fetch_config?: Json
+          fetch_interval_hours?: number
+          id?: string
+          is_active?: boolean
+          last_error?: string | null
+          last_fetched_at?: string | null
+          last_success_at?: string | null
+          name: string
+          priority?: number
+          slug: string
+          total_records_fetched?: number
+          updated_at?: string
+        }
+        Update: {
+          base_url?: string
+          category?: string
+          consecutive_failures?: number
+          created_at?: string
+          fetch_config?: Json
+          fetch_interval_hours?: number
+          id?: string
+          is_active?: boolean
+          last_error?: string | null
+          last_fetched_at?: string | null
+          last_success_at?: string | null
+          name?: string
+          priority?: number
+          slug?: string
+          total_records_fetched?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       intelligence_alerts: {
         Row: {
           alert_type: string
@@ -5520,6 +5624,7 @@ export type Database = {
         }
         Returns: string
       }
+      queue_ingestion_jobs: { Args: never; Returns: number }
       queue_kraken_discovery: {
         Args: {
           p_context?: Json
