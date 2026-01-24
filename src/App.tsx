@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Omniscient from "./pages/Omniscient";
+import Health from "./pages/Health";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -21,6 +22,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Omniscient />} />
+            <Route path="/health" element={<Health />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
