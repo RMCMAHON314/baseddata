@@ -16,9 +16,10 @@ import { cn } from '@/lib/utils';
 interface LiveDashboardStatsProps {
   records: ProcessedRecord[];
   className?: string;
+  onStatClick?: (stat: DashboardStat, records: ProcessedRecord[]) => void;
 }
 
-interface DashboardStat {
+export interface DashboardStat {
   id: string;
   value: string | number;
   label: string;
@@ -28,6 +29,9 @@ interface DashboardStat {
   borderColor: string;
   subValue?: string;
   trend?: 'up' | 'down' | 'new';
+  filterType?: 'all' | 'category' | 'agency' | 'state' | 'custom';
+  filterValue?: string;
+  filteredRecords?: ProcessedRecord[];
 }
 
 type DataType = 'healthcare' | 'contracts' | 'financial' | 'environmental' | 'mixed';
@@ -342,9 +346,71 @@ function generateStats(records: ProcessedRecord[], dataType: DataType): Dashboar
   }
 }
 
-export function LiveDashboardStats({ records, className }: LiveDashboardStatsProps) {
+export function LiveDashboardStats({ records, className, onStatClick }: LiveDashboardStatsProps) {
   const dataType = useMemo(() => detectDataType(records), [records]);
-  const stats = useMemo(() => generateStats(records, dataType), [records, dataType]);
+  const stats = useMemo(() => {
+    const baseStats = generateStats(records, dataType);
+    // Add filteredRecords to each stat for drill-down
+    return baseStats.map(stat => {
+      let filtered: ProcessedRecord[] = records;
+      let filterType: DashboardStat['filterType'] = 'all';
+      let filterValue: string | undefined;
+      
+      // Add filter logic based on stat id
+      switch (stat.id) {
+        case 'hospitals':
+          filtered = records.filter(r => {
+            const p = r.properties as Record<string, unknown>;
+            return String(p?.name || '').toLowerCase().includes('hospital') ||
+                   p?.healthcare_type === 'hospital' || p?.facility_type === 'hospital';
+          });
+          filterType = 'custom';
+          filterValue = 'hospitals';
+          break;
+        case 'flagged':
+          filtered = records.filter(r => {
+            const p = r.properties as Record<string, unknown>;
+            return (p?.violations as number) > 0 || (p?.risk_score as number) > 50 || p?.compliance_status === 'issues';
+          });
+          filterType = 'custom';
+          filterValue = 'flagged';
+          break;
+        case 'value':
+        case 'total':
+        case 'pharma':
+        case 'grants':
+          filtered = records;
+          filterType = 'all';
+          break;
+        case 'recipients':
+          filterType = 'custom';
+          filterValue = 'recipients';
+          break;
+        case 'setasides':
+          filtered = records.filter(r => {
+            const p = r.properties as Record<string, unknown>;
+            return p?.set_aside || p?.small_business || String(p?.business_type || '').includes('8(a)');
+          });
+          filterType = 'custom';
+          filterValue = 'set-asides';
+          break;
+        case 'expiring':
+          filtered = records.filter(r => {
+            const p = r.properties as Record<string, unknown>;
+            if (!p?.end_date) return false;
+            const endDate = new Date(p.end_date as string);
+            const sixMonths = new Date();
+            sixMonths.setMonth(sixMonths.getMonth() + 6);
+            return endDate <= sixMonths;
+          });
+          filterType = 'custom';
+          filterValue = 'expiring-soon';
+          break;
+      }
+      
+      return { ...stat, filteredRecords: filtered, filterType, filterValue };
+    });
+  }, [records, dataType]);
 
   return (
     <div className={cn("flex gap-3 overflow-x-auto pb-2", className)}>
@@ -355,10 +421,12 @@ export function LiveDashboardStats({ records, className }: LiveDashboardStatsPro
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: i * 0.05 }}
           className={cn(
-            "flex-1 min-w-[140px] rounded-xl border p-4 transition-all hover:shadow-lg cursor-pointer",
+            "flex-1 min-w-[140px] rounded-xl border p-4 transition-all hover:shadow-lg cursor-pointer group",
             stat.bgColor,
-            stat.borderColor
+            stat.borderColor,
+            "hover:ring-2 hover:ring-primary/20"
           )}
+          onClick={() => onStatClick?.(stat, stat.filteredRecords || records)}
         >
           <div className="flex items-center justify-between mb-2">
             <stat.icon className={cn("w-5 h-5", stat.iconColor)} />
@@ -373,11 +441,14 @@ export function LiveDashboardStats({ records, className }: LiveDashboardStatsPro
               </span>
             )}
           </div>
-          <div className="text-2xl font-black text-slate-900">{stat.value}</div>
+          <div className="text-2xl font-black text-slate-900 group-hover:text-primary transition-colors">{stat.value}</div>
           <div className="text-sm font-medium text-slate-600">{stat.label}</div>
           {stat.subValue && (
             <div className="text-xs text-slate-400 mt-1 truncate">{stat.subValue}</div>
           )}
+          <div className="text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity mt-1">
+            Click to drill down →
+          </div>
         </motion.div>
       ))}
     </div>
