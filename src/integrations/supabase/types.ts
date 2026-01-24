@@ -493,6 +493,20 @@ export type Database = {
             referencedRelation: "core_entities"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "core_entity_history_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "core_entity_history_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
         ]
       }
       core_facts: {
@@ -538,6 +552,20 @@ export type Database = {
             columns: ["entity_id"]
             isOneToOne: false
             referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "core_facts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "core_facts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
             referencedColumns: ["id"]
           },
         ]
@@ -588,6 +616,20 @@ export type Database = {
             columns: ["entity_id"]
             isOneToOne: false
             referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "core_feedback_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "core_feedback_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
             referencedColumns: ["id"]
           },
           {
@@ -775,10 +817,38 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "core_relationships_from_entity_id_fkey"
+            columns: ["from_entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "core_relationships_from_entity_id_fkey"
+            columns: ["from_entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "core_relationships_to_entity_id_fkey"
             columns: ["to_entity_id"]
             isOneToOne: false
             referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "core_relationships_to_entity_id_fkey"
+            columns: ["to_entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "core_relationships_to_entity_id_fkey"
+            columns: ["to_entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
             referencedColumns: ["id"]
           },
         ]
@@ -1307,6 +1377,61 @@ export type Database = {
         }
         Relationships: []
       }
+      entity_timeline: {
+        Row: {
+          change_magnitude: number | null
+          entity_id: string | null
+          event_data: Json
+          event_type: string
+          id: string
+          new_value: Json | null
+          previous_value: Json | null
+          recorded_at: string | null
+        }
+        Insert: {
+          change_magnitude?: number | null
+          entity_id?: string | null
+          event_data: Json
+          event_type: string
+          id?: string
+          new_value?: Json | null
+          previous_value?: Json | null
+          recorded_at?: string | null
+        }
+        Update: {
+          change_magnitude?: number | null
+          entity_id?: string | null
+          event_data?: Json
+          event_type?: string
+          id?: string
+          new_value?: Json | null
+          previous_value?: Json | null
+          recorded_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_timeline_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_timeline_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_timeline_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expansion_rules: {
         Row: {
           created_at: string
@@ -1696,6 +1821,64 @@ export type Database = {
             columns: ["source_id"]
             isOneToOne: false
             referencedRelation: "api_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      intelligence_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string | null
+          data: Json | null
+          description: string
+          entity_id: string | null
+          id: string
+          is_read: boolean | null
+          severity: string | null
+          title: string
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string | null
+          data?: Json | null
+          description: string
+          entity_id?: string | null
+          id?: string
+          is_read?: boolean | null
+          severity?: string | null
+          title: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string | null
+          data?: Json | null
+          description?: string
+          entity_id?: string | null
+          id?: string
+          is_read?: boolean | null
+          severity?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intelligence_alerts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intelligence_alerts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intelligence_alerts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
             referencedColumns: ["id"]
           },
         ]
@@ -2249,6 +2432,33 @@ export type Database = {
           },
         ]
       }
+      query_understanding: {
+        Row: {
+          confidence: number | null
+          created_at: string | null
+          id: string
+          parsed_intent: Json
+          raw_query: string
+          suggested_sources: string[] | null
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string | null
+          id?: string
+          parsed_intent: Json
+          raw_query: string
+          suggested_sources?: string[] | null
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string | null
+          id?: string
+          parsed_intent?: Json
+          raw_query?: string
+          suggested_sources?: string[] | null
+        }
+        Relationships: []
+      }
       record_feedback: {
         Row: {
           correction_data: Json | null
@@ -2396,6 +2606,20 @@ export type Database = {
             columns: ["entity_id"]
             isOneToOne: false
             referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "records_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "records_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
             referencedColumns: ["id"]
           },
           {
@@ -2699,7 +2923,59 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      entity_360_profiles: {
+        Row: {
+          canonical_name: string | null
+          created_at: string | null
+          data_coverage: Json | null
+          data_quality_score: number | null
+          entity_type: string | null
+          facts: Json | null
+          financial_profile: Json | null
+          health_score: number | null
+          id: string | null
+          identifiers: Json | null
+          influence_score: number | null
+          merged_data: Json | null
+          opportunity_score: number | null
+          profile_completeness: number | null
+          relationship_summary: Json | null
+          risk_score: number | null
+          updated_at: string | null
+        }
+        Relationships: []
+      }
+      high_value_opportunities: {
+        Row: {
+          canonical_name: string | null
+          entity_type: string | null
+          id: string | null
+          opportunity_score: number | null
+          opportunity_status: string | null
+        }
+        Insert: {
+          canonical_name?: string | null
+          entity_type?: string | null
+          id?: string | null
+          opportunity_score?: number | null
+          opportunity_status?: never
+        }
+        Update: {
+          canonical_name?: string | null
+          entity_type?: string | null
+          id?: string | null
+          opportunity_score?: number | null
+          opportunity_status?: never
+        }
+        Relationships: []
+      }
+      realtime_dashboard: {
+        Row: {
+          metric: string | null
+          value: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       add_credits: {
@@ -2755,6 +3031,7 @@ export type Database = {
         Args: { p_cron: string; p_from?: string }
         Returns: string
       }
+      calculate_opportunity_scores: { Args: never; Returns: undefined }
       calculate_retry_delay: {
         Args: { p_attempt: number; p_base_delay?: number }
         Returns: unknown
