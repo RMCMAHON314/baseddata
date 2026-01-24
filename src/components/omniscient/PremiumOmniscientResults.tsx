@@ -579,11 +579,17 @@ export function PremiumOmniscientResults({
               <span className="text-xs text-slate-400">{filteredRecords.length} records</span>
             </div>
 
-            {/* Content - use native overflow for better scrolling */}
-            <div className="flex-1 min-h-0 overflow-y-auto pb-6">
+            {/* Content
+                - Table/Grid manage their own internal scrolling (so pagination never clips)
+                - Cards uses panel scroll
+            */}
+            <div className={cn(
+              "flex-1 min-h-0",
+              viewMode === 'cards' ? "overflow-y-auto pb-6" : "overflow-hidden"
+            )}>
               {viewMode === 'table' ? (
-                <div className="p-4">
-                  <ResultsDataTable 
+                <div className="p-4 h-full min-h-0 flex flex-col">
+                  <ResultsDataTable
                     records={filteredRecords}
                     onRowClick={handleFeatureClick}
                     onOpenDossier={handleOpenDossier}
@@ -664,12 +670,14 @@ export function PremiumOmniscientResults({
                   )}
                 </div>
               ) : (
-                <DataGrid
-                  features={filteredRecords}
-                  onExport={(fmt) => handleExport(fmt)}
-                  onRowClick={handleFeatureClick}
-                  className="h-full rounded-none border-0"
-                />
+                <div className="h-full min-h-0">
+                  <DataGrid
+                    features={filteredRecords}
+                    onExport={(fmt) => handleExport(fmt)}
+                    onRowClick={handleFeatureClick}
+                    className="h-full rounded-none border-0"
+                  />
+                </div>
               )}
             </div>
           </div>
