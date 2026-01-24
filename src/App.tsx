@@ -18,6 +18,7 @@ import EntityProfilePage from "./pages/EntityProfilePage";
 import Admin from "./pages/Admin";
 import Onboarding from "./pages/Onboarding";
 import Diagnostic from "./pages/Diagnostic";
+import Explorer from "./pages/Explorer";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +42,7 @@ const App = () => (
             <Route path="/admin" element={<Admin />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/diagnostic" element={<Diagnostic />} />
+            <Route path="/explorer" element={<Explorer />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
