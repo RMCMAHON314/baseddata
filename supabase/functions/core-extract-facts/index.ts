@@ -15,19 +15,15 @@ interface RecordData {
   id: string;
   name: string;
   category: string;
-  subcategory?: string;
   source_id: string;
   properties: Record<string, unknown>;
   entity_id?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  zip_code?: string;
-  latitude?: number;
-  longitude?: number;
-  phone?: string;
-  website?: string;
   description?: string;
+  geometry?: {
+    type: string;
+    coordinates: number[];
+  };
+  quality_score?: number;
 }
 
 interface ExtractedFact {
@@ -81,15 +77,19 @@ async function linkOrphanedFacts(supabase: any): Promise<{ linked: number }> {
 // CALCULATE RECORD QUALITY SCORE
 // ═══════════════════════════════════════════════════════════════
 function calculateRecordQuality(record: RecordData): number {
+  // Use stored quality_score if available
+  if (record.quality_score) return record.quality_score;
+  
   let score = 30;
+  const props = record.properties || {};
   
   if (record.name) score += 15;
-  if (record.address) score += 10;
-  if (record.city && record.state) score += 10;
-  if (record.latitude && record.longitude) score += 15;
-  if (record.phone || record.website) score += 5;
+  if (props.address || props.street_address) score += 10;
+  if (props.city && props.state) score += 10;
+  if (record.geometry && record.geometry.coordinates && record.geometry.coordinates.length >= 2) score += 15;
+  if (props.phone || props.website) score += 5;
   if (record.description) score += 5;
-  if (record.properties && Object.keys(record.properties).length > 3) score += 10;
+  if (Object.keys(props).length > 3) score += 10;
   
   return Math.min(100, score);
 }
@@ -244,19 +244,24 @@ function extractFactsFromRecord(record: RecordData): ExtractedFact[] {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // 3. LOCATION FACTS (All Sources)
+  // 3. LOCATION FACTS (All Sources) - Use geometry and properties
   // ═══════════════════════════════════════════════════════════════
-  if (record.latitude && record.longitude) {
+  const coords = record.geometry?.coordinates;
+  const hasCoords = coords && coords.length >= 2;
+  const propLat = Number(props.latitude || props.lat);
+  const propLng = Number(props.longitude || props.lng || props.lon);
+  
+  if (hasCoords || (propLat && propLng)) {
     facts.push({
       ...baseInfo,
       fact_type: 'location_verified',
       fact_value: {
-        latitude: record.latitude,
-        longitude: record.longitude,
-        address: record.address,
-        city: record.city,
-        state: record.state,
-        zip: record.zip_code
+        latitude: hasCoords ? coords[1] : propLat,
+        longitude: hasCoords ? coords[0] : propLng,
+        address: props.address || props.street_address,
+        city: props.city,
+        state: props.state,
+        zip: props.zip_code || props.zip
       },
       fact_date: now,
       confidence: 0.85,
@@ -264,11 +269,11 @@ function extractFactsFromRecord(record: RecordData): ExtractedFact[] {
   }
 
   // City/State presence fact
-  if (record.city && record.state) {
+  if (props.city && props.state) {
     facts.push({
       ...baseInfo,
       fact_type: 'geographic_presence',
-      fact_value: { city: record.city, state: record.state },
+      fact_value: { city: props.city, state: props.state },
       fact_date: now,
       confidence: 0.9,
     });
@@ -284,7 +289,7 @@ function extractFactsFromRecord(record: RecordData): ExtractedFact[] {
       fact_type: 'facility_type',
       fact_value: {
         category: record.category,
-        subcategory: record.subcategory,
+        subcategory: props.subcategory,
         amenity: props.amenity
       },
       fact_date: now,
@@ -337,23 +342,23 @@ function extractFactsFromRecord(record: RecordData): ExtractedFact[] {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // 5. CONTACT FACTS (All Sources)
+  // 5. CONTACT FACTS (All Sources) - Use properties
   // ═══════════════════════════════════════════════════════════════
-  if (record.phone) {
+  if (props.phone || props.telephone) {
     facts.push({
       ...baseInfo,
       fact_type: 'contact_phone',
-      fact_value: { phone: record.phone },
+      fact_value: { phone: props.phone || props.telephone },
       fact_date: now,
       confidence: 0.9,
     });
   }
 
-  if (record.website) {
+  if (props.website || props.url) {
     facts.push({
       ...baseInfo,
       fact_type: 'contact_website',
-      fact_value: { website: record.website },
+      fact_value: { website: props.website || props.url },
       fact_date: now,
       confidence: 0.9,
     });
@@ -524,7 +529,7 @@ function extractFactsFromRecord(record: RecordData): ExtractedFact[] {
       fact_type: 'entity_category',
       fact_value: { 
         category: record.category,
-        subcategory: record.subcategory
+        subcategory: props.subcategory
       },
       fact_date: now,
       confidence: 0.95,
@@ -593,9 +598,10 @@ Deno.serve(async (req) => {
     }
 
     // Fetch records - prioritize those with entities but could use facts
+    // Note: Only select columns that actually exist in the records table
     let recordsQuery = supabase
       .from('records')
-      .select('id, name, category, subcategory, source_id, properties, entity_id, address, city, state, zip_code, latitude, longitude, phone, website, description')
+      .select('id, name, category, source_id, properties, entity_id, description, geometry, quality_score')
       .order('collected_at', { ascending: false })
       .limit(batch_size);
 
