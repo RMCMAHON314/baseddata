@@ -839,9 +839,11 @@ export type Database = {
       }
       core_entities: {
         Row: {
+          alternate_names: string[] | null
           annual_revenue: number | null
           business_types: string[] | null
           cage_code: string | null
+          canonical_id: string | null
           canonical_name: string
           city: string | null
           clusters: string[] | null
@@ -858,10 +860,12 @@ export type Database = {
           health_score: number | null
           id: string
           identifiers: Json
+          is_canonical: boolean | null
           last_source_update: string | null
           last_verified_at: string | null
           latitude: number | null
           longitude: number | null
+          merge_count: number | null
           merged_data: Json
           naics_codes: string[] | null
           opportunity_score: number | null
@@ -881,9 +885,11 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          alternate_names?: string[] | null
           annual_revenue?: number | null
           business_types?: string[] | null
           cage_code?: string | null
+          canonical_id?: string | null
           canonical_name: string
           city?: string | null
           clusters?: string[] | null
@@ -900,10 +906,12 @@ export type Database = {
           health_score?: number | null
           id?: string
           identifiers?: Json
+          is_canonical?: boolean | null
           last_source_update?: string | null
           last_verified_at?: string | null
           latitude?: number | null
           longitude?: number | null
+          merge_count?: number | null
           merged_data?: Json
           naics_codes?: string[] | null
           opportunity_score?: number | null
@@ -923,9 +931,11 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          alternate_names?: string[] | null
           annual_revenue?: number | null
           business_types?: string[] | null
           cage_code?: string | null
+          canonical_id?: string | null
           canonical_name?: string
           city?: string | null
           clusters?: string[] | null
@@ -942,10 +952,12 @@ export type Database = {
           health_score?: number | null
           id?: string
           identifiers?: Json
+          is_canonical?: boolean | null
           last_source_update?: string | null
           last_verified_at?: string | null
           latitude?: number | null
           longitude?: number | null
+          merge_count?: number | null
           merged_data?: Json
           naics_codes?: string[] | null
           opportunity_score?: number | null
@@ -1641,6 +1653,42 @@ export type Database = {
         }
         Relationships: []
       }
+      derivation_runs: {
+        Row: {
+          completed_at: string | null
+          details: Json | null
+          error: string | null
+          id: string
+          job_type: string
+          records_created: number | null
+          records_processed: number | null
+          started_at: string | null
+          status: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          details?: Json | null
+          error?: string | null
+          id?: string
+          job_type: string
+          records_created?: number | null
+          records_processed?: number | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          details?: Json | null
+          error?: string | null
+          id?: string
+          job_type?: string
+          records_created?: number | null
+          records_processed?: number | null
+          started_at?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
       discovered_sources: {
         Row: {
           api_endpoint: string | null
@@ -2031,6 +2079,241 @@ export type Database = {
           id?: string
           records_enriched?: number | null
           relationships_created?: number | null
+        }
+        Relationships: []
+      }
+      entity_aliases: {
+        Row: {
+          alias: string
+          alias_type: string | null
+          confidence: number | null
+          created_at: string | null
+          entity_id: string | null
+          id: string
+          source: string | null
+        }
+        Insert: {
+          alias: string
+          alias_type?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          entity_id?: string | null
+          id?: string
+          source?: string | null
+        }
+        Update: {
+          alias?: string
+          alias_type?: string | null
+          confidence?: number | null
+          created_at?: string | null
+          entity_id?: string | null
+          id?: string
+          source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_aliases_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_aliases_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_aliases_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_aliases_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entity_identifiers: {
+        Row: {
+          created_at: string | null
+          entity_id: string | null
+          id: string
+          identifier_type: string
+          identifier_value: string
+          is_primary: boolean | null
+          source: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          entity_id?: string | null
+          id?: string
+          identifier_type: string
+          identifier_value: string
+          is_primary?: boolean | null
+          source?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          entity_id?: string | null
+          id?: string
+          identifier_type?: string
+          identifier_value?: string
+          is_primary?: boolean | null
+          source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_identifiers_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_identifiers_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_identifiers_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_identifiers_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entity_merge_candidates: {
+        Row: {
+          created_at: string | null
+          entity_a_id: string | null
+          entity_b_id: string | null
+          id: string
+          match_reasons: Json | null
+          match_score: number | null
+          reviewed_at: string | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          entity_a_id?: string | null
+          entity_b_id?: string | null
+          id?: string
+          match_reasons?: Json | null
+          match_score?: number | null
+          reviewed_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          entity_a_id?: string | null
+          entity_b_id?: string | null
+          id?: string
+          match_reasons?: Json | null
+          match_score?: number | null
+          reviewed_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_merge_candidates_entity_a_id_fkey"
+            columns: ["entity_a_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_merge_candidates_entity_a_id_fkey"
+            columns: ["entity_a_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_merge_candidates_entity_a_id_fkey"
+            columns: ["entity_a_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_merge_candidates_entity_a_id_fkey"
+            columns: ["entity_a_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_merge_candidates_entity_b_id_fkey"
+            columns: ["entity_b_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_merge_candidates_entity_b_id_fkey"
+            columns: ["entity_b_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_merge_candidates_entity_b_id_fkey"
+            columns: ["entity_b_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_merge_candidates_entity_b_id_fkey"
+            columns: ["entity_b_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entity_merges: {
+        Row: {
+          id: string
+          loser_id: string | null
+          loser_name: string | null
+          merge_reason: string | null
+          merged_at: string | null
+          winner_id: string | null
+        }
+        Insert: {
+          id?: string
+          loser_id?: string | null
+          loser_name?: string | null
+          merge_reason?: string | null
+          merged_at?: string | null
+          winner_id?: string | null
+        }
+        Update: {
+          id?: string
+          loser_id?: string | null
+          loser_name?: string | null
+          merge_reason?: string | null
+          merged_at?: string | null
+          winner_id?: string | null
         }
         Relationships: []
       }
@@ -2988,6 +3271,42 @@ export type Database = {
         }
         Relationships: []
       }
+      insights: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          entity_ids: string[] | null
+          evidence: Json | null
+          id: string
+          insight_type: string
+          is_active: boolean | null
+          severity: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          entity_ids?: string[] | null
+          evidence?: Json | null
+          id?: string
+          insight_type: string
+          is_active?: boolean | null
+          severity?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          entity_ids?: string[] | null
+          evidence?: Json | null
+          id?: string
+          insight_type?: string
+          is_active?: boolean | null
+          severity?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
       intelligence_alerts: {
         Row: {
           alert_type: string
@@ -3320,6 +3639,87 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ocean_health_snapshots: {
+        Row: {
+          active_sources: number | null
+          avg_entity_quality: number | null
+          contracts_last_hour: number | null
+          coverage_score: number | null
+          degraded_sources: number | null
+          entities_last_hour: number | null
+          entities_with_cage: number | null
+          entities_with_uei: number | null
+          failed_sources: number | null
+          freshness_score: number | null
+          healthy_sources: number | null
+          id: string
+          overall_health_score: number | null
+          pipeline_health_score: number | null
+          records_last_hour: number | null
+          snapshot_at: string | null
+          total_contract_value: number | null
+          total_contracts: number | null
+          total_entities: number | null
+          total_facts: number | null
+          total_grants: number | null
+          total_insights: number | null
+          total_opportunities: number | null
+          total_relationships: number | null
+        }
+        Insert: {
+          active_sources?: number | null
+          avg_entity_quality?: number | null
+          contracts_last_hour?: number | null
+          coverage_score?: number | null
+          degraded_sources?: number | null
+          entities_last_hour?: number | null
+          entities_with_cage?: number | null
+          entities_with_uei?: number | null
+          failed_sources?: number | null
+          freshness_score?: number | null
+          healthy_sources?: number | null
+          id?: string
+          overall_health_score?: number | null
+          pipeline_health_score?: number | null
+          records_last_hour?: number | null
+          snapshot_at?: string | null
+          total_contract_value?: number | null
+          total_contracts?: number | null
+          total_entities?: number | null
+          total_facts?: number | null
+          total_grants?: number | null
+          total_insights?: number | null
+          total_opportunities?: number | null
+          total_relationships?: number | null
+        }
+        Update: {
+          active_sources?: number | null
+          avg_entity_quality?: number | null
+          contracts_last_hour?: number | null
+          coverage_score?: number | null
+          degraded_sources?: number | null
+          entities_last_hour?: number | null
+          entities_with_cage?: number | null
+          entities_with_uei?: number | null
+          failed_sources?: number | null
+          freshness_score?: number | null
+          healthy_sources?: number | null
+          id?: string
+          overall_health_score?: number | null
+          pipeline_health_score?: number | null
+          records_last_hour?: number | null
+          snapshot_at?: string | null
+          total_contract_value?: number | null
+          total_contracts?: number | null
+          total_entities?: number | null
+          total_facts?: number | null
+          total_grants?: number | null
+          total_insights?: number | null
+          total_opportunities?: number | null
+          total_relationships?: number | null
+        }
+        Relationships: []
       }
       opportunities: {
         Row: {
@@ -4103,6 +4503,30 @@ export type Database = {
           reward_claimed?: boolean | null
           reward_type?: string | null
           status?: string | null
+        }
+        Relationships: []
+      }
+      relationship_types: {
+        Row: {
+          default_strength: number | null
+          description: string | null
+          id: string
+          is_directional: boolean | null
+          name: string
+        }
+        Insert: {
+          default_strength?: number | null
+          description?: string | null
+          id: string
+          is_directional?: boolean | null
+          name: string
+        }
+        Update: {
+          default_strength?: number | null
+          description?: string | null
+          id?: string
+          is_directional?: boolean | null
+          name?: string
         }
         Relationships: []
       }
@@ -5236,6 +5660,35 @@ export type Database = {
         }
         Relationships: []
       }
+      ocean_health_current: {
+        Row: {
+          active_sources: number | null
+          avg_entity_quality: number | null
+          contracts_last_hour: number | null
+          coverage_score: number | null
+          degraded_sources: number | null
+          entities_last_hour: number | null
+          entities_with_cage: number | null
+          entities_with_uei: number | null
+          failed_sources: number | null
+          freshness_score: number | null
+          healthy_sources: number | null
+          id: string | null
+          overall_health_score: number | null
+          pipeline_health_score: number | null
+          records_last_hour: number | null
+          snapshot_at: string | null
+          total_contract_value: number | null
+          total_contracts: number | null
+          total_entities: number | null
+          total_facts: number | null
+          total_grants: number | null
+          total_insights: number | null
+          total_opportunities: number | null
+          total_relationships: number | null
+        }
+        Relationships: []
+      }
       realtime_dashboard: {
         Row: {
           active_sources: number | null
@@ -5320,6 +5773,7 @@ export type Database = {
           total_value: number
         }[]
       }
+      capture_ocean_health: { Args: never; Returns: string }
       check_circuit_breaker: {
         Args: { p_domain: string }
         Returns: {
@@ -5384,6 +5838,9 @@ export type Database = {
           entity_name: string
         }[]
       }
+      discover_competitors: { Args: never; Returns: number }
+      discover_geographic_clusters: { Args: never; Returns: number }
+      discover_industry_clusters: { Args: never; Returns: number }
       discover_transitive_relationships: {
         Args: { limit_count?: number; min_strength?: number }
         Returns: {
@@ -5471,6 +5928,7 @@ export type Database = {
         Args: { p_context: Json; p_template_type: string }
         Returns: string
       }
+      generate_all_insights: { Args: never; Returns: Json }
       generate_entity_briefing: {
         Args: { p_entity_id: string }
         Returns: string
@@ -5675,6 +6133,9 @@ export type Database = {
       record_master_dataset_stats: { Args: never; Returns: string }
       refresh_all_materialized_views: { Args: never; Returns: undefined }
       reset_monthly_search_counts: { Args: never; Returns: undefined }
+      run_all_discovery: { Args: never; Returns: Json }
+      run_full_ocean_cycle: { Args: never; Returns: Json }
+      score_all_entities: { Args: never; Returns: number }
       semantx_search: {
         Args: {
           p_limit?: number
@@ -5699,6 +6160,20 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      smart_resolve_entity: {
+        Args: {
+          p_cage_code?: string
+          p_city?: string
+          p_duns?: string
+          p_ein?: string
+          p_name: string
+          p_source?: string
+          p_state?: string
+          p_type?: string
+          p_uei?: string
+        }
+        Returns: string
+      }
       sync_entity_contract_stats: {
         Args: { p_entity_id: string }
         Returns: undefined

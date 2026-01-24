@@ -26,6 +26,7 @@ import RelationshipGraph from "./pages/RelationshipGraph";
 import Search from "./pages/Search";
 import Architecture from "./pages/Architecture";
 import SemanTX from "./pages/SemanTX";
+import OceanDashboard from "./pages/OceanDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -56,6 +57,7 @@ const App = () => (
             <Route path="/search" element={<Search />} />
             <Route path="/architecture" element={<Architecture />} />
             <Route path="/semantx" element={<SemanTX />} />
+            <Route path="/ocean" element={<OceanDashboard />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
