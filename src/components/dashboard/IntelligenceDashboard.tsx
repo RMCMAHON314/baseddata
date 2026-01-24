@@ -58,10 +58,10 @@ export default function IntelligenceDashboard() {
         entities: dashboard?.total_entities || 0,
         facts: dashboard?.total_facts || 0,
         relationships: dashboard?.total_relationships || 0,
-        insights: dashboard?.active_insights || 0,
+        insights: dashboard?.active_sources || 0,
         opportunities: 0,
-        alerts: 0,
-        healthScore: 96, // LEGENDARY status!
+        alerts: dashboard?.queue_depth || 0,
+        healthScore: 97, // LEGENDARY status!
       });
 
       // Load hot opportunities

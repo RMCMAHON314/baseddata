@@ -2057,6 +2057,42 @@ export type Database = {
         }
         Relationships: []
       }
+      flywheel_dead_letter_queue: {
+        Row: {
+          created_at: string | null
+          error_count: number | null
+          error_message: string | null
+          id: string
+          last_retry_at: string | null
+          original_id: string | null
+          payload: Json | null
+          resolved_at: string | null
+          source_table: string
+        }
+        Insert: {
+          created_at?: string | null
+          error_count?: number | null
+          error_message?: string | null
+          id?: string
+          last_retry_at?: string | null
+          original_id?: string | null
+          payload?: Json | null
+          resolved_at?: string | null
+          source_table: string
+        }
+        Update: {
+          created_at?: string | null
+          error_count?: number | null
+          error_message?: string | null
+          id?: string
+          last_retry_at?: string | null
+          original_id?: string | null
+          payload?: Json | null
+          resolved_at?: string | null
+          source_table?: string
+        }
+        Relationships: []
+      }
       flywheel_discovery_queue: {
         Row: {
           completed_at: string | null
@@ -3386,6 +3422,45 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_queries: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          id: string
+          is_favorite: boolean | null
+          last_run_at: string | null
+          name: string
+          prompt: string
+          result_count: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_favorite?: boolean | null
+          last_run_at?: string | null
+          name: string
+          prompt: string
+          result_count?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_favorite?: boolean | null
+          last_run_at?: string | null
+          name?: string
+          prompt?: string
+          result_count?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       saved_searches: {
         Row: {
           created_at: string | null
@@ -4299,6 +4374,7 @@ export type Database = {
         Row: {
           canonical_name: string | null
           city: string | null
+          country: string | null
           created_at: string | null
           data_quality_score: number | null
           entity_type: string | null
@@ -4317,6 +4393,7 @@ export type Database = {
         Insert: {
           canonical_name?: string | null
           city?: string | null
+          country?: string | null
           created_at?: string | null
           data_quality_score?: number | null
           entity_type?: string | null
@@ -4335,6 +4412,7 @@ export type Database = {
         Update: {
           canonical_name?: string | null
           city?: string | null
+          country?: string | null
           created_at?: string | null
           data_quality_score?: number | null
           entity_type?: string | null
@@ -4356,34 +4434,28 @@ export type Database = {
         Row: {
           canonical_name: string | null
           city: string | null
-          created_at: string | null
+          data_quality_score: number | null
           entity_type: string | null
-          health_score: number | null
           id: string | null
           opportunity_score: number | null
-          source_count: number | null
           state: string | null
         }
         Insert: {
           canonical_name?: string | null
           city?: string | null
-          created_at?: string | null
+          data_quality_score?: number | null
           entity_type?: string | null
-          health_score?: number | null
           id?: string | null
           opportunity_score?: number | null
-          source_count?: number | null
           state?: string | null
         }
         Update: {
           canonical_name?: string | null
           city?: string | null
-          created_at?: string | null
+          data_quality_score?: number | null
           entity_type?: string | null
-          health_score?: number | null
           id?: string | null
           opportunity_score?: number | null
-          source_count?: number | null
           state?: string | null
         }
         Relationships: []
@@ -4409,12 +4481,11 @@ export type Database = {
       }
       realtime_dashboard: {
         Row: {
-          active_insights: number | null
-          avg_quality_score: number | null
-          healthy_sources: number | null
+          active_sources: number | null
           queue_depth: number | null
           total_entities: number | null
           total_facts: number | null
+          total_records: number | null
           total_relationships: number | null
         }
         Relationships: []
