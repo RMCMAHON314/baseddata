@@ -38,3 +38,9 @@ verify_jwt = false
 
 [functions.auto-crawler]
 verify_jwt = false
+
+[functions.omniscient-ai]
+verify_jwt = false
+
+[functions.unified-intelligence]
+verify_jwt = false

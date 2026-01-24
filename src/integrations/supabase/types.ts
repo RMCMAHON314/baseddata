@@ -2027,6 +2027,33 @@ export type Database = {
         }
         Relationships: []
       }
+      narrative_templates: {
+        Row: {
+          created_at: string | null
+          id: string
+          template_body: string
+          template_name: string
+          template_type: string
+          variables: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          template_body: string
+          template_name: string
+          template_type: string
+          variables?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          template_body?: string
+          template_name?: string
+          template_type?: string
+          variables?: Json | null
+        }
+        Relationships: []
+      }
       nl_queries: {
         Row: {
           api_key_id: string | null
@@ -3010,6 +3037,8 @@ export type Database = {
           target_keywords: string[]
         }[]
       }
+      analyze_query_intent: { Args: { p_query: string }; Returns: Json }
+      build_unified_context: { Args: { p_query: string }; Returns: Json }
       cache_location: {
         Args: {
           p_admin_level?: string
@@ -3027,6 +3056,7 @@ export type Database = {
         Args: { p_crawler_id: string }
         Returns: string
       }
+      calculate_network_influence: { Args: never; Returns: undefined }
       calculate_next_run: {
         Args: { p_cron: string; p_from?: string }
         Returns: string
@@ -3079,6 +3109,17 @@ export type Database = {
         Returns: boolean
       }
       execute_nl_query: { Args: { p_sql: string }; Returns: Json }
+      find_competitors: {
+        Args: { p_entity_id: string; p_limit?: number }
+        Returns: {
+          competitor_id: string
+          competitor_name: string
+          entity_type: string
+          opportunity_score: number
+          shared_categories: number
+          similarity_score: number
+        }[]
+      }
       find_low_coverage_areas: {
         Args: never
         Returns: {
@@ -3122,6 +3163,19 @@ export type Database = {
           name: string
           query_count: number
         }[]
+      }
+      generate_ai_narrative: {
+        Args: { p_context: Json; p_template_type: string }
+        Returns: string
+      }
+      generate_entity_briefing: {
+        Args: { p_entity_id: string }
+        Returns: string
+      }
+      generate_intelligence_alerts: { Args: never; Returns: number }
+      get_entity_network: {
+        Args: { p_depth?: number; p_entity_id: string; p_min_strength?: number }
+        Returns: Json
       }
       get_flywheel_health: { Args: never; Returns: Json }
       get_matched_sources: {
