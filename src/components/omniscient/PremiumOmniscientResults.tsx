@@ -217,7 +217,7 @@ export function PremiumOmniscientResults({
 
   return (
     <TooltipProvider delayDuration={200}>
-    <div className="h-screen flex flex-col bg-slate-50 text-slate-900 overflow-hidden">
+    <div className="h-[100dvh] flex flex-col bg-slate-50 text-slate-900 overflow-hidden">
       {/* Header Bar - White */}
       <header className="flex-none h-16 bg-white border-b border-slate-200 flex items-center px-6 gap-4 z-40 shadow-sm">
         <Button
@@ -410,7 +410,7 @@ export function PremiumOmniscientResults({
 
         {/* Filter Sidebar */}
         <aside className={cn(
-          "w-64 bg-white border-r border-slate-200 flex flex-col transition-all duration-300",
+          "w-64 bg-white border-r border-slate-200 flex flex-col min-h-0 transition-all duration-300",
           !filterSidebarOpen && "-ml-64"
         )}>
           <div className="p-4 border-b border-slate-200 flex items-center justify-between">
@@ -515,7 +515,7 @@ export function PremiumOmniscientResults({
         )}
 
         {/* Map & Data Panel */}
-        <div className="flex-1 flex flex-col lg:flex-row min-w-0">
+        <div className="flex-1 flex flex-col lg:flex-row min-w-0 min-h-0">
           {/* Map */}
           <div className="flex-1 relative min-h-[300px] lg:min-h-0">
             <SimpleMap
@@ -541,7 +541,7 @@ export function PremiumOmniscientResults({
           </div>
 
           {/* Data Cards / Grid Panel */}
-          <div className="w-full lg:w-[480px] flex flex-col bg-white border-l border-slate-200">
+          <div className="w-full lg:w-[480px] flex flex-col min-h-0 bg-white border-l border-slate-200">
             {/* Panel Header */}
             <div className="flex-none px-4 py-3 border-b border-slate-200 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -580,7 +580,7 @@ export function PremiumOmniscientResults({
             </div>
 
             {/* Content - use native overflow for better scrolling */}
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 min-h-0 overflow-y-auto pb-6">
               {viewMode === 'table' ? (
                 <div className="p-4">
                   <ResultsDataTable 
