@@ -724,6 +724,13 @@ export type Database = {
             referencedRelation: "mv_top_contractors"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "clinical_trials_sponsor_entity_id_fkey"
+            columns: ["sponsor_entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
+            referencedColumns: ["id"]
+          },
         ]
       }
       contract_classifications: {
@@ -930,6 +937,13 @@ export type Database = {
             columns: ["recipient_entity_id"]
             isOneToOne: false
             referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contracts_recipient_entity_id_fkey"
+            columns: ["recipient_entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
             referencedColumns: ["id"]
           },
         ]
@@ -1195,6 +1209,13 @@ export type Database = {
             referencedRelation: "mv_top_contractors"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "core_entity_history_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
+            referencedColumns: ["id"]
+          },
         ]
       }
       core_facts: {
@@ -1261,6 +1282,13 @@ export type Database = {
             columns: ["entity_id"]
             isOneToOne: false
             referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "core_facts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
             referencedColumns: ["id"]
           },
         ]
@@ -1332,6 +1360,13 @@ export type Database = {
             columns: ["entity_id"]
             isOneToOne: false
             referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "core_feedback_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
             referencedColumns: ["id"]
           },
           {
@@ -1543,6 +1578,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "core_relationships_from_entity_id_fkey"
+            columns: ["from_entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "core_relationships_to_entity_id_fkey"
             columns: ["to_entity_id"]
             isOneToOne: false
@@ -1568,6 +1610,13 @@ export type Database = {
             columns: ["to_entity_id"]
             isOneToOne: false
             referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "core_relationships_to_entity_id_fkey"
+            columns: ["to_entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
             referencedColumns: ["id"]
           },
         ]
@@ -2296,6 +2345,13 @@ export type Database = {
             referencedRelation: "mv_top_contractors"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "entity_aliases_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
+            referencedColumns: ["id"]
+          },
         ]
       }
       entity_health_scores: {
@@ -2361,6 +2417,13 @@ export type Database = {
             referencedRelation: "mv_top_contractors"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "entity_health_scores_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: true
+            referencedRelation: "top_entities_mv"
+            referencedColumns: ["id"]
+          },
         ]
       }
       entity_identifiers: {
@@ -2418,6 +2481,13 @@ export type Database = {
             columns: ["entity_id"]
             isOneToOne: false
             referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_identifiers_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
             referencedColumns: ["id"]
           },
         ]
@@ -2483,6 +2553,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "entity_merge_candidates_entity_a_id_fkey"
+            columns: ["entity_a_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "entity_merge_candidates_entity_b_id_fkey"
             columns: ["entity_b_id"]
             isOneToOne: false
@@ -2508,6 +2585,13 @@ export type Database = {
             columns: ["entity_b_id"]
             isOneToOne: false
             referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_merge_candidates_entity_b_id_fkey"
+            columns: ["entity_b_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
             referencedColumns: ["id"]
           },
         ]
@@ -2617,6 +2701,13 @@ export type Database = {
             referencedRelation: "mv_top_contractors"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "entity_profiles_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: true
+            referencedRelation: "top_entities_mv"
+            referencedColumns: ["id"]
+          },
         ]
       }
       entity_timeline: {
@@ -2679,6 +2770,13 @@ export type Database = {
             referencedRelation: "mv_top_contractors"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "entity_timeline_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
+            referencedColumns: ["id"]
+          },
         ]
       }
       entity_watchlist: {
@@ -2739,6 +2837,13 @@ export type Database = {
             columns: ["entity_id"]
             isOneToOne: false
             referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_watchlist_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
             referencedColumns: ["id"]
           },
         ]
@@ -2878,6 +2983,13 @@ export type Database = {
             referencedRelation: "mv_top_contractors"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fda_devices_applicant_entity_id_fkey"
+            columns: ["applicant_entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
+            referencedColumns: ["id"]
+          },
         ]
       }
       fda_drugs: {
@@ -2965,6 +3077,13 @@ export type Database = {
             columns: ["sponsor_entity_id"]
             isOneToOne: false
             referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fda_drugs_sponsor_entity_id_fkey"
+            columns: ["sponsor_entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
             referencedColumns: ["id"]
           },
         ]
@@ -3402,6 +3521,13 @@ export type Database = {
             referencedRelation: "mv_top_contractors"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "generated_reports_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
+            referencedColumns: ["id"]
+          },
         ]
       }
       grants: {
@@ -3513,6 +3639,13 @@ export type Database = {
             columns: ["recipient_entity_id"]
             isOneToOne: false
             referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grants_recipient_entity_id_fkey"
+            columns: ["recipient_entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
             referencedColumns: ["id"]
           },
         ]
@@ -3767,6 +3900,13 @@ export type Database = {
             referencedRelation: "mv_top_contractors"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "intelligence_alerts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
+            referencedColumns: ["id"]
+          },
         ]
       }
       knowledge_edges: {
@@ -3982,6 +4122,13 @@ export type Database = {
             referencedRelation: "mv_top_contractors"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "md_education_institutions_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
+            referencedColumns: ["id"]
+          },
         ]
       }
       md_education_spending: {
@@ -4045,6 +4192,13 @@ export type Database = {
             columns: ["payee_entity_id"]
             isOneToOne: false
             referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "md_education_spending_payee_entity_id_fkey"
+            columns: ["payee_entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
             referencedColumns: ["id"]
           },
         ]
@@ -4482,6 +4636,13 @@ export type Database = {
             referencedRelation: "mv_top_contractors"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "opportunity_pipeline_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
+            referencedColumns: ["id"]
+          },
         ]
       }
       pipeline_runs: {
@@ -4583,6 +4744,13 @@ export type Database = {
             columns: ["entity_id"]
             isOneToOne: false
             referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_members_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
             referencedColumns: ["id"]
           },
           {
@@ -5124,6 +5292,13 @@ export type Database = {
             columns: ["entity_id"]
             isOneToOne: false
             referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "records_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
             referencedColumns: ["id"]
           },
           {
@@ -5985,6 +6160,13 @@ export type Database = {
             referencedRelation: "mv_top_contractors"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_alerts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_feedback: {
@@ -6368,6 +6550,21 @@ export type Database = {
           total_facts: number | null
           total_records: number | null
           total_relationships: number | null
+        }
+        Relationships: []
+      }
+      top_entities_mv: {
+        Row: {
+          canonical_name: string | null
+          contract_count: number | null
+          contract_velocity: number | null
+          entity_type: string | null
+          grant_success: number | null
+          health_score: number | null
+          id: string | null
+          state: string | null
+          total_contract_value: number | null
+          trend_direction: string | null
         }
         Relationships: []
       }
@@ -6827,6 +7024,7 @@ export type Database = {
       }
       record_master_dataset_stats: { Args: never; Returns: string }
       refresh_all_materialized_views: { Args: never; Returns: undefined }
+      refresh_top_entities: { Args: never; Returns: undefined }
       reset_monthly_search_counts: { Args: never; Returns: undefined }
       run_all_discovery: { Args: never; Returns: Json }
       run_full_ocean_cycle: { Args: never; Returns: Json }
