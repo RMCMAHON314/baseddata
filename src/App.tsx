@@ -24,6 +24,7 @@ import FileExplorer from "./pages/FileExplorer";
 import DataSources from "./pages/DataSources";
 import RelationshipGraph from "./pages/RelationshipGraph";
 import Search from "./pages/Search";
+import Architecture from "./pages/Architecture";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -52,6 +53,7 @@ const App = () => (
             <Route path="/sources" element={<DataSources />} />
             <Route path="/graph" element={<RelationshipGraph />} />
             <Route path="/search" element={<Search />} />
+            <Route path="/architecture" element={<Architecture />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
