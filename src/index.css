@@ -2,117 +2,114 @@
 @tailwind components;
 @tailwind utilities;
 
-/* BASED DATA v10.0 - Premium Light Design System */
-/* Clean blue (#3B82F6) + white aesthetic matching the beautiful landing page */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+/* BASED DATA v11.0 - BLOOMBERG TERMINAL EDITION */
+/* "The Bloomberg Terminal for Public Data" - Premium Dark Intelligence Theme */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 @layer base {
   :root {
-    /* BASED DATA Core Palette - Clean Blue */
-    --based-blue: 217 91% 60%;        /* #3B82F6 */
-    --based-blue-hover: 224 76% 52%;  /* #2563EB */
-    --based-blue-light: 199 89% 48%;  /* #06B6D4 - Accent Cyan */
-    --based-blue-medium: 217 91% 55%;
+    /* BASED DATA Core Palette - Bloomberg-Inspired */
+    --based-navy: 220 47% 8%;          /* #0A1628 - Deep Navy */
+    --based-navy-light: 220 40% 12%;   /* #141E30 */
+    --based-blue: 217 91% 60%;         /* #3B82F6 - Electric Blue */
+    --based-blue-hover: 224 76% 52%;   /* #2563EB */
+    --based-cyan: 199 89% 48%;         /* #06B6D4 - Accent Cyan */
+    --based-slate: 217 33% 17%;        /* #1E293B */
     
-    /* Semantic Colors */
-    --success: 158 64% 42%;           /* #10B981 */
+    /* Semantic Colors - Intelligence Signals */
+    --success: 158 64% 42%;            /* #10B981 - Emerald */
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;            /* #F59E0B */
-    --warning-foreground: 0 0% 100%;
-    --error: 0 84% 60%;               /* #EF4444 */
+    --warning: 38 92% 50%;             /* #F59E0B - Amber */
+    --warning-foreground: 0 0% 0%;
+    --error: 350 89% 60%;              /* #F43F5E - Rose */
+    --critical: 350 89% 60%;           /* #F43F5E - Critical alerts */
     
-    /* Light Mode - Premium White Aesthetic */
-    --background: 0 0% 100%;          /* #FFFFFF */
-    --background-secondary: 210 40% 98%; /* #F8FAFC */
-    --background-tertiary: 210 40% 96%; /* #F1F5F9 */
+    /* DARK MODE DEFAULT - Bloomberg Terminal Style */
+    --background: 222 47% 4%;          /* #050A12 - Near black */
+    --background-secondary: 220 47% 8%; /* #0A1628 */
+    --background-tertiary: 220 40% 12%; /* #141E30 */
     
-    --foreground: 222 47% 17%;        /* #1E293B - Text Primary */
-    --foreground-secondary: 215 16% 47%; /* #64748B */
-    --foreground-tertiary: 215 16% 62%; /* #94A3B8 */
+    --foreground: 0 0% 96%;            /* #F5F5F5 */
+    --foreground-secondary: 215 20% 65%; /* #94A3B8 */
+    --foreground-tertiary: 215 16% 47%; /* #64748B */
     
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 17%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 17%;
+    --card: 220 47% 7%;                /* #0D1424 */
+    --card-foreground: 0 0% 96%;
+    --popover: 220 47% 7%;
+    --popover-foreground: 0 0% 96%;
     
-    --primary: 217 91% 60%;           /* #3B82F6 */
+    --primary: 217 91% 60%;            /* #3B82F6 - Electric Blue */
     --primary-foreground: 0 0% 100%;
     
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 17%;
+    --secondary: 220 40% 14%;          /* #1C2536 */
+    --secondary-foreground: 0 0% 90%;
     
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 220 30% 16%;
+    --muted-foreground: 215 16% 55%;
     
-    --accent: 199 89% 48%;            /* Cyan accent */
+    --accent: 199 89% 48%;             /* Cyan accent */
     --accent-foreground: 0 0% 100%;
     
-    --destructive: 0 84% 60%;
+    --destructive: 350 89% 60%;
     --destructive-foreground: 0 0% 100%;
     
     /* Borders */
-    --border: 214 32% 91%;            /* #E2E8F0 */
-    --border-hover: 214 20% 79%;      /* #CBD5E1 */
-    --input: 214 32% 91%;
+    --border: 220 30% 18%;             /* Subtle dark borders */
+    --border-hover: 220 30% 28%;
+    --input: 220 30% 16%;
     --ring: 217 91% 60%;
     
     --radius: 0.75rem;
     
-    /* Typography */
+    /* Typography - Bloomberg-style */
     --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, monospace;
     
-    /* Gradients */
+    /* Premium Gradients */
     --gradient-hero: linear-gradient(135deg, hsl(217 91% 60%) 0%, hsl(199 89% 48%) 100%);
-    --gradient-subtle: linear-gradient(180deg, hsl(210 40% 98%) 0%, hsl(0 0% 100%) 100%);
+    --gradient-dark: linear-gradient(180deg, hsl(220 47% 8%) 0%, hsl(222 47% 4%) 100%);
+    --gradient-card: linear-gradient(135deg, hsl(220 47% 10%) 0%, hsl(220 47% 7%) 100%);
+    --gradient-glow: linear-gradient(135deg, hsl(217 91% 60% / 0.2) 0%, hsl(199 89% 48% / 0.1) 100%);
     
-    /* Shadows */
-    --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-card-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    /* Premium Shadows */
+    --shadow-card: 0 4px 20px -4px rgba(0, 0, 0, 0.5), 0 2px 8px -2px rgba(0, 0, 0, 0.3);
+    --shadow-card-hover: 0 12px 40px -8px rgba(59, 130, 246, 0.25), 0 4px 12px -4px rgba(0, 0, 0, 0.4);
+    --shadow-glow: 0 0 40px -10px hsl(217 91% 60% / 0.4);
+    --shadow-lg: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
     
-    /* Sidebar */
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 222 47% 17%;
+    /* Sidebar - Dark */
+    --sidebar-background: 220 47% 6%;
+    --sidebar-foreground: 0 0% 90%;
     --sidebar-primary: 217 91% 60%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 40% 96%;
-    --sidebar-accent-foreground: 222 47% 17%;
-    --sidebar-border: 214 32% 91%;
+    --sidebar-accent: 220 30% 14%;
+    --sidebar-accent-foreground: 0 0% 90%;
+    --sidebar-border: 220 30% 16%;
     --sidebar-ring: 217 91% 60%;
   }
   
-  /* Dark Theme - for optional toggle */
-  .dark, [data-theme="dark"] {
-    --background: 222 47% 4%;
-    --foreground: 0 0% 96%;
-    --card: 222 40% 7%;
-    --card-foreground: 0 0% 96%;
-    --popover: 222 40% 7%;
-    --popover-foreground: 0 0% 96%;
-    --primary: 217 91% 65%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 222 30% 12%;
-    --secondary-foreground: 0 0% 85%;
-    --muted: 222 25% 14%;
-    --muted-foreground: 0 0% 55%;
-    --accent: 199 89% 48%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 65% 55%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 222 25% 15%;
-    --input: 222 25% 12%;
-    --ring: 217 91% 60%;
+  /* Light Theme Option */
+  .light, [data-theme="light"] {
+    --background: 0 0% 100%;
+    --background-secondary: 210 40% 98%;
+    --background-tertiary: 210 40% 96%;
+    --foreground: 222 47% 17%;
+    --foreground-secondary: 215 16% 47%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 17%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 17%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 17%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
     
-    --sidebar-background: 222 40% 7%;
-    --sidebar-foreground: 0 0% 96%;
-    --sidebar-primary: 217 91% 65%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 25% 14%;
-    --sidebar-accent-foreground: 0 0% 96%;
-    --sidebar-border: 222 25% 15%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 47% 17%;
+    --sidebar-border: 214 32% 91%;
   }
 }
 
@@ -137,89 +134,131 @@
     font-weight: 700;
   }
   
-  code, pre {
+  code, pre, .font-mono, [data-value] {
     font-family: var(--font-mono);
   }
 }
 
 @layer components {
-  /* Premium Primary Button - Blue Gradient */
+  /* Bloomberg-style Primary Button */
   .btn-omni {
     @apply relative font-semibold rounded-xl px-6 py-3 text-white overflow-hidden transition-all duration-300;
     background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--based-blue-hover)));
-    box-shadow: 0 4px 14px -4px hsl(var(--primary) / 0.4);
+    box-shadow: 0 4px 20px -4px hsl(var(--primary) / 0.5), 0 0 0 1px hsl(var(--primary) / 0.2);
   }
   
   .btn-omni:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px -4px hsl(var(--primary) / 0.5);
+    box-shadow: 0 8px 30px -4px hsl(var(--primary) / 0.6), 0 0 0 1px hsl(var(--primary) / 0.3);
   }
   
   .btn-omni:active {
     transform: translateY(0);
   }
   
-  /* Premium Card - White with subtle shadow */
+  /* Premium Card - Dark Glass Effect */
   .card-premium {
     @apply bg-card rounded-2xl border border-border;
+    background: var(--gradient-card);
     box-shadow: var(--shadow-card);
-    transition: box-shadow 0.3s ease, border-color 0.3s ease;
+    transition: all 0.3s ease;
   }
   
   .card-premium:hover {
     box-shadow: var(--shadow-card-hover);
-    border-color: hsl(var(--border-hover));
+    border-color: hsl(var(--primary) / 0.3);
   }
   
-  /* Glass Card - Light version */
+  /* Glass Card - Frosted Dark */
   .card-glass {
-    @apply bg-white/80 backdrop-blur-xl rounded-2xl border border-border/50;
+    @apply rounded-2xl border border-border/50;
+    background: hsl(var(--card) / 0.8);
+    backdrop-filter: blur(20px);
     box-shadow: var(--shadow-card);
+  }
+  
+  /* Metric Card - Bloomberg Terminal Style */
+  .metric-card {
+    @apply bg-card rounded-xl border border-border p-4 transition-all duration-200;
+    background: linear-gradient(135deg, hsl(220 47% 9%) 0%, hsl(220 47% 6%) 100%);
+  }
+  
+  .metric-card:hover {
+    border-color: hsl(var(--primary) / 0.3);
+    box-shadow: 0 0 20px -5px hsl(var(--primary) / 0.2);
+  }
+  
+  .metric-value {
+    @apply text-2xl font-bold font-mono;
+    background: linear-gradient(135deg, hsl(var(--foreground)), hsl(var(--foreground-secondary)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .metric-label {
+    @apply text-xs uppercase tracking-wider text-muted-foreground mt-1;
+  }
+  
+  /* Hot/Fire Metric - For opportunities */
+  .metric-hot {
+    border-color: hsl(var(--warning) / 0.3);
+    background: linear-gradient(135deg, hsl(38 92% 50% / 0.1) 0%, hsl(220 47% 6%) 100%);
+  }
+  
+  .metric-hot .metric-value {
+    background: linear-gradient(135deg, hsl(var(--warning)), hsl(24 100% 60%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  /* Intelligence Summary Card */
+  .intelligence-card {
+    @apply rounded-2xl border border-border p-6 relative overflow-hidden;
+    background: linear-gradient(135deg, hsl(220 47% 10%) 0%, hsl(220 47% 6%) 100%);
+  }
+  
+  .intelligence-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, hsl(217 91% 60% / 0.05) 0%, transparent 50%);
+    pointer-events: none;
   }
   
   /* Hero Gradient Background */
   .gradient-hero {
-    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--based-blue-light)) 100%);
-  }
-  
-  /* Gradient Border Effect */
-  .gradient-border {
-    position: relative;
-  }
-  
-  .gradient-border::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    padding: 1px;
-    border-radius: inherit;
-    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--based-blue-light)));
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    pointer-events: none;
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--based-cyan)) 100%);
   }
   
   /* Text Gradients */
   .text-gradient-omni {
-    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--based-blue-light)));
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--based-cyan)));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
   
   .text-gradient-hero {
-    background: linear-gradient(135deg, hsl(var(--foreground)), hsl(var(--muted-foreground)));
+    background: linear-gradient(135deg, hsl(var(--foreground)), hsl(var(--foreground-secondary)));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
   
-  /* Animated Background Grid - Light */
+  .text-gradient-gold {
+    background: linear-gradient(135deg, hsl(38 92% 50%), hsl(24 100% 60%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  /* Animated Background Grid */
   .bg-grid {
     background-image: 
-      linear-gradient(hsl(var(--border) / 0.4) 1px, transparent 1px),
-      linear-gradient(90deg, hsl(var(--border) / 0.4) 1px, transparent 1px);
+      linear-gradient(hsl(var(--border) / 0.3) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border) / 0.3) 1px, transparent 1px);
     background-size: 60px 60px;
   }
   
@@ -228,26 +267,39 @@
     mask: linear-gradient(to bottom, black 0%, transparent 100%);
   }
   
-  /* Radial Gradient Overlay - Light */
+  /* Radial Gradient Overlay */
   .radial-overlay {
-    background: radial-gradient(ellipse 80% 50% at 50% -20%, hsl(var(--primary) / 0.08), transparent);
+    background: radial-gradient(ellipse 80% 50% at 50% -20%, hsl(var(--primary) / 0.15), transparent);
   }
   
-  /* Status Badges */
+  /* Status Badges - Terminal Style */
   .status-success {
-    @apply bg-emerald-50 text-emerald-700 border border-emerald-200;
+    @apply bg-emerald-500/10 text-emerald-400 border border-emerald-500/20;
   }
   
   .status-error {
-    @apply bg-red-50 text-red-700 border border-red-200;
+    @apply bg-rose-500/10 text-rose-400 border border-rose-500/20;
   }
   
   .status-warning {
-    @apply bg-amber-50 text-amber-700 border border-amber-200;
+    @apply bg-amber-500/10 text-amber-400 border border-amber-500/20;
   }
   
   .status-active {
-    @apply bg-blue-50 text-blue-700 border border-blue-200;
+    @apply bg-blue-500/10 text-blue-400 border border-blue-500/20;
+  }
+  
+  /* Opportunity Score Badges */
+  .score-hot {
+    @apply bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-300 border border-amber-500/30;
+  }
+  
+  .score-warm {
+    @apply bg-blue-500/10 text-blue-400 border border-blue-500/20;
+  }
+  
+  .score-neutral {
+    @apply bg-slate-500/10 text-slate-400 border border-slate-500/20;
   }
   
   /* Shimmer Effect */
@@ -255,7 +307,7 @@
     background: linear-gradient(
       90deg,
       hsl(var(--muted)) 0%,
-      hsl(var(--background)) 50%,
+      hsl(var(--border)) 50%,
       hsl(var(--muted)) 100%
     );
     background-size: 200% 100%;
@@ -267,126 +319,96 @@
     100% { background-position: -200% 0; }
   }
   
-  /* Category Colors - Bright on light background */
-  .cat-wildlife { --cat-color: 158 64% 42%; }    /* Emerald */
-  .cat-weather { --cat-color: 38 92% 50%; }      /* Amber */
-  .cat-marine { --cat-color: 199 89% 48%; }      /* Cyan */
-  .cat-government { --cat-color: 270 95% 65%; }  /* Purple */
-  .cat-economic { --cat-color: 24 100% 60%; }    /* Orange */
-  .cat-geospatial { --cat-color: 217 91% 60%; }  /* Blue */
-  .cat-health { --cat-color: 0 84% 60%; }        /* Red */
-  .cat-transportation { --cat-color: 199 89% 48%; } /* Cyan */
-  .cat-energy { --cat-color: 48 96% 53%; }       /* Yellow */
-  .cat-recreation { --cat-color: 158 64% 42%; }  /* Emerald */
-  
-  /* LIGHT THEME Map Components */
-  .map-panel-light {
-    @apply bg-white border-slate-200 shadow-lg;
+  /* Pulse Glow Animation */
+  @keyframes pulse-glow {
+    0%, 100% {
+      box-shadow: 0 0 5px hsl(var(--success) / 0.3);
+    }
+    50% {
+      box-shadow: 0 0 15px hsl(var(--success) / 0.6);
+    }
   }
   
-  .map-card-light {
-    @apply bg-white rounded-2xl border border-slate-200 hover:border-blue-300 hover:shadow-lg transition-all duration-200;
+  .pulse-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
   }
   
-  /* Premium Result Card - Light Theme */
-  .result-card-light {
-    @apply bg-white rounded-2xl border border-slate-200 hover:border-blue-300 hover:shadow-lg transition-all duration-200 overflow-hidden;
+  /* Live Indicator */
+  .live-indicator {
+    @apply relative flex items-center gap-2;
   }
   
-  /* Insights Card - Gradient accent */
-  .insights-card {
-    @apply bg-gradient-to-r from-blue-50 to-cyan-50 rounded-2xl p-6 border border-blue-100;
+  .live-indicator::before {
+    content: '';
+    @apply w-2 h-2 rounded-full bg-emerald-400 animate-pulse;
   }
   
-  /* Filter Sidebar - Light */
-  .filter-sidebar {
-    @apply bg-white border-r border-slate-200;
+  /* Category Colors - Dark Theme Optimized */
+  .cat-wildlife { --cat-color: 158 64% 42%; }
+  .cat-weather { --cat-color: 38 92% 50%; }
+  .cat-marine { --cat-color: 199 89% 48%; }
+  .cat-government { --cat-color: 270 95% 65%; }
+  .cat-economic { --cat-color: 24 100% 60%; }
+  .cat-geospatial { --cat-color: 217 91% 60%; }
+  .cat-health { --cat-color: 350 89% 60%; }
+  .cat-transportation { --cat-color: 199 89% 48%; }
+  .cat-energy { --cat-color: 48 96% 53%; }
+  .cat-recreation { --cat-color: 158 64% 42%; }
+  
+  /* Map Components - Dark Theme */
+  .map-panel-dark {
+    @apply bg-card border-border shadow-lg;
   }
   
-  /* Stats Bar - Light */
-  .stats-bar-light {
-    @apply bg-white border-t border-slate-200 shadow-sm;
+  .map-card-dark {
+    @apply bg-card rounded-2xl border border-border hover:border-primary/30 transition-all duration-200;
+    box-shadow: var(--shadow-card);
   }
   
-  /* Progress Pill States */
-  .progress-pill-complete {
-    @apply bg-emerald-50 text-emerald-700 border border-emerald-200;
-  }
-  
-  .progress-pill-active {
-    @apply bg-blue-50 text-blue-700 border border-blue-200 shadow-sm;
-  }
-  
-  .progress-pill-pending {
-    @apply bg-slate-50 text-slate-400 border border-slate-200;
-  }
-  
-  /* Source Query Card - Light */
-  .source-card-querying {
-    @apply bg-blue-50 border-blue-200 shadow-sm scale-105;
-  }
-  
-  .source-card-complete {
-    @apply bg-emerald-50 border-emerald-200;
-  }
-  
-  .source-card-pending {
-    @apply bg-white border-slate-200;
-  }
-  
-  /* Leaflet Light Theme Overrides */
-  .leaflet-container-light {
-    background: #F8FAFC;
+  /* Leaflet Dark Theme Overrides */
+  .leaflet-container {
+    background: hsl(220 47% 4%);
     font-family: var(--font-body), system-ui, -apple-system, sans-serif;
   }
   
-  .leaflet-container-light .leaflet-control-zoom {
+  .leaflet-container .leaflet-control-zoom {
     border: none !important;
     box-shadow: var(--shadow-card) !important;
     border-radius: 12px;
     overflow: hidden;
   }
   
-  .leaflet-container-light .leaflet-control-zoom a {
-    background: white !important;
-    color: #1E293B !important;
-    border: 1px solid #E2E8F0 !important;
+  .leaflet-container .leaflet-control-zoom a {
+    background: hsl(220 47% 10%) !important;
+    color: hsl(0 0% 90%) !important;
+    border: 1px solid hsl(220 30% 18%) !important;
     width: 36px;
     height: 36px;
     line-height: 34px;
     font-size: 18px;
   }
   
-  .leaflet-container-light .leaflet-control-zoom a:hover {
-    background: #F1F5F9 !important;
-    color: #3B82F6 !important;
+  .leaflet-container .leaflet-control-zoom a:hover {
+    background: hsl(220 47% 14%) !important;
+    color: hsl(217 91% 60%) !important;
   }
   
-  .leaflet-container-light .leaflet-control-scale-line {
-    background: white !important;
-    color: #64748B !important;
-    border-color: #E2E8F0 !important;
-    font-size: 10px;
-    padding: 2px 8px;
-    border-radius: 4px;
-  }
-  
-  .leaflet-container-light .leaflet-popup-content-wrapper {
-    background: white;
-    color: #1E293B;
+  .leaflet-container .leaflet-popup-content-wrapper {
+    background: hsl(220 47% 8%);
+    color: hsl(0 0% 96%);
     border-radius: 16px;
     box-shadow: var(--shadow-lg);
-    border: 1px solid #E2E8F0;
+    border: 1px solid hsl(220 30% 18%);
   }
   
-  .leaflet-container-light .leaflet-popup-tip {
-    background: white;
-    border: 1px solid #E2E8F0;
+  .leaflet-container .leaflet-popup-tip {
+    background: hsl(220 47% 8%);
+    border: 1px solid hsl(220 30% 18%);
   }
   
-  .leaflet-container-light .leaflet-control-attribution {
-    background: white !important;
-    color: #94A3B8 !important;
+  .leaflet-container .leaflet-control-attribution {
+    background: hsl(220 47% 8% / 0.9) !important;
+    color: hsl(215 16% 55%) !important;
     font-size: 10px;
     padding: 2px 8px;
   }
@@ -404,9 +426,43 @@
     height: 100% !important;
   }
   
+  /* Progress Pill States */
+  .progress-pill-complete {
+    @apply bg-emerald-500/20 text-emerald-400 border border-emerald-500/30;
+  }
+  
+  .progress-pill-active {
+    @apply bg-blue-500/20 text-blue-400 border border-blue-500/30;
+    box-shadow: 0 0 15px -3px hsl(217 91% 60% / 0.3);
+  }
+  
+  .progress-pill-pending {
+    @apply bg-slate-500/10 text-slate-500 border border-slate-500/20;
+  }
+  
   /* Fix flex children collapsing */
   .min-h-0 {
     min-height: 0;
+  }
+  
+  /* Scrollbar Styling - Dark */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: hsl(220 47% 6%);
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: hsl(220 30% 20%);
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(220 30% 28%);
   }
 }
 
@@ -445,5 +501,14 @@
   
   .shadow-premium-hover {
     box-shadow: var(--shadow-card-hover);
+  }
+  
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+  
+  /* Data value display - monospace */
+  .data-value {
+    @apply font-mono tabular-nums;
   }
 }
