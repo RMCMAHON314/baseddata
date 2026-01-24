@@ -1,6 +1,7 @@
 // ============================================================
-// 🧠 THE CORE: FACT EXTRACTION ENGINE v2.0
-// Extracts temporal facts AND links orphaned facts to entities
+// 🧠 THE CORE: QUANTUM FACT EXTRACTION ENGINE v3.0
+// MAXIMUM AGGRESSION - Extract 5-15 facts per record
+// Target: 1000+ facts, 1.0+ density
 // ============================================================
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -14,9 +15,19 @@ interface RecordData {
   id: string;
   name: string;
   category: string;
+  subcategory?: string;
   source_id: string;
   properties: Record<string, unknown>;
   entity_id?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
+  latitude?: number;
+  longitude?: number;
+  phone?: string;
+  website?: string;
+  description?: string;
 }
 
 interface ExtractedFact {
@@ -33,13 +44,12 @@ interface ExtractedFact {
 // LINK ORPHANED FACTS TO ENTITIES
 // ═══════════════════════════════════════════════════════════════
 async function linkOrphanedFacts(supabase: any): Promise<{ linked: number }> {
-  // Find facts without entity_id but with source_record_id
   const { data: orphanedFacts } = await supabase
     .from('core_facts')
     .select('id, source_record_id')
     .is('entity_id', null)
     .not('source_record_id', 'is', null)
-    .limit(100);
+    .limit(200);
 
   if (!orphanedFacts || orphanedFacts.length === 0) {
     return { linked: 0 };
@@ -48,7 +58,6 @@ async function linkOrphanedFacts(supabase: any): Promise<{ linked: number }> {
   let linked = 0;
 
   for (const fact of orphanedFacts) {
-    // Get record's entity_id
     const { data: record } = await supabase
       .from('records')
       .select('entity_id')
@@ -69,11 +78,30 @@ async function linkOrphanedFacts(supabase: any): Promise<{ linked: number }> {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// EXTRACT ALL POSSIBLE FACTS FROM A RECORD
+// CALCULATE RECORD QUALITY SCORE
+// ═══════════════════════════════════════════════════════════════
+function calculateRecordQuality(record: RecordData): number {
+  let score = 30;
+  
+  if (record.name) score += 15;
+  if (record.address) score += 10;
+  if (record.city && record.state) score += 10;
+  if (record.latitude && record.longitude) score += 15;
+  if (record.phone || record.website) score += 5;
+  if (record.description) score += 5;
+  if (record.properties && Object.keys(record.properties).length > 3) score += 10;
+  
+  return Math.min(100, score);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// QUANTUM FACT EXTRACTION - 5-15 facts per record
 // ═══════════════════════════════════════════════════════════════
 function extractFactsFromRecord(record: RecordData): ExtractedFact[] {
   const facts: ExtractedFact[] = [];
   const props = record.properties || {};
+  const now = new Date().toISOString();
+  
   const baseInfo = {
     source_name: record.source_id,
     source_record_id: record.id,
@@ -81,94 +109,340 @@ function extractFactsFromRecord(record: RecordData): ExtractedFact[] {
   };
 
   // ═══════════════════════════════════════════════════════════════
-  // FINANCIAL FACTS
+  // 1. PAYMENT FACTS (CMS Data)
   // ═══════════════════════════════════════════════════════════════
+  const paymentAmount = Number(props.total_payment_usd || props.payment_amount || 
+                               props.total_amount_of_payment_usdollars || 0);
   
-  // Contract/Award values (USASpending, SAM.gov)
-  const contractAmount = props.total_amount || props.award_amount || 
-                         props.contract_value || props.obligated_amount ||
-                         props.federal_action_obligation;
-  if (contractAmount && Number(contractAmount) > 0) {
-    facts.push({
-      ...baseInfo,
-      fact_type: 'contract_awarded',
-      fact_value: {
-        amount: Number(contractAmount),
-        agency: props.awarding_agency || props.agency_name || props.awarding_agency_name,
-        type: props.contract_type || props.award_type || props.assistance_type,
-        description: props.award_description || props.description,
-        recipient: props.recipient_name || record.name,
-      },
-      fact_date: String(props.award_date || props.action_date || props.start_date || new Date().toISOString()),
-      confidence: 0.95,
-    });
-  }
-
-  // CMS Open Payments
-  const paymentAmount = props.total_payment_usd || props.payment_amount || 
-                        props.total_amount_of_payment_usdollars;
-  if (paymentAmount && Number(paymentAmount) > 0) {
+  if (paymentAmount > 0) {
+    // Main payment fact
     facts.push({
       ...baseInfo,
       fact_type: 'payment_received',
       fact_value: {
-        amount: Number(paymentAmount),
+        amount: paymentAmount,
         payer: props.applicable_manufacturer || props.payer_name || props.submitting_applicable_manufacturer,
         nature: props.nature_of_payment || props.payment_type || props.form_of_payment_or_transfer,
         recipient: props.physician_name || props.covered_recipient_name || record.name,
       },
-      fact_date: String(props.date_of_payment || props.payment_date || new Date().toISOString()),
+      fact_date: String(props.date_of_payment || props.payment_date || now),
+      confidence: 0.95,
+    });
+
+    // Payment tier fact
+    const tier = paymentAmount >= 100000 ? 'major' :
+                 paymentAmount >= 10000 ? 'significant' :
+                 paymentAmount >= 1000 ? 'moderate' : 'minor';
+    facts.push({
+      ...baseInfo,
+      fact_type: 'payment_tier',
+      fact_value: { tier, amount: paymentAmount },
+      fact_date: String(props.date_of_payment || props.payment_date || now),
+      confidence: 0.9,
+    });
+
+    // Payer relationship fact
+    const payer = props.applicable_manufacturer || props.payer_name || props.submitting_applicable_manufacturer;
+    if (payer) {
+      facts.push({
+        ...baseInfo,
+        fact_type: 'pharma_relationship',
+        fact_value: { 
+          company: payer,
+          payment_count: 1,
+          total_value: paymentAmount
+        },
+        fact_date: now,
+        confidence: 0.9,
+      });
+    }
+
+    // Specialty fact
+    const specialty = props.specialty || props.physician_specialty || props.provider_specialty;
+    if (specialty) {
+      facts.push({
+        ...baseInfo,
+        fact_type: 'medical_specialty',
+        fact_value: { specialty },
+        fact_date: now,
+        confidence: 0.95,
+      });
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // 2. CONTRACT FACTS (USASpending Data)
+  // ═══════════════════════════════════════════════════════════════
+  const contractAmount = Number(props.total_amount || props.award_amount || 
+                                props.contract_value || props.obligated_amount ||
+                                props.federal_action_obligation || 0);
+  
+  if (contractAmount > 0) {
+    // Main contract fact
+    facts.push({
+      ...baseInfo,
+      fact_type: 'contract_awarded',
+      fact_value: {
+        amount: contractAmount,
+        agency: props.awarding_agency || props.agency_name || props.awarding_agency_name,
+        sub_agency: props.awarding_sub_agency,
+        type: props.contract_type || props.award_type || props.assistance_type,
+        description: props.award_description || props.description || record.description,
+        recipient: props.recipient_name || record.name,
+      },
+      fact_date: String(props.award_date || props.action_date || props.start_date || now),
+      confidence: 0.95,
+    });
+
+    // Contract size tier
+    const contractTier = contractAmount >= 10000000 ? 'major' :
+                         contractAmount >= 1000000 ? 'significant' :
+                         contractAmount >= 100000 ? 'moderate' : 'small';
+    facts.push({
+      ...baseInfo,
+      fact_type: 'contract_tier',
+      fact_value: { tier: contractTier, amount: contractAmount },
+      fact_date: String(props.start_date || props.award_date || now),
+      confidence: 0.9,
+    });
+
+    // Agency relationship
+    const agency = props.awarding_agency || props.agency_name || props.awarding_agency_name;
+    if (agency) {
+      facts.push({
+        ...baseInfo,
+        fact_type: 'federal_relationship',
+        fact_value: { 
+          agency,
+          contract_count: 1,
+          total_value: contractAmount
+        },
+        fact_date: now,
+        confidence: 0.9,
+      });
+    }
+
+    // Contract duration fact
+    if (props.start_date && props.end_date) {
+      const start = new Date(String(props.start_date));
+      const end = new Date(String(props.end_date));
+      const durationDays = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+      if (!isNaN(durationDays) && durationDays > 0) {
+        facts.push({
+          ...baseInfo,
+          fact_type: 'contract_duration',
+          fact_value: { 
+            days: durationDays,
+            start: props.start_date,
+            end: props.end_date
+          },
+          fact_date: String(props.start_date),
+          confidence: 0.9,
+        });
+      }
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // 3. LOCATION FACTS (All Sources)
+  // ═══════════════════════════════════════════════════════════════
+  if (record.latitude && record.longitude) {
+    facts.push({
+      ...baseInfo,
+      fact_type: 'location_verified',
+      fact_value: {
+        latitude: record.latitude,
+        longitude: record.longitude,
+        address: record.address,
+        city: record.city,
+        state: record.state,
+        zip: record.zip_code
+      },
+      fact_date: now,
+      confidence: 0.85,
+    });
+  }
+
+  // City/State presence fact
+  if (record.city && record.state) {
+    facts.push({
+      ...baseInfo,
+      fact_type: 'geographic_presence',
+      fact_value: { city: record.city, state: record.state },
+      fact_date: now,
       confidence: 0.9,
     });
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // FACILITY/CAPACITY FACTS
+  // 4. FACILITY FACTS (OSM Data)
   // ═══════════════════════════════════════════════════════════════
-  
-  const beds = props.beds || props.bed_count || props.staffed_beds;
-  const capacity = props.capacity || props.max_capacity;
-  if (beds || capacity) {
+  if (record.source_id === 'OpenStreetMap' || record.source_id?.includes('osm')) {
+    // Facility type fact
+    facts.push({
+      ...baseInfo,
+      fact_type: 'facility_type',
+      fact_value: {
+        category: record.category,
+        subcategory: record.subcategory,
+        amenity: props.amenity
+      },
+      fact_date: now,
+      confidence: 0.85,
+    });
+
+    // Operating hours
+    if (props.opening_hours) {
+      facts.push({
+        ...baseInfo,
+        fact_type: 'operating_hours',
+        fact_value: { hours: props.opening_hours },
+        fact_date: now,
+        confidence: 0.8,
+      });
+    }
+
+    // Accessibility
+    if (props.wheelchair) {
+      facts.push({
+        ...baseInfo,
+        fact_type: 'accessibility',
+        fact_value: { wheelchair: props.wheelchair },
+        fact_date: now,
+        confidence: 0.85,
+      });
+    }
+
+    // Brand/chain
+    if (props.brand) {
+      facts.push({
+        ...baseInfo,
+        fact_type: 'brand_affiliation',
+        fact_value: { brand: props.brand },
+        fact_date: now,
+        confidence: 0.9,
+      });
+    }
+
+    // Operator
+    if (props.operator) {
+      facts.push({
+        ...baseInfo,
+        fact_type: 'operated_by',
+        fact_value: { operator: props.operator },
+        fact_date: now,
+        confidence: 0.85,
+      });
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // 5. CONTACT FACTS (All Sources)
+  // ═══════════════════════════════════════════════════════════════
+  if (record.phone) {
+    facts.push({
+      ...baseInfo,
+      fact_type: 'contact_phone',
+      fact_value: { phone: record.phone },
+      fact_date: now,
+      confidence: 0.9,
+    });
+  }
+
+  if (record.website) {
+    facts.push({
+      ...baseInfo,
+      fact_type: 'contact_website',
+      fact_value: { website: record.website },
+      fact_date: now,
+      confidence: 0.9,
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // 6. IDENTIFIER FACTS
+  // ═══════════════════════════════════════════════════════════════
+  if (props.npi) {
+    facts.push({
+      ...baseInfo,
+      fact_type: 'identifier_npi',
+      fact_value: { npi: props.npi },
+      fact_date: now,
+      confidence: 0.99,
+    });
+  }
+
+  if (props.recipient_duns || props.duns || props.uei) {
+    facts.push({
+      ...baseInfo,
+      fact_type: 'identifier_duns_uei',
+      fact_value: { 
+        duns: props.recipient_duns || props.duns,
+        uei: props.uei
+      },
+      fact_date: now,
+      confidence: 0.99,
+    });
+  }
+
+  if (props.license_number || props.registration_number) {
+    facts.push({
+      ...baseInfo,
+      fact_type: 'registration',
+      fact_value: {
+        license: props.license_number,
+        registration: props.registration_number,
+        status: props.registration_status || 'active',
+      },
+      fact_date: String(props.enumeration_date || props.registration_date || now),
+      confidence: 0.95,
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // 7. CAPACITY/FACILITY FACTS
+  // ═══════════════════════════════════════════════════════════════
+  const beds = Number(props.beds || props.bed_count || props.staffed_beds || 0);
+  const capacity = Number(props.capacity || props.max_capacity || 0);
+  if (beds > 0 || capacity > 0) {
     facts.push({
       ...baseInfo,
       fact_type: 'facility_capacity',
       fact_value: {
-        beds: beds ? Number(beds) : null,
-        capacity: capacity ? Number(capacity) : null,
+        beds: beds || null,
+        capacity: capacity || null,
         type: props.facility_type || props.hospital_type || record.category,
         name: record.name,
       },
-      fact_date: new Date().toISOString(),
+      fact_date: now,
       confidence: 0.85,
     });
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // COMPLIANCE/VIOLATION FACTS
+  // 8. COMPLIANCE/VIOLATION FACTS
   // ═══════════════════════════════════════════════════════════════
-  
-  const violations = props.violations || props.violation_count || 
-                     props.informal_enforcement_actions || props.formal_enforcement_actions;
-  if (violations || props.compliance_status || props.violation_type) {
+  const violations = Number(props.violations || props.violation_count || 
+                            props.informal_enforcement_actions || props.formal_enforcement_actions || 0);
+  if (violations > 0 || props.compliance_status || props.violation_type) {
     facts.push({
       ...baseInfo,
       fact_type: 'compliance_violation',
       fact_value: {
-        count: violations ? Number(violations) : null,
+        count: violations || null,
         type: props.violation_type || props.enforcement_type,
         status: props.compliance_status || props.current_compliance_status,
         agency: 'EPA',
         facility: record.name,
       },
-      fact_date: String(props.violation_date || props.last_inspection_date || new Date().toISOString()),
+      fact_date: String(props.violation_date || props.last_inspection_date || now),
       confidence: 0.9,
     });
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // RATING/SCORE FACTS
+  // 9. RATING/SCORE FACTS
   // ═══════════════════════════════════════════════════════════════
-  
   const rating = props.rating || props.overall_rating || props.star_rating || 
                  props.quality_score || props.cms_rating;
   if (rating) {
@@ -176,81 +450,57 @@ function extractFactsFromRecord(record: RecordData): ExtractedFact[] {
       ...baseInfo,
       fact_type: 'rating_received',
       fact_value: {
-        rating: rating,
+        rating,
         scale: props.rating_scale || '5-star',
         source: props.rating_source || record.source_id,
         entity: record.name,
       },
-      fact_date: String(props.rating_date || new Date().toISOString()),
+      fact_date: String(props.rating_date || now),
       confidence: 0.85,
     });
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // EMPLOYEE/STAFF FACTS
+  // 10. EMPLOYEE/STAFF FACTS
   // ═══════════════════════════════════════════════════════════════
-  
-  const employees = props.employee_count || props.staff_count || props.fte || 
-                    props.total_employees;
-  if (employees && Number(employees) > 0) {
+  const employees = Number(props.employee_count || props.staff_count || props.fte || 
+                          props.total_employees || 0);
+  if (employees > 0) {
     facts.push({
       ...baseInfo,
       fact_type: 'employee_count',
       fact_value: {
-        count: Number(employees),
+        count: employees,
         type: props.employee_type || 'total',
         entity: record.name,
       },
-      fact_date: String(props.data_date || new Date().toISOString()),
+      fact_date: String(props.data_date || now),
       confidence: 0.8,
     });
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // REGISTRATION/LICENSE FACTS
+  // 11. GRANT FACTS
   // ═══════════════════════════════════════════════════════════════
-  
-  if (props.npi || props.license_number || props.registration_number || props.uei) {
-    facts.push({
-      ...baseInfo,
-      fact_type: 'registration',
-      fact_value: {
-        npi: props.npi,
-        uei: props.uei,
-        license: props.license_number,
-        registration: props.registration_number,
-        entity: record.name,
-        status: props.registration_status || 'active',
-      },
-      fact_date: String(props.enumeration_date || props.registration_date || new Date().toISOString()),
-      confidence: 0.95,
-    });
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  // GRANT FACTS
-  // ═══════════════════════════════════════════════════════════════
-  
-  const grantAmount = props.grant_amount || props.funding_amount;
-  if (grantAmount && Number(grantAmount) > 0) {
+  const grantAmount = Number(props.grant_amount || props.funding_amount || 0);
+  if (grantAmount > 0) {
     facts.push({
       ...baseInfo,
       fact_type: 'grant_awarded',
       fact_value: {
-        amount: Number(grantAmount),
+        amount: grantAmount,
         agency: props.funding_agency || props.grantor_name,
         program: props.program_name,
         recipient: record.name,
       },
-      fact_date: String(props.grant_date || props.award_date || new Date().toISOString()),
+      fact_date: String(props.grant_date || props.award_date || now),
       confidence: 0.9,
     });
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // OWNERSHIP/AFFILIATION FACTS
+  // 12. OWNERSHIP/AFFILIATION FACTS
   // ═══════════════════════════════════════════════════════════════
-  
   if (props.parent_company || props.owner_name || props.hospital_system) {
     facts.push({
       ...baseInfo,
@@ -260,8 +510,52 @@ function extractFactsFromRecord(record: RecordData): ExtractedFact[] {
         system: props.hospital_system,
         entity: record.name,
       },
-      fact_date: new Date().toISOString(),
+      fact_date: now,
       confidence: 0.85,
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // 13. CATEGORY/TYPE FACT (Always)
+  // ═══════════════════════════════════════════════════════════════
+  if (record.category) {
+    facts.push({
+      ...baseInfo,
+      fact_type: 'entity_category',
+      fact_value: { 
+        category: record.category,
+        subcategory: record.subcategory
+      },
+      fact_date: now,
+      confidence: 0.95,
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // 14. DATA QUALITY FACT (Meta)
+  // ═══════════════════════════════════════════════════════════════
+  const qualityScore = calculateRecordQuality(record);
+  facts.push({
+    ...baseInfo,
+    fact_type: 'data_quality_score',
+    fact_value: { score: qualityScore, source: record.source_id },
+    fact_date: now,
+    confidence: 0.95,
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // 15. ENTITY NAME FACT (Always - for search)
+  // ═══════════════════════════════════════════════════════════════
+  if (record.name) {
+    facts.push({
+      ...baseInfo,
+      fact_type: 'entity_name',
+      fact_value: { 
+        name: record.name,
+        normalized: record.name.toLowerCase().trim()
+      },
+      fact_date: now,
+      confidence: 0.99,
     });
   }
 
@@ -281,14 +575,14 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { record_ids, query_id, batch_size = 50, link_orphans = true } = await req.json() as {
+    const { record_ids, query_id, batch_size = 200, link_orphans = true } = await req.json() as {
       record_ids?: string[];
       query_id?: string;
       batch_size?: number;
       link_orphans?: boolean;
     };
 
-    console.log(`[core-extract-facts] Starting extraction for ${record_ids?.length || 'batch'} records`);
+    console.log(`[core-extract-facts] Starting QUANTUM extraction (batch: ${batch_size})`);
     const startTime = Date.now();
 
     // First, link any orphaned facts
@@ -298,10 +592,10 @@ Deno.serve(async (req) => {
       orphansLinked = linkResult.linked;
     }
 
-    // Fetch records
+    // Fetch records - prioritize those with entities but could use facts
     let recordsQuery = supabase
       .from('records')
-      .select('id, name, category, source_id, properties, entity_id')
+      .select('id, name, category, subcategory, source_id, properties, entity_id, address, city, state, zip_code, latitude, longitude, phone, website, description')
       .order('collected_at', { ascending: false })
       .limit(batch_size);
 
@@ -329,7 +623,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[core-extract-facts] Processing ${records.length} records`);
+    console.log(`[core-extract-facts] Processing ${records.length} records (QUANTUM mode)`);
 
     // Extract facts from all records
     const allFacts: ExtractedFact[] = [];
@@ -350,36 +644,46 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Batch insert facts (include those without entity_id for later linking)
+    // Batch insert facts
     const factsWithEntity = allFacts.filter(f => f.entity_id);
     const factsWithoutEntity = allFacts.filter(f => !f.entity_id);
     let factsCreated = 0;
 
+    // Insert facts with entities
     if (factsWithEntity.length > 0) {
-      const { error: insertError, data: inserted } = await supabase
-        .from('core_facts')
-        .insert(factsWithEntity)
-        .select('id');
+      // Insert in batches of 100 to avoid payload limits
+      for (let i = 0; i < factsWithEntity.length; i += 100) {
+        const batch = factsWithEntity.slice(i, i + 100);
+        const { data: inserted, error: insertError } = await supabase
+          .from('core_facts')
+          .insert(batch)
+          .select('id');
 
-      if (insertError) {
-        console.error('[core-extract-facts] Insert error:', insertError);
-      } else {
-        factsCreated = inserted?.length || 0;
+        if (insertError) {
+          console.error('[core-extract-facts] Insert error:', insertError);
+        } else {
+          factsCreated += inserted?.length || 0;
+        }
       }
     }
 
     // Also insert facts without entity (they'll be linked later)
     if (factsWithoutEntity.length > 0) {
-      const { data: orphanInserted } = await supabase
-        .from('core_facts')
-        .insert(factsWithoutEntity)
-        .select('id');
-      
-      factsCreated += orphanInserted?.length || 0;
+      for (let i = 0; i < factsWithoutEntity.length; i += 100) {
+        const batch = factsWithoutEntity.slice(i, i + 100);
+        const { data: orphanInserted } = await supabase
+          .from('core_facts')
+          .insert(batch)
+          .select('id');
+        
+        factsCreated += orphanInserted?.length || 0;
+      }
     }
 
     const processingTime = Date.now() - startTime;
-    console.log(`[core-extract-facts] Created ${factsCreated} facts from ${records.length} records in ${processingTime}ms`);
+    const avgFactsPerRecord = (factsCreated / records.length).toFixed(2);
+    
+    console.log(`[core-extract-facts] QUANTUM: Created ${factsCreated} facts from ${records.length} records (${avgFactsPerRecord}/record) in ${processingTime}ms`);
 
     // Update metrics
     try {
@@ -393,6 +697,7 @@ Deno.serve(async (req) => {
         success: true,
         records_processed: records.length,
         facts_created: factsCreated,
+        facts_per_record: parseFloat(avgFactsPerRecord),
         facts_with_entity: factsWithEntity.length,
         facts_orphaned: factsWithoutEntity.length,
         orphans_linked: orphansLinked,

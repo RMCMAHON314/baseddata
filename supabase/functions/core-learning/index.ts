@@ -1,6 +1,7 @@
 // ============================================================
-// 🧠 THE CORE: LEARNING ENGINE v2.0
-// Enhanced pattern extraction and learning from queries
+// 🧠 THE CORE: QUANTUM LEARNING ENGINE v3.0
+// Enhanced pattern extraction with 20+ pattern types
+// Target: 25+ unique query patterns
 // ============================================================
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -18,53 +19,82 @@ interface QueryPattern {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// QUANTUM PATTERN DEFINITIONS - 25+ patterns
+// ═══════════════════════════════════════════════════════════════
+const QUERY_PATTERNS = [
+  // Healthcare facility patterns
+  { regex: /^hospitals?\s+in\s+(.+)$/i, template: 'hospitals in {location}', category: 'healthcare_facility' },
+  { regex: /^clinics?\s+in\s+(.+)$/i, template: 'clinics in {location}', category: 'healthcare_facility' },
+  { regex: /^pharmacies?\s+in\s+(.+)$/i, template: 'pharmacies in {location}', category: 'healthcare_retail' },
+  { regex: /^medical\s+centers?\s+in\s+(.+)$/i, template: 'medical centers in {location}', category: 'healthcare_facility' },
+  { regex: /^nursing\s+homes?\s+in\s+(.+)$/i, template: 'nursing homes in {location}', category: 'healthcare_facility' },
+  
+  // Healthcare provider patterns
+  { regex: /^doctors?\s+in\s+(.+)$/i, template: 'doctors in {location}', category: 'healthcare_provider' },
+  { regex: /^physicians?\s+in\s+(.+)$/i, template: 'physicians in {location}', category: 'healthcare_provider' },
+  { regex: /^doctors?\s+receiving\s+(.+?)\s+in\s+(.+)$/i, template: 'doctors receiving {type} in {location}', category: 'payment_search' },
+  { regex: /^physicians?\s+(.+?)\s+in\s+(.+)$/i, template: 'physicians {modifier} in {location}', category: 'healthcare_provider' },
+  
+  // Education patterns
+  { regex: /^schools?\s+in\s+(.+)$/i, template: 'schools in {location}', category: 'education_facility' },
+  { regex: /^universities?\s+in\s+(.+)$/i, template: 'universities in {location}', category: 'education_facility' },
+  { regex: /^colleges?\s+in\s+(.+)$/i, template: 'colleges in {location}', category: 'education_facility' },
+  { regex: /^high\s+schools?\s+in\s+(.+)$/i, template: 'high schools in {location}', category: 'education_facility' },
+  
+  // Federal/Government patterns
+  { regex: /^federal\s+(.+?)\s+in\s+(.+)$/i, template: 'federal {subject} in {location}', category: 'federal_search' },
+  { regex: /^(.+?)\s+contracts?\s+in\s+(.+)$/i, template: '{subject} contracts in {location}', category: 'contract_search' },
+  { regex: /^(.+?)\s+grants?\s+in\s+(.+)$/i, template: '{subject} grants in {location}', category: 'grant_search' },
+  { regex: /^government\s+(.+?)\s+in\s+(.+)$/i, template: 'government {subject} in {location}', category: 'government_search' },
+  { regex: /^federal\s+contracts?\s+in\s+(.+)$/i, template: 'federal contracts in {location}', category: 'federal_contracts' },
+  { regex: /^federal\s+grants?\s+in\s+(.+)$/i, template: 'federal grants in {location}', category: 'federal_grants' },
+  
+  // Commercial patterns
+  { regex: /^restaurants?\s+in\s+(.+)$/i, template: 'restaurants in {location}', category: 'dining' },
+  { regex: /^banks?\s+in\s+(.+)$/i, template: 'banks in {location}', category: 'financial' },
+  { regex: /^hotels?\s+in\s+(.+)$/i, template: 'hotels in {location}', category: 'hospitality' },
+  { regex: /^stores?\s+in\s+(.+)$/i, template: 'stores in {location}', category: 'retail' },
+  { regex: /^shops?\s+in\s+(.+)$/i, template: 'shops in {location}', category: 'retail' },
+  
+  // Public services patterns
+  { regex: /^parks?\s+in\s+(.+)$/i, template: 'parks in {location}', category: 'recreation' },
+  { regex: /^libraries?\s+in\s+(.+)$/i, template: 'libraries in {location}', category: 'public_service' },
+  { regex: /^police\s+stations?\s+in\s+(.+)$/i, template: 'police stations in {location}', category: 'public_safety' },
+  { regex: /^fire\s+stations?\s+in\s+(.+)$/i, template: 'fire stations in {location}', category: 'public_safety' },
+  
+  // Location patterns (generic)
+  { regex: /^(.+?)\s+in\s+([a-z\s,]+)$/i, template: '{subject} in {location}', category: 'location_search' },
+  { regex: /^(.+?)\s+near\s+(.+)$/i, template: '{subject} near {location}', category: 'proximity_search' },
+  { regex: /^(.+?)\s+around\s+(.+)$/i, template: '{subject} around {location}', category: 'proximity_search' },
+  
+  // Entity lookup patterns
+  { regex: /^who\s+(?:is|are)\s+(.+)$/i, template: 'who is {entity}', category: 'entity_lookup' },
+  { regex: /^what\s+is\s+(.+)$/i, template: 'what is {subject}', category: 'entity_lookup' },
+  
+  // Comparison patterns
+  { regex: /^compare\s+(.+?)\s+(?:vs?|versus|and)\s+(.+)$/i, template: 'compare {entity1} vs {entity2}', category: 'comparison' },
+  
+  // List/ranking patterns
+  { regex: /^(?:all|list|show)\s+(.+?)\s+in\s+(.+)$/i, template: 'list {subject} in {location}', category: 'list_search' },
+  { regex: /^top\s+(\d+)?\s*(.+?)\s+in\s+(.+)$/i, template: 'top {count} {subject} in {location}', category: 'ranking_search' },
+  { regex: /^largest\s+(.+?)\s+in\s+(.+)$/i, template: 'largest {subject} in {location}', category: 'ranking_search' },
+  { regex: /^biggest\s+(.+?)\s+in\s+(.+)$/i, template: 'biggest {subject} in {location}', category: 'ranking_search' },
+];
+
+// ═══════════════════════════════════════════════════════════════
 // ENHANCED PATTERN EXTRACTION
 // ═══════════════════════════════════════════════════════════════
 function extractQueryPattern(rawQuery: string): QueryPattern {
   const q = rawQuery.toLowerCase().trim();
   
-  // Pattern definitions with regex and templates
-  const patterns = [
-    // Location patterns
-    { regex: /^(.+?)\s+in\s+(.+)$/, template: '{subject} in {location}', category: 'location_search' },
-    { regex: /^(.+?)\s+near\s+(.+)$/, template: '{subject} near {location}', category: 'proximity_search' },
-    { regex: /^(.+?)\s+around\s+(.+)$/, template: '{subject} around {location}', category: 'proximity_search' },
-    
-    // Federal patterns
-    { regex: /^federal\s+(.+?)\s+in\s+(.+)$/i, template: 'federal {subject} in {location}', category: 'federal_search' },
-    { regex: /^(.+?)\s+contracts?\s+in\s+(.+)$/i, template: '{subject} contracts in {location}', category: 'contract_search' },
-    { regex: /^(.+?)\s+grants?\s+in\s+(.+)$/i, template: '{subject} grants in {location}', category: 'grant_search' },
-    
-    // Healthcare patterns
-    { regex: /^doctors?\s+(.+?)\s+in\s+(.+)$/i, template: 'doctors {modifier} in {location}', category: 'healthcare_search' },
-    { regex: /^physicians?\s+(.+?)\s+in\s+(.+)$/i, template: 'physicians {modifier} in {location}', category: 'healthcare_search' },
-    { regex: /^hospitals?\s+in\s+(.+)$/i, template: 'hospitals in {location}', category: 'healthcare_search' },
-    { regex: /^(.+?)\s+receiving\s+(.+?)\s+in\s+(.+)$/i, template: '{subject} receiving {object} in {location}', category: 'payment_search' },
-    
-    // Education patterns
-    { regex: /^schools?\s+in\s+(.+)$/i, template: 'schools in {location}', category: 'education_search' },
-    { regex: /^universities?\s+in\s+(.+)$/i, template: 'universities in {location}', category: 'education_search' },
-    
-    // Comparison patterns
-    { regex: /^compare\s+(.+?)\s+(?:vs?|versus|and)\s+(.+)$/i, template: 'compare {entity1} vs {entity2}', category: 'comparison' },
-    
-    // Entity lookup
-    { regex: /^who\s+(?:is|are)\s+(.+)$/i, template: 'who is {entity}', category: 'entity_lookup' },
-    { regex: /^what\s+is\s+(.+)$/i, template: 'what is {subject}', category: 'entity_lookup' },
-    
-    // List patterns
-    { regex: /^(?:all|list|show)\s+(.+?)\s+in\s+(.+)$/i, template: 'list {subject} in {location}', category: 'list_search' },
-    { regex: /^top\s+(\d+)?\s*(.+?)\s+in\s+(.+)$/i, template: 'top {count} {subject} in {location}', category: 'ranking_search' },
-  ];
-
-  for (const p of patterns) {
+  for (const p of QUERY_PATTERNS) {
     const match = q.match(p.regex);
     if (match) {
       const variables: Record<string, string> = {};
       const varNames = (p.template.match(/\{(\w+)\}/g) || []).map(v => v.replace(/[{}]/g, ''));
       match.slice(1).forEach((v, i) => {
         if (varNames[i]) {
-          variables[varNames[i]] = v;
+          variables[varNames[i]] = v.trim();
         }
       });
       
@@ -97,13 +127,18 @@ function calculateSatisfaction(behavior: {
   refined_search?: boolean;
   abandoned_quickly?: boolean;
   clicked_insight?: boolean;
+  viewed_map?: boolean;
+  used_filters?: boolean;
 }): number {
   let score = 0.5;
   
   if (behavior.clicked_results?.length) score += 0.1;
+  if (behavior.clicked_results && behavior.clicked_results.length > 3) score += 0.1;
   if (behavior.clicked_insight) score += 0.15;
   if (behavior.exported_data) score += 0.15;
   if (behavior.saved_search) score += 0.1;
+  if (behavior.viewed_map) score += 0.05;
+  if (behavior.used_filters) score += 0.05;
   if (behavior.time_spent_seconds && behavior.time_spent_seconds > 30) score += 0.05;
   if (behavior.time_spent_seconds && behavior.time_spent_seconds > 120) score += 0.1;
   if (behavior.refined_search) score -= 0.1;
@@ -155,7 +190,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[core-learning] Learning from query: "${prompt}"`);
+    console.log(`[core-learning] QUANTUM learning from: "${prompt}"`);
     const startTime = Date.now();
 
     // 1. Extract query pattern
@@ -165,7 +200,7 @@ Deno.serve(async (req) => {
     // 2. Calculate satisfaction score
     const satisfactionScore = body.user_behavior 
       ? calculateSatisfaction(body.user_behavior as any) 
-      : 0.5;
+      : 0.6; // Default to slightly positive
 
     // 3. Update or create pattern record
     const { data: existingPattern } = await supabase
@@ -239,7 +274,7 @@ Deno.serve(async (req) => {
       } else {
         patternId = newPattern?.id || 'new';
         isNewPattern = true;
-        console.log('[core-learning] Created new pattern');
+        console.log('[core-learning] Created NEW pattern');
       }
     }
 
@@ -277,7 +312,7 @@ Deno.serve(async (req) => {
 
     // 5. Generate popularity insight if high satisfaction
     let insightGenerated = false;
-    if (satisfactionScore > 0.7 && result_count > 10 && isNewPattern) {
+    if (satisfactionScore > 0.7 && result_count > 5 && isNewPattern) {
       const { error: insightError } = await supabase
         .from('core_derived_insights')
         .insert({
@@ -285,8 +320,8 @@ Deno.serve(async (req) => {
           scope_value: pattern.signature,
           insight_type: 'popular_search',
           severity: 'info',
-          title: `Popular search pattern detected`,
-          description: `The query pattern "${pattern.signature}" is frequently used with high user satisfaction (${Math.round(satisfactionScore * 100)}%). Consider pre-caching results.`,
+          title: `New search pattern: "${pattern.category}"`,
+          description: `The query pattern "${pattern.signature}" has been learned with ${Math.round(satisfactionScore * 100)}% satisfaction. Sources: ${sources_used.join(', ')}.`,
           supporting_data: {
             pattern: pattern.signature,
             category: pattern.category,
@@ -296,12 +331,12 @@ Deno.serve(async (req) => {
           },
           confidence: satisfactionScore,
           is_active: true,
-          valid_until: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         });
 
       if (!insightError) {
         insightGenerated = true;
-        console.log('[core-learning] Generated popularity insight');
+        console.log('[core-learning] Generated pattern insight');
       }
     }
 
@@ -345,6 +380,7 @@ Deno.serve(async (req) => {
         satisfaction_score: satisfactionScore,
         entities_boosted: entitiesBoosted,
         insight_generated: insightGenerated,
+        total_pattern_types: QUERY_PATTERNS.length,
         processing_time_ms: processingTime,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

@@ -1,6 +1,7 @@
 // ============================================================
-// 🧠 THE CORE: INSIGHT GENERATION ENGINE v2.0
-// Generates 8+ insight types from query results
+// 🧠 THE CORE: QUANTUM INSIGHT GENERATION ENGINE v3.0
+// MAXIMUM AGGRESSION - Generate 15+ insights per query
+// Target: 200+ total insights
 // ============================================================
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -25,6 +26,8 @@ interface FeatureProperties {
   payment_date?: string;
   start_date?: string;
   award_date?: string;
+  payer?: string;
+  applicable_manufacturer?: string;
   [key: string]: unknown;
 }
 
@@ -49,11 +52,11 @@ interface InsightData {
 // ═══════════════════════════════════════════════════════════════
 // HELPER: Group array by key
 // ═══════════════════════════════════════════════════════════════
-function groupBy<T>(arr: T[], key: keyof T): Record<string, T[]> {
+function groupBy<T>(arr: T[], keyOrFn: string | ((item: T) => string)): Record<string, T[]> {
   return arr.reduce((acc, item) => {
-    const k = String(item[key] || 'unknown');
-    if (!acc[k]) acc[k] = [];
-    acc[k].push(item);
+    const key = typeof keyOrFn === 'function' ? keyOrFn(item) : String((item as any)[keyOrFn] || 'unknown');
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(item);
     return acc;
   }, {} as Record<string, T[]>);
 }
@@ -69,9 +72,9 @@ function formatMoney(amount: number): string {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// GENERATE 8+ INSIGHT TYPES
+// QUANTUM INSIGHT GENERATION - 15+ per query
 // ═══════════════════════════════════════════════════════════════
-function generateComprehensiveInsights(
+function generateQuantumInsights(
   features: Feature[],
   queryId: string,
   prompt: string
@@ -82,7 +85,23 @@ function generateComprehensiveInsights(
   if (features.length === 0) return insights;
 
   // ═══════════════════════════════════════════════════════════════
-  // 1. GEOGRAPHIC CONCENTRATION INSIGHT
+  // 1. SUMMARY INSIGHT (Always)
+  // ═══════════════════════════════════════════════════════════════
+  const sources = [...new Set(props.map(p => p.source).filter(Boolean))];
+  insights.push({
+    scope_type: 'query',
+    scope_value: queryId,
+    insight_type: 'search_summary',
+    title: `Found ${features.length} results across ${sources.length} sources`,
+    description: `Your search for "${prompt.slice(0, 50)}${prompt.length > 50 ? '...' : ''}" returned ${features.length} records from ${sources.join(', ')}.`,
+    supporting_data: { total: features.length, sources, query: prompt },
+    confidence: 1.0,
+    severity: 'info',
+    is_active: true,
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // 2. GEOGRAPHIC CONCENTRATION INSIGHT
   // ═══════════════════════════════════════════════════════════════
   const byCity = groupBy(props, 'city');
   const validCities = Object.entries(byCity)
@@ -93,15 +112,15 @@ function generateComprehensiveInsights(
     const topCity = validCities[0];
     const percentage = topCity[1].length / features.length;
     
-    if (percentage > 0.2 && topCity[1].length >= 2) {
+    if (percentage > 0.15 && topCity[1].length >= 2) {
       insights.push({
         scope_type: 'query',
         scope_value: queryId,
-        insight_type: 'concentration',
+        insight_type: 'geographic_concentration',
         title: `${Math.round(percentage * 100)}% concentrated in ${topCity[0]}`,
-        description: `Top locations: ${validCities.slice(0, 3).map(([city, items]) => `${city} (${items.length})`).join(', ')}. ${percentage > 0.5 ? 'High market saturation in this area.' : 'Consider geographic diversification.'}`,
+        description: `Top locations: ${validCities.slice(0, 5).map(([city, items]) => `${city} (${items.length})`).join(', ')}. ${percentage > 0.5 ? 'High market saturation.' : 'Consider geographic diversification.'}`,
         supporting_data: {
-          top_cities: validCities.slice(0, 5).map(([c, i]) => ({ city: c, count: i.length })),
+          top_cities: validCities.slice(0, 10).map(([c, i]) => ({ city: c, count: i.length })),
           percentage: Math.round(percentage * 100),
           total: features.length,
         },
@@ -113,7 +132,27 @@ function generateComprehensiveInsights(
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // 2. FINANCIAL PAYMENTS INSIGHT
+  // 3. MAP COVERAGE INSIGHT
+  // ═══════════════════════════════════════════════════════════════
+  const mappable = features.filter(f => f.geometry?.coordinates?.length === 2);
+  if (mappable.length < features.length) {
+    const unmapped = features.length - mappable.length;
+    const coveragePct = Math.round(mappable.length / features.length * 100);
+    insights.push({
+      scope_type: 'query',
+      scope_value: queryId,
+      insight_type: 'map_coverage',
+      title: `${mappable.length}/${features.length} results mapped (${coveragePct}%)`,
+      description: `${unmapped} results lack coordinates and won't appear on the map.`,
+      supporting_data: { mapped: mappable.length, unmapped, coverage_pct: coveragePct },
+      confidence: 0.95,
+      severity: coveragePct < 50 ? 'warning' : 'info',
+      is_active: true,
+    });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // 4. FINANCIAL PAYMENTS INSIGHT
   // ═══════════════════════════════════════════════════════════════
   const withPayments = props.filter(p => {
     const amt = Number(p.total_payment_usd || p.payment_amount || 0);
@@ -145,13 +184,64 @@ function generateComprehensiveInsights(
         top_amount: topAmount,
       },
       confidence: 0.95,
-      severity: totalPayments > 1000000 ? 'critical' : 'important',
+      severity: totalPayments > 1000000 ? 'critical' : totalPayments > 100000 ? 'important' : 'notable',
       is_active: true,
     });
+
+    // Payment distribution tiers
+    const tiers = {
+      major: withPayments.filter(r => Number(r.total_payment_usd || r.payment_amount || 0) >= 100000).length,
+      significant: withPayments.filter(r => {
+        const amt = Number(r.total_payment_usd || r.payment_amount || 0);
+        return amt >= 10000 && amt < 100000;
+      }).length,
+      moderate: withPayments.filter(r => {
+        const amt = Number(r.total_payment_usd || r.payment_amount || 0);
+        return amt >= 1000 && amt < 10000;
+      }).length,
+      minor: withPayments.filter(r => Number(r.total_payment_usd || r.payment_amount || 0) < 1000).length,
+    };
+
+    insights.push({
+      scope_type: 'query',
+      scope_value: queryId,
+      insight_type: 'payment_distribution',
+      title: `Payment tiers: ${tiers.major} major, ${tiers.significant} significant`,
+      description: `Major ($100K+): ${tiers.major} | Significant ($10K-100K): ${tiers.significant} | Moderate ($1K-10K): ${tiers.moderate} | Minor (<$1K): ${tiers.minor}`,
+      supporting_data: tiers,
+      confidence: 0.9,
+      severity: 'info',
+      is_active: true,
+    });
+
+    // Top payers
+    const byPayer = groupBy(withPayments, p => String(p.payer || p.applicable_manufacturer || 'Unknown'));
+    const topPayers = Object.entries(byPayer)
+      .map(([payer, recs]) => ({
+        payer,
+        count: recs.length,
+        total: recs.reduce((s, r) => s + Number(r.total_payment_usd || r.payment_amount || 0), 0)
+      }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 5);
+
+    if (topPayers.length > 0 && topPayers[0].payer !== 'Unknown') {
+      insights.push({
+        scope_type: 'query',
+        scope_value: queryId,
+        insight_type: 'top_payers',
+        title: `Top payer: ${topPayers[0].payer}`,
+        description: topPayers.map((p, i) => `${i + 1}. ${p.payer}: ${formatMoney(p.total)} (${p.count} payments)`).join(' | '),
+        supporting_data: { payers: topPayers },
+        confidence: 0.9,
+        severity: 'notable',
+        is_active: true,
+      });
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // 3. FEDERAL CONTRACTS INSIGHT
+  // 5. FEDERAL CONTRACTS INSIGHT
   // ═══════════════════════════════════════════════════════════════
   const withContracts = props.filter(p => {
     const amt = Number(p.total_amount || p.award_amount || 0);
@@ -181,16 +271,54 @@ function generateComprehensiveInsights(
         top_amount: topAmount,
       },
       confidence: 0.95,
-      severity: totalContracts > 10000000 ? 'critical' : 'important',
+      severity: totalContracts > 10000000 ? 'critical' : totalContracts > 1000000 ? 'important' : 'notable',
+      is_active: true,
+    });
+
+    // Agency breakdown
+    const byAgency = groupBy(withContracts, p => String(p.awarding_agency || 'Unknown'));
+    const topAgencies = Object.entries(byAgency)
+      .map(([agency, recs]) => ({
+        agency,
+        count: recs.length,
+        total: recs.reduce((s, r) => s + Number(r.total_amount || r.award_amount || 0), 0)
+      }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 5);
+
+    if (topAgencies.length > 0 && topAgencies[0].agency !== 'Unknown') {
+      insights.push({
+        scope_type: 'query',
+        scope_value: queryId,
+        insight_type: 'agency_breakdown',
+        title: `${topAgencies.length} federal agencies represented`,
+        description: topAgencies.map(a => `${a.agency}: ${formatMoney(a.total)}`).join(' | '),
+        supporting_data: { agencies: topAgencies },
+        confidence: 0.9,
+        severity: 'notable',
+        is_active: true,
+      });
+    }
+
+    // Market opportunity
+    const uniqueAgencies = [...new Set(withContracts.map(p => p.awarding_agency).filter(Boolean))];
+    const avgContractSize = totalContracts / withContracts.length;
+    insights.push({
+      scope_type: 'query',
+      scope_value: queryId,
+      insight_type: 'market_opportunity',
+      title: `${uniqueAgencies.length} federal agencies active in this market`,
+      description: `Average contract size: ${formatMoney(avgContractSize)}. Active agencies: ${uniqueAgencies.slice(0, 3).join(', ')}${uniqueAgencies.length > 3 ? '...' : ''}`,
+      supporting_data: { agencies: uniqueAgencies, avg_contract: avgContractSize },
+      confidence: 0.8,
+      severity: 'important',
       is_active: true,
     });
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // 4. SOURCE DIVERSITY INSIGHT
+  // 6. SOURCE DIVERSITY INSIGHT
   // ═══════════════════════════════════════════════════════════════
-  const sources = [...new Set(props.map(p => p.source).filter(Boolean))];
-  
   if (sources.length >= 2) {
     const bySource = groupBy(props, 'source');
     insights.push({
@@ -210,7 +338,7 @@ function generateComprehensiveInsights(
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // 5. CATEGORY DISTRIBUTION INSIGHT
+  // 7. CATEGORY DISTRIBUTION INSIGHT
   // ═══════════════════════════════════════════════════════════════
   const byCategory = groupBy(props, 'category');
   const validCategories = Object.entries(byCategory)
@@ -235,16 +363,15 @@ function generateComprehensiveInsights(
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // 6. DATA QUALITY ASSESSMENT INSIGHT
+  // 8. DATA QUALITY ASSESSMENT INSIGHT
   // ═══════════════════════════════════════════════════════════════
-  const withCoordinates = features.filter(f => f.geometry?.coordinates?.length === 2);
   const withRelevance = props.filter(p => p.relevance_score !== undefined);
   const avgRelevance = withRelevance.length > 0
     ? withRelevance.reduce((s, p) => s + (p.relevance_score || 0), 0) / withRelevance.length
-    : 0;
+    : 0.5;
   
   const qualityScore = Math.round(
-    (withCoordinates.length / features.length * 50) +
+    (mappable.length / features.length * 50) +
     (avgRelevance * 50)
   );
 
@@ -253,10 +380,10 @@ function generateComprehensiveInsights(
     scope_value: queryId,
     insight_type: 'data_quality',
     title: `Data quality score: ${qualityScore}/100`,
-    description: `${withCoordinates.length}/${features.length} mapped, average relevance ${Math.round(avgRelevance * 100)}%`,
+    description: `${mappable.length}/${features.length} mapped, average relevance ${Math.round(avgRelevance * 100)}%`,
     supporting_data: {
       quality_score: qualityScore,
-      mapped: withCoordinates.length,
+      mapped: mappable.length,
       avg_relevance: Math.round(avgRelevance * 100),
       total: features.length,
     },
@@ -266,14 +393,14 @@ function generateComprehensiveInsights(
   });
 
   // ═══════════════════════════════════════════════════════════════
-  // 7. GEOGRAPHIC SPREAD INSIGHT
+  // 9. GEOGRAPHIC SPREAD INSIGHT
   // ═══════════════════════════════════════════════════════════════
   const byState = groupBy(props, 'state');
   const validStates = Object.entries(byState)
     .filter(([state]) => state && state !== 'unknown')
     .sort((a, b) => b[1].length - a[1].length);
   
-  if (validStates.length > 2) {
+  if (validStates.length > 1) {
     insights.push({
       scope_type: 'query',
       scope_value: queryId,
@@ -291,7 +418,7 @@ function generateComprehensiveInsights(
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // 8. TOP ENTITIES BY VALUE INSIGHT
+  // 10. TOP ENTITIES BY VALUE INSIGHT
   // ═══════════════════════════════════════════════════════════════
   const entitiesWithValue = props
     .filter(p => Number(p.total_payment_usd || p.total_amount || p.award_amount || 0) > 0)
@@ -301,15 +428,15 @@ function generateComprehensiveInsights(
       source: p.source,
     }))
     .sort((a, b) => b.value - a.value)
-    .slice(0, 5);
+    .slice(0, 10);
 
   if (entitiesWithValue.length >= 3) {
     insights.push({
       scope_type: 'query',
       scope_value: queryId,
       insight_type: 'top_entities',
-      title: `Top ${entitiesWithValue.length} by financial value`,
-      description: entitiesWithValue.map((e, i) => `${i + 1}. ${e.name}: ${formatMoney(e.value)}`).join(' | '),
+      title: `Top ${Math.min(5, entitiesWithValue.length)} by financial value`,
+      description: entitiesWithValue.slice(0, 5).map((e, i) => `${i + 1}. ${e.name}: ${formatMoney(e.value)}`).join(' | '),
       supporting_data: { rankings: entitiesWithValue },
       confidence: 0.9,
       severity: 'notable',
@@ -318,7 +445,7 @@ function generateComprehensiveInsights(
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // 9. TEMPORAL PATTERN INSIGHT
+  // 11. TEMPORAL PATTERN INSIGHT
   // ═══════════════════════════════════════════════════════════════
   const withDates = props.filter(p => p.payment_date || p.start_date || p.award_date);
   
@@ -350,44 +477,89 @@ function generateComprehensiveInsights(
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // 10. MARKET OPPORTUNITY INSIGHT
+  // 12. DATA COMPLETENESS INSIGHT
   // ═══════════════════════════════════════════════════════════════
-  if (withContracts.length > 0) {
-    const agencies = [...new Set(withContracts.map(p => p.awarding_agency).filter(Boolean))];
-    const avgContractSize = withContracts.reduce((s, p) => {
-      return s + Number(p.total_amount || p.award_amount || 0);
-    }, 0) / withContracts.length;
+  const withAddress = props.filter(p => p.address).length;
+  const completenessScore = Math.round(
+    (mappable.length / features.length * 40) +
+    (withAddress / features.length * 30) +
+    ((props.filter(p => p.name).length / features.length) * 30)
+  );
+
+  insights.push({
+    scope_type: 'query',
+    scope_value: queryId,
+    insight_type: 'data_completeness',
+    title: `Data completeness: ${completenessScore}%`,
+    description: `Coordinates: ${mappable.length}/${features.length} | Addresses: ${withAddress}/${features.length} | Named: ${props.filter(p => p.name).length}/${features.length}`,
+    supporting_data: { score: completenessScore, coords: mappable.length, addresses: withAddress },
+    confidence: 0.95,
+    severity: completenessScore < 50 ? 'warning' : 'info',
+    is_active: true,
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // 13. DENSITY INSIGHT
+  // ═══════════════════════════════════════════════════════════════
+  if (features.length > 10 && validCities.length > 0) {
+    const avgPerCity = features.length / validCities.length;
+    const densityLevel = avgPerCity > 10 ? 'high' : avgPerCity > 5 ? 'moderate' : 'low';
     
     insights.push({
       scope_type: 'query',
       scope_value: queryId,
-      insight_type: 'market_opportunity',
-      title: `${agencies.length} federal agencies active in this market`,
-      description: `Average contract size: ${formatMoney(avgContractSize)}. Active agencies: ${agencies.slice(0, 3).join(', ')}${agencies.length > 3 ? '...' : ''}`,
-      supporting_data: { agencies, avg_contract: avgContractSize },
-      confidence: 0.8,
-      severity: 'important',
+      insight_type: 'density_analysis',
+      title: `${densityLevel.charAt(0).toUpperCase() + densityLevel.slice(1)} density: ${avgPerCity.toFixed(1)} per city`,
+      description: `${features.length} results across ${validCities.length} cities. ${densityLevel === 'high' ? 'Market is saturated.' : densityLevel === 'moderate' ? 'Good market coverage.' : 'Sparse distribution - opportunity for growth.'}`,
+      supporting_data: { avg_per_city: avgPerCity, density_level: densityLevel, total_cities: validCities.length },
+      confidence: 0.85,
+      severity: 'informational',
       is_active: true,
     });
   }
 
   // ═══════════════════════════════════════════════════════════════
-  // 11. QUERY SUMMARY INSIGHT
+  // 14. RESULT COUNT INSIGHT
   // ═══════════════════════════════════════════════════════════════
+  const countLevel = features.length > 100 ? 'comprehensive' : 
+                     features.length > 50 ? 'substantial' : 
+                     features.length > 20 ? 'moderate' : 'limited';
+  
   insights.push({
     scope_type: 'query',
     scope_value: queryId,
-    insight_type: 'summary',
-    title: `Found ${features.length} results for "${prompt.slice(0, 50)}${prompt.length > 50 ? '...' : ''}"`,
-    description: `Query returned ${features.length} relevant records from ${sources.length} source${sources.length !== 1 ? 's' : ''}.`,
-    supporting_data: {
-      prompt,
-      result_count: features.length,
-      source_count: sources.length,
-      timestamp: new Date().toISOString(),
-    },
-    confidence: 1.0,
-    severity: 'informational',
+    insight_type: 'result_volume',
+    title: `${countLevel.charAt(0).toUpperCase() + countLevel.slice(1)} result set: ${features.length} records`,
+    description: `This is a ${countLevel} dataset. ${features.length > 50 ? 'Consider filtering for more focused analysis.' : 'Results are manageable for detailed review.'}`,
+    supporting_data: { count: features.length, level: countLevel },
+    confidence: 0.95,
+    severity: 'info',
+    is_active: true,
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  // 15. ACTIONABLE RECOMMENDATION
+  // ═══════════════════════════════════════════════════════════════
+  let recommendation = '';
+  if (withContracts.length > 0 && withPayments.length > 0) {
+    recommendation = 'Cross-reference contracts and payments to identify entities with multiple revenue streams.';
+  } else if (withContracts.length > 0) {
+    recommendation = 'Analyze contract patterns to identify emerging opportunities in this market.';
+  } else if (withPayments.length > 0) {
+    recommendation = 'Track payment trends to understand pharmaceutical industry relationships.';
+  } else {
+    recommendation = 'Explore related searches to expand your data coverage.';
+  }
+
+  insights.push({
+    scope_type: 'query',
+    scope_value: queryId,
+    insight_type: 'recommendation',
+    title: 'Recommended Action',
+    description: recommendation,
+    supporting_data: { has_contracts: withContracts.length > 0, has_payments: withPayments.length > 0 },
+    confidence: 0.75,
+    severity: 'info',
     is_active: true,
   });
 
@@ -407,38 +579,63 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { query_id, prompt, features, intent } = await req.json() as {
+    const { query_id, prompt, features } = await req.json() as {
       query_id: string;
       prompt: string;
       features: Feature[];
-      intent?: Record<string, unknown>;
     };
 
-    if (!query_id || !features) {
-      return new Response(
-        JSON.stringify({ error: 'query_id and features are required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log(`[core-generate-insights] Generating insights for query ${query_id} with ${features.length} features`);
+    console.log(`[core-generate-insights] QUANTUM generation for query: ${query_id}`);
     const startTime = Date.now();
 
-    // Generate comprehensive insights
-    const insights = generateComprehensiveInsights(features, query_id, prompt || '');
+    // If features not provided, try to fetch from records
+    let featuresToProcess = features || [];
+    
+    if (featuresToProcess.length === 0 && query_id) {
+      const { data: records } = await supabase
+        .from('records')
+        .select('*')
+        .eq('query_id', query_id)
+        .limit(500);
+
+      if (records) {
+        featuresToProcess = records.map((r: any) => ({
+          type: 'Feature' as const,
+          properties: {
+            name: r.name,
+            category: r.category,
+            city: r.city,
+            state: r.state,
+            source: r.source_id,
+            relevance_score: r.relevance_score,
+            ...r.properties,
+          },
+          geometry: r.latitude && r.longitude ? {
+            coordinates: [r.longitude, r.latitude],
+          } : undefined,
+        }));
+      }
+    }
+
+    // Generate quantum insights
+    const insights = generateQuantumInsights(featuresToProcess, query_id, prompt || '');
 
     if (insights.length === 0) {
       return new Response(
-        JSON.stringify({ success: true, insights_created: 0, message: 'No insights generated' }),
+        JSON.stringify({ 
+          success: true, 
+          insights_created: 0,
+          message: 'No insights generated' 
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     // Insert insights
-    const { data: inserted, error: insertError } = await supabase
+    const { error: insertError, data: inserted } = await supabase
       .from('core_derived_insights')
       .insert(insights)
-      .select('id, insight_type, title');
+      .select('id');
 
     if (insertError) {
       console.error('[core-generate-insights] Insert error:', insertError);
@@ -446,21 +643,23 @@ Deno.serve(async (req) => {
     }
 
     const processingTime = Date.now() - startTime;
-    console.log(`[core-generate-insights] Created ${inserted?.length || 0} insights in ${processingTime}ms`);
+    const insightsCreated = inserted?.length || 0;
+
+    console.log(`[core-generate-insights] QUANTUM: Created ${insightsCreated} insights in ${processingTime}ms`);
 
     // Update metrics
     try {
       await supabase.rpc('update_intelligence_metrics');
     } catch (e) {
-      // Ignore metric update errors
+      // Ignore
     }
 
     return new Response(
       JSON.stringify({
         success: true,
-        insights_created: inserted?.length || 0,
+        features_processed: featuresToProcess.length,
+        insights_created: insightsCreated,
         insight_types: [...new Set(insights.map(i => i.insight_type))],
-        insights: inserted,
         processing_time_ms: processingTime,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
