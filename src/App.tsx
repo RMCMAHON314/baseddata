@@ -27,12 +27,16 @@ import Showcase from "./pages/Showcase";
 import ApiDocs from "./pages/ApiDocs";
 import NotFound from "./pages/NotFound";
 
-// New Premium Pages
+// Premium Pages
 import EntityIntelligenceHub from "./pages/EntityIntelligenceHub";
 import MarketExplorer from "./pages/MarketExplorer";
 import OpportunityCommandCenter from "./pages/OpportunityCommandCenter";
 import AnalyticsCommandCenter from "./pages/AnalyticsCommandCenter";
 import EntitiesList from "./pages/EntitiesList";
+
+// Vertical Intelligence
+import Healthcare from "./pages/Healthcare";
+import Education from "./pages/Education";
 
 const queryClient = new QueryClient();
 
@@ -49,12 +53,16 @@ const App = () => (
             <Route path="/showcase" element={<Showcase />} />
             <Route path="/ocean" element={<OceanDashboard />} />
             
-            {/* New Premium Routes */}
+            {/* Premium Routes */}
             <Route path="/explore" element={<MarketExplorer />} />
             <Route path="/entities" element={<EntitiesList />} />
             <Route path="/entity/:id" element={<EntityIntelligenceHub />} />
             <Route path="/opportunities" element={<OpportunityCommandCenter />} />
             <Route path="/analytics" element={<AnalyticsCommandCenter />} />
+            
+            {/* Vertical Intelligence */}
+            <Route path="/healthcare" element={<Healthcare />} />
+            <Route path="/education" element={<Education />} />
             
             {/* Existing Routes */}
             <Route path="/health" element={<Health />} />

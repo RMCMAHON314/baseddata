@@ -4,7 +4,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Waves, Search, Building2, Target, BarChart3, Settings, Menu, X,
-  ChevronDown, Bell, User, LogOut, Sparkles, Database, FileText
+  ChevronDown, Bell, User, LogOut, Sparkles, Database, FileText,
+  Activity, GraduationCap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +31,8 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/entities', label: 'Entities', icon: Building2 },
   { path: '/opportunities', label: 'Opportunities', icon: Target, badge: 'NEW' },
   { path: '/analytics', label: 'Analytics', icon: BarChart3 },
+  { path: '/healthcare', label: 'Healthcare', icon: Activity },
+  { path: '/education', label: 'Education', icon: GraduationCap },
 ];
 
 interface GlobalLayoutProps {

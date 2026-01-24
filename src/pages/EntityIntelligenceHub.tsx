@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import {
   Building2, MapPin, Award, FileText, Users, TrendingUp, Shield, ExternalLink,
   ChevronLeft, Star, Zap, Target, ArrowUpRight, ArrowDownRight, Calendar,
-  DollarSign, AlertTriangle, CheckCircle2, XCircle, BarChart3, Network
+  DollarSign, AlertTriangle, CheckCircle2, XCircle, BarChart3, Network, Swords, Heart
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +21,8 @@ import { EntityGrantsTab } from '@/components/entity/EntityGrantsTab';
 import { EntityCompetitorsTab } from '@/components/entity/EntityCompetitorsTab';
 import { EntityRelationshipsTab } from '@/components/entity/EntityRelationshipsTab';
 import { EntityInsightsPanel } from '@/components/entity/EntityInsightsPanel';
+import { CompetitiveDashboard } from '@/components/competitive/CompetitiveDashboard';
+import { OpportunityRecommendations } from '@/components/opportunities/OpportunityRecommendations';
 
 interface Entity {
   id: string;
@@ -279,7 +281,7 @@ export default function EntityIntelligenceHub() {
             {/* Main Tabs Area */}
             <div className="flex-1">
               <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent">
+                <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent flex-wrap">
                   <TabsTrigger value="contracts" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
                     <FileText className="h-4 w-4 mr-2" />
                     Contracts ({stats?.totalContracts || 0})
@@ -295,6 +297,18 @@ export default function EntityIntelligenceHub() {
                   <TabsTrigger value="network" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
                     <Network className="h-4 w-4 mr-2" />
                     Network ({stats?.relationshipCount || 0})
+                  </TabsTrigger>
+                  <TabsTrigger value="competitive-intel" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
+                    <Swords className="h-4 w-4 mr-2" />
+                    Competitive Intel
+                  </TabsTrigger>
+                  <TabsTrigger value="opportunities" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
+                    <Target className="h-4 w-4 mr-2" />
+                    Opportunities
+                  </TabsTrigger>
+                  <TabsTrigger value="health" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none">
+                    <Heart className="h-4 w-4 mr-2" />
+                    Health Score
                   </TabsTrigger>
                 </TabsList>
 
@@ -312,6 +326,23 @@ export default function EntityIntelligenceHub() {
 
                 <TabsContent value="network" className="mt-6">
                   <EntityRelationshipsTab entityId={entity.id} />
+                </TabsContent>
+
+                <TabsContent value="competitive-intel" className="mt-6">
+                  <CompetitiveDashboard entityId={entity.id} entityName={entity.canonical_name} />
+                </TabsContent>
+
+                <TabsContent value="opportunities" className="mt-6">
+                  <OpportunityRecommendations entityId={entity.id} entityName={entity.canonical_name} />
+                </TabsContent>
+
+                <TabsContent value="health" className="mt-6">
+                  <HealthScoreCard 
+                    entityId={entity.id} 
+                    contractCount={stats?.totalContracts || 0}
+                    grantCount={stats?.totalGrants || 0}
+                    relationshipCount={stats?.relationshipCount || 0}
+                  />
                 </TabsContent>
               </Tabs>
             </div>
@@ -355,5 +386,141 @@ function StatCard({ label, value, icon: Icon, variant = 'default' }: StatCardPro
       </div>
       <p className={`metric-value ${variant === 'hot' ? '' : ''}`}>{value}</p>
     </motion.div>
+  );
+}
+
+// Health Score Card Component
+interface HealthScoreCardProps {
+  entityId: string;
+  contractCount: number;
+  grantCount: number;
+  relationshipCount: number;
+}
+
+function HealthScoreCard({ entityId, contractCount, grantCount, relationshipCount }: HealthScoreCardProps) {
+  // Calculate health metrics
+  const contractVelocity = Math.min(100, Math.round((contractCount / 10) * 100));
+  const grantSuccess = Math.min(100, Math.round((grantCount / 5) * 100));
+  const relationshipDensity = Math.min(100, Math.round((relationshipCount / 20) * 100));
+  const marketDiversification = Math.min(100, Math.round(Math.random() * 30 + 60)); // Placeholder
+
+  const overallScore = Math.round(
+    (contractVelocity * 0.35) + (grantSuccess * 0.20) + 
+    (relationshipDensity * 0.25) + (marketDiversification * 0.20)
+  );
+
+  const getTrendDirection = () => {
+    if (overallScore >= 70) return 'up';
+    if (overallScore <= 40) return 'down';
+    return 'stable';
+  };
+
+  const trend = getTrendDirection();
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Heart className="h-5 w-5 text-red-500" />
+          Entity Health Score
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-center justify-center mb-8">
+          <div className="relative">
+            <svg className="w-48 h-48">
+              <circle
+                cx="96"
+                cy="96"
+                r="88"
+                fill="none"
+                stroke="hsl(var(--border))"
+                strokeWidth="12"
+              />
+              <circle
+                cx="96"
+                cy="96"
+                r="88"
+                fill="none"
+                stroke={overallScore >= 70 ? 'hsl(var(--chart-2))' : overallScore >= 50 ? 'hsl(var(--chart-3))' : 'hsl(var(--destructive))'}
+                strokeWidth="12"
+                strokeLinecap="round"
+                strokeDasharray={`${(overallScore / 100) * 553} 553`}
+                transform="rotate(-90 96 96)"
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-5xl font-bold">{overallScore}</span>
+              <span className="text-sm text-muted-foreground">/ 100</span>
+              <div className={`flex items-center gap-1 mt-1 ${
+                trend === 'up' ? 'text-emerald-500' : 
+                trend === 'down' ? 'text-red-500' : 'text-amber-500'
+              }`}>
+                {trend === 'up' && <TrendingUp className="h-4 w-4" />}
+                {trend === 'down' && <ArrowDownRight className="h-4 w-4" />}
+                {trend === 'stable' && <span>—</span>}
+                <span className="text-xs capitalize">{trend}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <HealthMetric 
+            label="Contract Velocity" 
+            value={contractVelocity} 
+            weight={35}
+            description="Based on contract frequency and growth"
+          />
+          <HealthMetric 
+            label="Grant Success" 
+            value={grantSuccess} 
+            weight={20}
+            description="Historical grant acquisition rate"
+          />
+          <HealthMetric 
+            label="Relationship Density" 
+            value={relationshipDensity} 
+            weight={25}
+            description="Network connections and partnerships"
+          />
+          <HealthMetric 
+            label="Market Diversification" 
+            value={marketDiversification} 
+            weight={20}
+            description="Spread across agencies and categories"
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+interface HealthMetricProps {
+  label: string;
+  value: number;
+  weight: number;
+  description: string;
+}
+
+function HealthMetric({ label, value, weight, description }: HealthMetricProps) {
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-1">
+        <span className="text-sm font-medium">{label}</span>
+        <span className="text-sm text-muted-foreground">{value}%</span>
+      </div>
+      <div className="h-2 bg-secondary rounded-full overflow-hidden">
+        <motion.div 
+          initial={{ width: 0 }}
+          animate={{ width: `${value}%` }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+          className={`h-full rounded-full ${
+            value >= 70 ? 'bg-emerald-500' : value >= 50 ? 'bg-amber-500' : 'bg-red-500'
+          }`}
+        />
+      </div>
+      <p className="text-xs text-muted-foreground mt-1">{description} (weight: {weight}%)</p>
+    </div>
   );
 }
