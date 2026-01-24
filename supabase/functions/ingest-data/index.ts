@@ -81,7 +81,8 @@ serve(async (req) => {
   }
 })
 
-async function ingestUSASpending(supabase: ReturnType<typeof createClient>, options: { state?: string; fiscal_year: number; limit: number }): Promise<IngestResult> {
+// deno-lint-ignore no-explicit-any
+async function ingestUSASpending(supabase: any, options: { state?: string; fiscal_year: number; limit: number }): Promise<IngestResult> {
   const { state, fiscal_year, limit } = options
   const results: IngestResult = { 
     source: 'usaspending', 
@@ -203,7 +204,8 @@ async function ingestUSASpending(supabase: ReturnType<typeof createClient>, opti
   return results
 }
 
-async function ingestSAM(supabase: ReturnType<typeof createClient>, options: { state?: string; limit: number }): Promise<IngestResult> {
+// deno-lint-ignore no-explicit-any
+async function ingestSAM(supabase: any, options: { state?: string; limit: number }): Promise<IngestResult> {
   const { state, limit } = options
   const apiKey = Deno.env.get('SAM_API_KEY')
   const results: IngestResult = { 
@@ -294,7 +296,8 @@ async function ingestSAM(supabase: ReturnType<typeof createClient>, options: { s
   return results
 }
 
-async function ingestGrants(supabase: ReturnType<typeof createClient>, options: { state?: string; fiscal_year: number; limit: number }): Promise<IngestResult> {
+// deno-lint-ignore no-explicit-any
+async function ingestGrants(supabase: any, options: { state?: string; fiscal_year: number; limit: number }): Promise<IngestResult> {
   const { state, fiscal_year, limit } = options
   const results: IngestResult = { 
     source: 'grants', 
