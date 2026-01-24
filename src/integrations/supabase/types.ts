@@ -436,6 +436,45 @@ export type Database = {
           },
         ]
       }
+      architecture_connections: {
+        Row: {
+          connection_type: string
+          created_at: string | null
+          from_component: string
+          id: string
+          is_active: boolean | null
+          last_verified: string | null
+          latency_p50_ms: number | null
+          latency_p99_ms: number | null
+          success_rate: number | null
+          to_component: string
+        }
+        Insert: {
+          connection_type?: string
+          created_at?: string | null
+          from_component: string
+          id?: string
+          is_active?: boolean | null
+          last_verified?: string | null
+          latency_p50_ms?: number | null
+          latency_p99_ms?: number | null
+          success_rate?: number | null
+          to_component: string
+        }
+        Update: {
+          connection_type?: string
+          created_at?: string | null
+          from_component?: string
+          id?: string
+          is_active?: boolean | null
+          last_verified?: string | null
+          latency_p50_ms?: number | null
+          latency_p99_ms?: number | null
+          success_rate?: number | null
+          to_component?: string
+        }
+        Relationships: []
+      }
       auto_crawlers: {
         Row: {
           circuit_state: string | null
@@ -3868,6 +3907,42 @@ export type Database = {
           },
         ]
       }
+      system_resilience: {
+        Row: {
+          check_timestamp: string
+          component: string
+          error_count: number | null
+          id: string
+          last_error: string | null
+          latency_ms: number | null
+          metadata: Json | null
+          recovery_attempts: number | null
+          status: string
+        }
+        Insert: {
+          check_timestamp?: string
+          component: string
+          error_count?: number | null
+          id?: string
+          last_error?: string | null
+          latency_ms?: number | null
+          metadata?: Json | null
+          recovery_attempts?: number | null
+          status?: string
+        }
+        Update: {
+          check_timestamp?: string
+          component?: string
+          error_count?: number | null
+          id?: string
+          last_error?: string | null
+          latency_ms?: number | null
+          metadata?: Json | null
+          recovery_attempts?: number | null
+          status?: string
+        }
+        Relationships: []
+      }
       team_invitations: {
         Row: {
           accepted_at: string | null
@@ -4223,46 +4298,93 @@ export type Database = {
       entity_360_profiles: {
         Row: {
           canonical_name: string | null
+          city: string | null
           created_at: string | null
-          data_coverage: Json | null
           data_quality_score: number | null
           entity_type: string | null
-          facts: Json | null
-          financial_profile: Json | null
+          fact_count: number | null
           health_score: number | null
           id: string | null
-          identifiers: Json | null
-          influence_score: number | null
-          merged_data: Json | null
+          latitude: number | null
+          longitude: number | null
           opportunity_score: number | null
-          profile_completeness: number | null
-          relationship_summary: Json | null
+          relationship_count: number | null
           risk_score: number | null
+          source_count: number | null
+          state: string | null
           updated_at: string | null
+        }
+        Insert: {
+          canonical_name?: string | null
+          city?: string | null
+          created_at?: string | null
+          data_quality_score?: number | null
+          entity_type?: string | null
+          fact_count?: never
+          health_score?: number | null
+          id?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          opportunity_score?: number | null
+          relationship_count?: never
+          risk_score?: number | null
+          source_count?: number | null
+          state?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          canonical_name?: string | null
+          city?: string | null
+          created_at?: string | null
+          data_quality_score?: number | null
+          entity_type?: string | null
+          fact_count?: never
+          health_score?: number | null
+          id?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          opportunity_score?: number | null
+          relationship_count?: never
+          risk_score?: number | null
+          source_count?: number | null
+          state?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
       high_value_opportunities: {
         Row: {
           canonical_name: string | null
+          city: string | null
+          created_at: string | null
           entity_type: string | null
+          health_score: number | null
           id: string | null
           opportunity_score: number | null
-          opportunity_status: string | null
+          source_count: number | null
+          state: string | null
         }
         Insert: {
           canonical_name?: string | null
+          city?: string | null
+          created_at?: string | null
           entity_type?: string | null
+          health_score?: number | null
           id?: string | null
           opportunity_score?: number | null
-          opportunity_status?: never
+          source_count?: number | null
+          state?: string | null
         }
         Update: {
           canonical_name?: string | null
+          city?: string | null
+          created_at?: string | null
           entity_type?: string | null
+          health_score?: number | null
           id?: string | null
           opportunity_score?: number | null
-          opportunity_status?: never
+          source_count?: number | null
+          state?: string | null
         }
         Relationships: []
       }
@@ -4287,8 +4409,13 @@ export type Database = {
       }
       realtime_dashboard: {
         Row: {
-          metric: string | null
-          value: string | null
+          active_insights: number | null
+          avg_quality_score: number | null
+          healthy_sources: number | null
+          queue_depth: number | null
+          total_entities: number | null
+          total_facts: number | null
+          total_relationships: number | null
         }
         Relationships: []
       }
@@ -4564,6 +4691,21 @@ export type Database = {
           name: string
           priority: number
           slug: string
+        }[]
+      }
+      get_system_health: {
+        Args: never
+        Returns: {
+          entities: number
+          fact_density: number
+          facts: number
+          health_score: number
+          healthy_sources: number
+          insights: number
+          queue_depth: number
+          relationships: number
+          resolution_rate: number
+          system_status: string
         }[]
       }
       get_system_stats: {
