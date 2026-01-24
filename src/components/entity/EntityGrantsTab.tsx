@@ -187,10 +187,10 @@ export function EntityGrantsTab({ entityId }: EntityGrantsTabProps) {
             transition={{ delay: index * 0.02 }}
           >
             <Card className="p-4 hover:border-primary/30 transition-colors">
-              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="font-mono text-sm text-muted-foreground">{grant.award_id || '-'}</span>
+                    <span className="font-mono text-sm text-muted-foreground">{grant.cfda_number || '-'}</span>
                     <Badge variant="secondary">{grant.awarding_agency || 'Unknown'}</Badge>
                   </div>
                   <p className="font-medium line-clamp-2 mb-2">{grant.description || grant.cfda_title || 'No description'}</p>
