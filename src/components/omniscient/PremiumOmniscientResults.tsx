@@ -217,9 +217,9 @@ export function PremiumOmniscientResults({
 
   return (
     <TooltipProvider delayDuration={200}>
-    <div className="h-[100dvh] flex flex-col bg-slate-50 text-slate-900 overflow-hidden">
+    <div className="h-[100dvh] flex flex-col bg-slate-50 text-slate-900">
       {/* Header Bar - White */}
-      <header className="flex-none h-16 bg-white border-b border-slate-200 flex items-center px-6 gap-4 z-40 shadow-sm">
+      <header className="flex-none h-16 bg-white border-b border-slate-200 flex items-center px-6 gap-4 sticky top-0 z-50 shadow-sm">
         <Button
           variant="ghost"
           size="icon"
@@ -301,84 +301,88 @@ export function PremiumOmniscientResults({
         </div>
       </header>
 
-      {/* Smart Stats Dashboard - Category-specific intelligence */}
-      <div className="flex-none px-6 py-4 bg-white border-b border-slate-200">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">
-              {totalRecords} Results Found
-            </h2>
-            <p className="text-slate-500 text-sm">
-              Aggregated from {successSources} sources across {dataStats.categories} categories
-              {dataStats.totalDuplicatesRemoved > 0 && (
-                <span className="text-slate-400"> • {dataStats.totalDuplicatesRemoved} duplicates removed</span>
-              )}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowInsightsPanel(!showInsightsPanel)}
-              className={cn(
-                "border-slate-200",
-                showInsightsPanel && "bg-amber-50 border-amber-200 text-amber-700"
-              )}
-            >
-              <Sparkles className="w-4 h-4 mr-2" />
-              Insights
-            </Button>
-            <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
-              ✓ Deduplicated
-            </span>
-            <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
-              {dataStats.geoPercent}% Geo
-            </span>
-          </div>
-        </div>
-        {/* NUCLEAR: Live Dashboard Stats - Clickable for drill-down */}
-        <LiveDashboardStats records={processedRecords} onStatClick={handleStatClick} />
-        
-        {/* NUCLEAR: Critical Insights Banner */}
-        {showCriticalBanner && processedRecords.length > 0 && (
-          <CriticalInsightsBanner 
-            records={processedRecords}
-            onShowOnMap={(records) => {
-              // Filter map to show these records
-              toast.success(`Showing ${records.length} records on map`);
-            }}
-            onViewDetails={(insight) => {
-              if (insight.relatedRecords?.[0]) {
-                setEntityDeepDive(insight.relatedRecords[0]);
-              }
-            }}
-          />
-        )}
-        
-        {/* Collapsible Insights Panel */}
-        <AnimatePresence>
-          {showInsightsPanel && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-visible"
-            >
-              <div className="mt-4 pt-4 border-t border-slate-200">
-                <div className="max-h-[320px] overflow-y-auto">
-                  <InsightsPanel
-                    insights={insights}
-                    records={processedRecords}
-                  />
-                </div>
+      {/* Main Content (scroll container) */}
+      <main className="flex-1 overflow-y-auto">
+        {/* IMPORTANT: extra bottom padding so the last rows/cards never clip */}
+        <div className="pb-32">
+          {/* Smart Stats Dashboard - Category-specific intelligence */}
+          <div className="px-6 py-4 bg-white border-b border-slate-200">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">
+                  {totalRecords} Results Found
+                </h2>
+                <p className="text-slate-500 text-sm">
+                  Aggregated from {successSources} sources across {dataStats.categories} categories
+                  {dataStats.totalDuplicatesRemoved > 0 && (
+                    <span className="text-slate-400"> • {dataStats.totalDuplicatesRemoved} duplicates removed</span>
+                  )}
+                </p>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowInsightsPanel(!showInsightsPanel)}
+                  className={cn(
+                    "border-slate-200",
+                    showInsightsPanel && "bg-amber-50 border-amber-200 text-amber-700"
+                  )}
+                >
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Insights
+                </Button>
+                <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
+                  ✓ Deduplicated
+                </span>
+                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
+                  {dataStats.geoPercent}% Geo
+                </span>
+              </div>
+            </div>
+            {/* NUCLEAR: Live Dashboard Stats - Clickable for drill-down */}
+            <LiveDashboardStats records={processedRecords} onStatClick={handleStatClick} />
+            
+            {/* NUCLEAR: Critical Insights Banner */}
+            {showCriticalBanner && processedRecords.length > 0 && (
+              <CriticalInsightsBanner 
+                records={processedRecords}
+                onShowOnMap={(records) => {
+                  // Filter map to show these records
+                  toast.success(`Showing ${records.length} records on map`);
+                }}
+                onViewDetails={(insight) => {
+                  if (insight.relatedRecords?.[0]) {
+                    setEntityDeepDive(insight.relatedRecords[0]);
+                  }
+                }}
+              />
+            )}
+            
+            {/* Collapsible Insights Panel */}
+            <AnimatePresence>
+              {showInsightsPanel && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-visible"
+                >
+                  <div className="mt-4 pt-4 border-t border-slate-200">
+                    <div className="max-h-[320px] overflow-y-auto">
+                      <InsightsPanel
+                        insights={insights}
+                        records={processedRecords}
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex min-h-0 overflow-hidden">
+          {/* Main Results Area */}
+          <div className="flex">
         {/* History Sidebar (Vision: Left panel with search history) */}
         <AnimatePresence>
           {historySidebarOpen && (
@@ -410,7 +414,7 @@ export function PremiumOmniscientResults({
 
         {/* Filter Sidebar */}
         <aside className={cn(
-          "w-64 bg-white border-r border-slate-200 flex flex-col min-h-0 transition-all duration-300",
+          "w-64 bg-white border-r border-slate-200 flex flex-col min-h-0 transition-all duration-300 sticky top-24 self-start",
           !filterSidebarOpen && "-ml-64"
         )}>
           <div className="p-4 border-b border-slate-200 flex items-center justify-between">
@@ -517,7 +521,7 @@ export function PremiumOmniscientResults({
         {/* Map & Data Panel */}
         <div className="flex-1 flex flex-col lg:flex-row min-w-0 min-h-0">
           {/* Map */}
-          <div className="flex-1 relative min-h-[300px] lg:min-h-0">
+          <div className="flex-1 relative h-[500px] min-h-[500px]">
             <SimpleMap
               features={features}
               layers={layers}
@@ -682,7 +686,9 @@ export function PremiumOmniscientResults({
             </div>
           </div>
         </div>
-      </div>
+          </div>
+        </div>
+      </main>
 
       {/* 10x Enriched Dossier Panel */}
       <AnimatePresence>
