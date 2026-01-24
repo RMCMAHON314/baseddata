@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   BarChart3, TrendingUp, Map, PieChart, Users, DollarSign, Building2,
-  Activity, Zap, Target, FileText, Award, RefreshCw, ChevronDown
+  Activity, Zap, Target, FileText, Award, RefreshCw, ChevronDown, Calendar
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
+import { PredictiveCalendar } from '@/components/analytics/PredictiveCalendar';
 import {
   LineChart, Line, BarChart, Bar, AreaChart, Area, XAxis, YAxis, 
   CartesianGrid, Tooltip, ResponsiveContainer, Legend, 
@@ -493,6 +494,21 @@ export default function AnalyticsCommandCenter() {
                 <span>📍 Top-Right: Market Leaders</span>
                 <span>📍 Size = Opportunity Score</span>
               </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Predictive Analytics Section */}
+        <div className="mt-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Predictive Intelligence
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <PredictiveCalendar />
             </CardContent>
           </Card>
         </div>

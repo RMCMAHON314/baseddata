@@ -34,8 +34,8 @@ export function SavedSearchManager({ currentFilters = {}, onLoadSearch }: SavedS
   const [loading, setLoading] = useState(true);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [newSearchName, setNewSearchName] = useState('');
-  const [notifyOnChange, setNotifyOnChange] = useState(false);
-  const [schedule, setSchedule] = useState('daily');
+  const [alertEnabled, setAlertEnabled] = useState(false);
+  const [alertFrequency, setAlertFrequency] = useState('daily');
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -61,7 +61,18 @@ export function SavedSearchManager({ currentFilters = {}, onLoadSearch }: SavedS
       .order('created_at', { ascending: false });
 
     if (!error && data) {
-      setSearches(data);
+      // Transform data to match our interface
+      const transformed: SavedSearch[] = data.map(item => ({
+        id: item.id,
+        name: item.name,
+        filters: typeof item.filters === 'object' && item.filters !== null 
+          ? item.filters as Record<string, any>
+          : {},
+        notify_on_change: item.notify_on_change || false,
+        schedule: item.schedule || 'daily',
+        created_at: item.created_at
+      }));
+      setSearches(transformed);
     }
     setLoading(false);
   }
@@ -78,8 +89,9 @@ export function SavedSearchManager({ currentFilters = {}, onLoadSearch }: SavedS
         user_id: userId,
         name: newSearchName.trim(),
         query: JSON.stringify(currentFilters),
-        notify_on_change: notifyOnChange,
-        schedule: schedule
+        filters: currentFilters,
+        notify_on_change: alertEnabled,
+        schedule: alertFrequency
       });
 
     if (error) {
@@ -88,7 +100,7 @@ export function SavedSearchManager({ currentFilters = {}, onLoadSearch }: SavedS
       toast.success('Search saved successfully');
       setSaveDialogOpen(false);
       setNewSearchName('');
-      setNotifyOnChange(false);
+      setAlertEnabled(false);
       loadSearches(userId);
     }
   }
@@ -254,15 +266,15 @@ export function SavedSearchManager({ currentFilters = {}, onLoadSearch }: SavedS
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {search.alert_enabled && (
+                    {search.notify_on_change && (
                       <Badge variant="secondary" className="gap-1">
                         <Bell className="h-3 w-3" />
-                        {search.alert_frequency}
+                        {search.schedule}
                       </Badge>
                     )}
                     <Switch
-                      checked={search.alert_enabled}
-                      onCheckedChange={(checked) => toggleAlert(search.id, checked)}
+                      checked={search.notify_on_change}
+                      onCheckedChange={(checked) => toggleNotify(search.id, checked)}
                     />
                     <Button 
                       variant="ghost" 
