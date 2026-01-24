@@ -3,7 +3,7 @@
 // Grouped search history with quality indicators
 // ============================================================================
 
-import { useState } from 'react';
+import { useState, forwardRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -200,13 +200,13 @@ interface HistoryItemCardProps {
   onDelete: () => void;
 }
 
-function HistoryItemCard({
+const HistoryItemCard = forwardRef<HTMLDivElement, HistoryItemCardProps>(({
   item,
   isActive,
   onSelect,
   onToggleSaved,
   onDelete,
-}: HistoryItemCardProps) {
+}, ref) => {
   const [showActions, setShowActions] = useState(false);
   const stats = item.snapshot?.stats;
   const isFailed = item.status === 'failed';
@@ -214,6 +214,7 @@ function HistoryItemCard({
 
   return (
     <motion.div
+      ref={ref}
       initial={{ opacity: 0, y: 5 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
@@ -346,4 +347,6 @@ function HistoryItemCard({
       </AnimatePresence>
     </motion.div>
   );
-}
+});
+
+HistoryItemCard.displayName = 'HistoryItemCard';
