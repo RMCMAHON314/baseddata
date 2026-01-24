@@ -138,6 +138,15 @@ export const OmniscientLanding = forwardRef<HTMLDivElement, OmniscientLandingPro
                 <span className="font-mono font-bold">{DATA_SOURCE_REGISTRY.length}+</span> quantum sources
               </span>
             </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="hidden sm:flex border-border hover:border-primary/50 hover:bg-primary/5"
+              onClick={() => window.location.href = '/health'}
+            >
+              <Activity className="w-4 h-4 mr-2" />
+              System Health
+            </Button>
             <Button variant="outline" size="sm" className="hidden sm:flex border-border hover:border-primary/50 hover:bg-primary/5">
               <ExternalLink className="w-4 h-4 mr-2" />
               API Docs
