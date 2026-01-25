@@ -4,6 +4,8 @@
 import { EnrichmentFlywheel } from '@/services/enrichmentFlywheel';
 import { classifyAllContracts } from '@/services/classificationService';
 import { calculateAllHealthScores } from '@/services/healthScoreService';
+import { DataQualityAgent } from '@/services/dataQualityAgent';
+import { BackgroundJobs } from '@/jobs/backgroundJobs';
 import { supabase } from '@/integrations/supabase/client';
 
 let initialized = false;

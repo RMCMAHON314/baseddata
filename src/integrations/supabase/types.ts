@@ -1760,6 +1760,33 @@ export type Database = {
         }
         Relationships: []
       }
+      data_quality_logs: {
+        Row: {
+          audit_type: string
+          details: Json | null
+          id: string
+          issues_fixed: number | null
+          issues_found: number | null
+          ran_at: string | null
+        }
+        Insert: {
+          audit_type: string
+          details?: Json | null
+          id?: string
+          issues_fixed?: number | null
+          issues_found?: number | null
+          ran_at?: string | null
+        }
+        Update: {
+          audit_type?: string
+          details?: Json | null
+          id?: string
+          issues_fixed?: number | null
+          issues_found?: number | null
+          ran_at?: string | null
+        }
+        Relationships: []
+      }
       data_sources: {
         Row: {
           content_hash: string | null
@@ -3996,6 +4023,69 @@ export type Database = {
         }
         Relationships: []
       }
+      market_shifts: {
+        Row: {
+          agencies: string[] | null
+          detected_at: string | null
+          entity_id: string | null
+          id: string
+          shift_type: string
+          velocity_change: number | null
+        }
+        Insert: {
+          agencies?: string[] | null
+          detected_at?: string | null
+          entity_id?: string | null
+          id?: string
+          shift_type: string
+          velocity_change?: number | null
+        }
+        Update: {
+          agencies?: string[] | null
+          detected_at?: string | null
+          entity_id?: string | null
+          id?: string
+          shift_type?: string
+          velocity_change?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "market_shifts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "market_shifts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "market_shifts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "market_shifts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "market_shifts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       master_dataset_stats: {
         Row: {
           avg_quality_score: number | null
@@ -6067,6 +6157,104 @@ export type Database = {
           },
         ]
       }
+      teaming_partners: {
+        Row: {
+          discovered_at: string | null
+          entity_id: string | null
+          id: string
+          partner_entity_id: string | null
+          shared_agencies: number | null
+          strength_score: number | null
+        }
+        Insert: {
+          discovered_at?: string | null
+          entity_id?: string | null
+          id?: string
+          partner_entity_id?: string | null
+          shared_agencies?: number | null
+          strength_score?: number | null
+        }
+        Update: {
+          discovered_at?: string | null
+          entity_id?: string | null
+          id?: string
+          partner_entity_id?: string | null
+          shared_agencies?: number | null
+          strength_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teaming_partners_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teaming_partners_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teaming_partners_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teaming_partners_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teaming_partners_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teaming_partners_partner_entity_id_fkey"
+            columns: ["partner_entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teaming_partners_partner_entity_id_fkey"
+            columns: ["partner_entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teaming_partners_partner_entity_id_fkey"
+            columns: ["partner_entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teaming_partners_partner_entity_id_fkey"
+            columns: ["partner_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teaming_partners_partner_entity_id_fkey"
+            columns: ["partner_entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teams: {
         Row: {
           created_at: string | null
@@ -6365,6 +6553,69 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      win_predictions: {
+        Row: {
+          entity_id: string | null
+          features: Json | null
+          id: string
+          opportunity_id: string | null
+          predicted_at: string | null
+          predicted_win_rate: number | null
+        }
+        Insert: {
+          entity_id?: string | null
+          features?: Json | null
+          id?: string
+          opportunity_id?: string | null
+          predicted_at?: string | null
+          predicted_win_rate?: number | null
+        }
+        Update: {
+          entity_id?: string | null
+          features?: Json | null
+          id?: string
+          opportunity_id?: string | null
+          predicted_at?: string | null
+          predicted_win_rate?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "win_predictions_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "win_predictions_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "win_predictions_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "win_predictions_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "win_predictions_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
