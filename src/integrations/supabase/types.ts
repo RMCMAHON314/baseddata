@@ -3349,6 +3349,7 @@ export type Database = {
           discovery_type: string
           error_message: string | null
           id: string
+          metadata: Json | null
           priority: number | null
           records_collected: number | null
           started_at: string | null
@@ -3365,6 +3366,7 @@ export type Database = {
           discovery_type: string
           error_message?: string | null
           id?: string
+          metadata?: Json | null
           priority?: number | null
           records_collected?: number | null
           started_at?: string | null
@@ -3381,6 +3383,7 @@ export type Database = {
           discovery_type?: string
           error_message?: string | null
           id?: string
+          metadata?: Json | null
           priority?: number | null
           records_collected?: number | null
           started_at?: string | null
