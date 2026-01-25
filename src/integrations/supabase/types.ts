@@ -294,6 +294,7 @@ export type Database = {
           requests_this_minute: number | null
           requests_today: number | null
           scopes: string[] | null
+          tier_id: string | null
           updated_at: string
           user_id: string
         }
@@ -312,6 +313,7 @@ export type Database = {
           requests_this_minute?: number | null
           requests_today?: number | null
           scopes?: string[] | null
+          tier_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -330,10 +332,93 @@ export type Database = {
           requests_this_minute?: number | null
           requests_today?: number | null
           scopes?: string[] | null
+          tier_id?: string | null
           updated_at?: string
           user_id?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "api_keys_tier_id_fkey"
+            columns: ["tier_id"]
+            isOneToOne: false
+            referencedRelation: "api_pricing_tiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_pricing_tiers: {
+        Row: {
+          created_at: string | null
+          features: Json | null
+          id: string
+          is_active: boolean | null
+          name: string
+          price_monthly: number
+          rate_limit_per_minute: number
+          requests_per_month: number
+        }
+        Insert: {
+          created_at?: string | null
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          price_monthly?: number
+          rate_limit_per_minute?: number
+          requests_per_month?: number
+        }
+        Update: {
+          created_at?: string | null
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          price_monthly?: number
+          rate_limit_per_minute?: number
+          requests_per_month?: number
+        }
         Relationships: []
+      }
+      api_request_logs: {
+        Row: {
+          api_key_id: string | null
+          created_at: string | null
+          endpoint: string
+          id: string
+          method: string
+          request_body: Json | null
+          response_time_ms: number | null
+          status_code: number | null
+        }
+        Insert: {
+          api_key_id?: string | null
+          created_at?: string | null
+          endpoint: string
+          id?: string
+          method?: string
+          request_body?: Json | null
+          response_time_ms?: number | null
+          status_code?: number | null
+        }
+        Update: {
+          api_key_id?: string | null
+          created_at?: string | null
+          endpoint?: string
+          id?: string
+          method?: string
+          request_body?: Json | null
+          response_time_ms?: number | null
+          status_code?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_request_logs_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       api_sources: {
         Row: {
@@ -3271,6 +3356,7 @@ export type Database = {
           target_query: Json
           target_source: string
           target_type: string | null
+          target_value: string | null
         }
         Insert: {
           completed_at?: string | null
@@ -3286,6 +3372,7 @@ export type Database = {
           target_query: Json
           target_source: string
           target_type?: string | null
+          target_value?: string | null
         }
         Update: {
           completed_at?: string | null
@@ -3301,6 +3388,7 @@ export type Database = {
           target_query?: Json
           target_source?: string
           target_type?: string | null
+          target_value?: string | null
         }
         Relationships: []
       }
@@ -6468,6 +6556,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       webhook_logs: {
         Row: {
           created_at: string | null
@@ -7156,6 +7265,13 @@ export type Database = {
         }[]
       }
       get_user_dashboard: { Args: { p_user_id: string }; Returns: Json }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       increment_query_access_count: {
         Args: { query_uuid: string }
         Returns: number
@@ -7386,6 +7502,7 @@ export type Database = {
       }
     }
     Enums: {
+      app_role: "admin" | "moderator" | "user"
       dataset_status: "pending" | "processing" | "complete" | "failed"
       transaction_type: "purchase" | "usage" | "bonus" | "refund"
     }
@@ -7515,6 +7632,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "moderator", "user"],
       dataset_status: ["pending", "processing", "complete", "failed"],
       transaction_type: ["purchase", "usage", "bonus", "refund"],
     },
