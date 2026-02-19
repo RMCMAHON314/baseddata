@@ -1,638 +1,382 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { motion, useInView } from 'framer-motion';
 import {
-  Search, Building2, FileText, Award, Briefcase, TrendingUp,
-  Zap, Globe, Database, GitBranch, Sparkles, ArrowRight,
-  Play, ChevronRight, Star, Shield, Lightbulb
+  Search, ArrowRight, Building2, Shield, Target, TrendingUp,
+  Zap, BarChart3, Bell, ChevronRight, ExternalLink
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 
-// Animated counter hook with easing
-function useAnimatedCounter(target: number, duration: number = 2000) {
+/* ── animated counter ── */
+function useAnimatedCounter(target: number, duration = 2000) {
   const [count, setCount] = useState(0);
-  const countRef = useRef(0);
-  const startTimeRef = useRef<number | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { once: true });
 
   useEffect(() => {
-    if (target === 0) return;
-    startTimeRef.current = null;
-    
-    const animate = (timestamp: number) => {
-      if (!startTimeRef.current) startTimeRef.current = timestamp;
-      const progress = Math.min((timestamp - startTimeRef.current) / duration, 1);
-      
-      // Easing function for smooth animation
-      const easeOutQuart = 1 - Math.pow(1 - progress, 4);
-      countRef.current = Math.floor(easeOutQuart * target);
-      setCount(countRef.current);
-      
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      }
+    if (!inView || target === 0) return;
+    let start: number | null = null;
+    const step = (ts: number) => {
+      if (!start) start = ts;
+      const p = Math.min((ts - start) / duration, 1);
+      setCount(Math.floor((1 - Math.pow(1 - p, 4)) * target));
+      if (p < 1) requestAnimationFrame(step);
     };
-    
-    requestAnimationFrame(animate);
-  }, [target, duration]);
+    requestAnimationFrame(step);
+  }, [inView, target, duration]);
 
-  return count;
+  return { count, ref };
 }
 
-// Live stat component with animation
-function LiveStat({ value, label, icon: Icon, colorClass }: {
-  value: number;
-  label: string;
-  icon: React.ElementType;
-  colorClass: string;
-}) {
-  const animatedValue = useAnimatedCounter(value);
-  
-  const formatValue = (n: number) => {
-    if (n >= 1e12) return `${(n / 1e12).toFixed(2)}T`;
-    if (n >= 1e9) return `${(n / 1e9).toFixed(2)}B`;
-    if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M`;
+function AnimatedStat({ value, label, prefix = '' }: { value: number; label: string; prefix?: string }) {
+  const { count, ref } = useAnimatedCounter(value);
+  const fmt = (n: number) => {
+    if (n >= 1e12) return `${(n / 1e12).toFixed(1)}T`;
+    if (n >= 1e9) return `${(n / 1e9).toFixed(1)}B`;
+    if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
     if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`;
     return n.toLocaleString();
   };
-
   return (
-    <div className="text-center group">
-      <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br ${colorClass} 
-                      flex items-center justify-center group-hover:scale-110 transition-transform duration-300
-                      border border-white/10`}>
-        <Icon className="w-8 h-8 text-white" />
-      </div>
-      <p className={`text-4xl md:text-5xl font-black font-mono tracking-tight text-white`}>
-        {formatValue(animatedValue)}
+    <div ref={ref} className="text-center">
+      <p className="text-4xl md:text-5xl font-black font-mono tracking-tight text-white">
+        {prefix}{fmt(count)}
       </p>
-      <p className="text-muted-foreground mt-2 text-sm font-medium">{label}</p>
+      <p className="text-sm text-cyan-300/70 mt-2 font-medium uppercase tracking-wider">{label}</p>
     </div>
   );
 }
 
-// Floating particle background
-function ParticleBackground() {
+/* ── search results dropdown ── */
+function SearchDropdown({ results, onSelect }: { results: any[]; onSelect: (id: string) => void }) {
+  if (!results.length) return null;
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {[...Array(50)].map((_, i) => (
-        <div
-          key={i}
-          className="absolute w-1 h-1 bg-primary/30 rounded-full animate-pulse"
-          style={{
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-            animationDelay: `${Math.random() * 5}s`,
-            animationDuration: `${3 + Math.random() * 4}s`
-          }}
-        />
+    <div className="absolute top-full left-0 right-0 mt-2 bg-[hsl(220,30%,12%)] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50">
+      {results.map((e) => (
+        <button
+          key={e.id}
+          onClick={() => onSelect(e.id)}
+          className="w-full px-4 py-3 flex items-center gap-3 hover:bg-white/5 transition-colors text-left"
+        >
+          <Building2 className="h-4 w-4 text-cyan-400" />
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-white truncate">{e.canonical_name}</p>
+            <p className="text-xs text-white/50">{e.entity_type} · {e.state || 'US'} · {e.contract_count || 0} contracts</p>
+          </div>
+          <ChevronRight className="h-4 w-4 text-white/30" />
+        </button>
       ))}
     </div>
   );
 }
 
-// Recent activity ticker
-function ActivityTicker({ items }: { items: { type: string; text: string }[] }) {
-  if (items.length === 0) return null;
-  
-  return (
-    <div className="overflow-hidden">
-      <div className="flex animate-scroll gap-6">
-        {[...items, ...items].map((item, i) => (
-          <div key={i} className="flex items-center gap-2 px-4 py-2 bg-card/80 rounded-full border border-border whitespace-nowrap">
-            {item.type === 'contract' && <FileText className="w-4 h-4 text-green-400" />}
-            {item.type === 'entity' && <Building2 className="w-4 h-4 text-primary" />}
-            {item.type === 'insight' && <Lightbulb className="w-4 h-4 text-yellow-400" />}
-            {item.type === 'relationship' && <GitBranch className="w-4 h-4 text-purple-400" />}
-            <span className="text-sm text-muted-foreground">{item.text}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+const FEATURES = [
+  {
+    icon: Shield,
+    title: 'Competitive Intelligence',
+    desc: 'Know who\'s winning contracts, where they operate, and how to position against them.',
+    color: 'from-cyan-500 to-blue-600',
+  },
+  {
+    icon: Bell,
+    title: 'Opportunity Alerts',
+    desc: 'Get notified the moment contracts match your criteria. Never miss a bid window again.',
+    color: 'from-violet-500 to-indigo-600',
+  },
+  {
+    icon: TrendingUp,
+    title: 'Win Probability',
+    desc: 'AI-scored likelihood before you invest in a proposal. Focus on the bids you can win.',
+    color: 'from-emerald-500 to-teal-600',
+  },
+];
 
 export default function Showcase() {
-  const [stats, setStats] = useState({
-    entities: 0,
-    contracts: 0,
-    grants: 0,
-    opportunities: 0,
-    relationships: 0,
-    totalValue: 0,
-    states: 0,
-    agencies: 0
-  });
-  const [recentActivity, setRecentActivity] = useState<{ type: string; text: string }[]>([]);
+  const [stats, setStats] = useState({ totalValue: 0, entities: 0, relationships: 0, agencies: 0, states: 0 });
   const [searchQuery, setSearchQuery] = useState('');
-  const [topEntities, setTopEntities] = useState<any[]>([]);
-  const [recentInsights, setRecentInsights] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [showResults, setShowResults] = useState(false);
+  const navigate = useNavigate();
+  const searchTimeout = useRef<ReturnType<typeof setTimeout>>();
 
   useEffect(() => {
-    loadShowcaseData();
-    
-    // Real-time updates
-    const channel = supabase
-      .channel('showcase')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'contracts' }, loadShowcaseData)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'core_entities' }, loadShowcaseData)
-      .subscribe();
-
-    return () => { channel.unsubscribe(); };
+    loadStats();
   }, []);
 
-  async function loadShowcaseData() {
-    try {
-      // Load stats
-      const [entities, contracts, grants, opps, rels, value, states, agencies] = await Promise.all([
-        supabase.from('core_entities').select('*', { count: 'exact', head: true }).eq('is_canonical', true),
-        supabase.from('contracts').select('*', { count: 'exact', head: true }),
-        supabase.from('grants').select('*', { count: 'exact', head: true }),
-        supabase.from('opportunities').select('*', { count: 'exact', head: true }).eq('is_active', true),
-        supabase.from('core_relationships').select('*', { count: 'exact', head: true }),
-        supabase.from('contracts').select('award_amount').limit(1000),
-        supabase.from('core_entities').select('state').not('state', 'is', null).limit(1000),
-        supabase.from('contracts').select('awarding_agency').not('awarding_agency', 'is', null).limit(1000)
-      ]);
-
-      const totalValue = (value.data || []).reduce((s, c) => s + (c.award_amount || 0), 0);
-      const uniqueStates = new Set((states.data || []).map(e => e.state)).size;
-      const uniqueAgencies = new Set((agencies.data || []).map(c => c.awarding_agency)).size;
-
-      setStats({
-        entities: entities.count || 0,
-        contracts: contracts.count || 0,
-        grants: grants.count || 0,
-        opportunities: opps.count || 0,
-        relationships: rels.count || 0,
-        totalValue,
-        states: uniqueStates,
-        agencies: uniqueAgencies
-      });
-
-      // Load top entities
-      const { data: top } = await supabase
-        .from('core_entities')
-        .select('id, canonical_name, total_contract_value, contract_count, state, opportunity_score')
-        .eq('is_canonical', true)
-        .not('total_contract_value', 'is', null)
-        .order('total_contract_value', { ascending: false })
-        .limit(6);
-      setTopEntities(top || []);
-
-      // Load recent insights
-      const { data: insights } = await supabase
-        .from('insights')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(5);
-      setRecentInsights(insights || []);
-
-      // Build activity ticker
-      const activities: { type: string; text: string }[] = [
-        { type: 'contract', text: `$${(totalValue / 1e9).toFixed(1)}B in contracts indexed` },
-        { type: 'entity', text: `${(entities.count || 0).toLocaleString()} organizations tracked` },
-        { type: 'relationship', text: `${(rels.count || 0).toLocaleString()} relationships discovered` },
-        { type: 'contract', text: `${uniqueAgencies} federal agencies covered` },
-        { type: 'entity', text: `${uniqueStates} states represented` },
-      ];
-      setRecentActivity(activities);
-    } catch (error) {
-      console.error('Error loading showcase data:', error);
-    }
+  async function loadStats() {
+    const [entities, rels, valueRes, statesRes, agenciesRes] = await Promise.all([
+      supabase.from('core_entities').select('*', { count: 'exact', head: true }),
+      supabase.from('core_relationships').select('*', { count: 'exact', head: true }),
+      supabase.from('contracts').select('base_and_all_options').limit(1000),
+      supabase.from('core_entities').select('state').not('state', 'is', null).limit(1000),
+      supabase.from('contracts').select('awarding_agency').not('awarding_agency', 'is', null).limit(1000),
+    ]);
+    const totalValue = (valueRes.data || []).reduce((s, c) => s + (Number(c.base_and_all_options) || 0), 0);
+    const uniqueStates = new Set((statesRes.data || []).map(e => e.state)).size;
+    const uniqueAgencies = new Set((agenciesRes.data || []).map(c => c.awarding_agency)).size;
+    setStats({
+      totalValue,
+      entities: entities.count || 0,
+      relationships: rels.count || 0,
+      agencies: uniqueAgencies,
+      states: uniqueStates,
+    });
   }
 
-  const formatCurrency = (n: number) => {
-    if (n >= 1e12) return `$${(n / 1e12).toFixed(2)}T`;
-    if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
-    if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
-    return `$${n.toLocaleString()}`;
-  };
+  function handleSearchInput(q: string) {
+    setSearchQuery(q);
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    if (q.length < 2) { setSearchResults([]); setShowResults(false); return; }
+    searchTimeout.current = setTimeout(async () => {
+      const { data } = await supabase
+        .from('core_entities')
+        .select('id, canonical_name, entity_type, state, contract_count')
+        .ilike('canonical_name', `%${q}%`)
+        .order('total_contract_value', { ascending: false })
+        .limit(5);
+      setSearchResults(data || []);
+      setShowResults(true);
+    }, 300);
+  }
+
+  function handleSearchSelect(id: string) {
+    setShowResults(false);
+    setSearchQuery('');
+    navigate(`/entity/${id}`);
+  }
+
+  function handleSearchSubmit() {
+    if (searchQuery) navigate(`/explore?q=${encodeURIComponent(searchQuery)}`);
+  }
 
   return (
-    <div className="min-h-screen bg-background text-foreground overflow-hidden">
-      {/* Hero Section */}
-      <section className="relative min-h-screen flex flex-col">
-        <ParticleBackground />
-        
-        {/* Gradient orbs */}
-        <div className="absolute top-20 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 right-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-cyan-500/10 rounded-full blur-3xl" />
-
-        {/* Nav */}
-        <nav className="relative z-10 flex items-center justify-between px-6 md:px-12 py-6">
-          <Link to="/" className="flex items-center gap-3">
-            <Logo variant="compact" className="text-2xl" />
+    <div className="min-h-screen bg-[hsl(222,47%,5%)] text-white overflow-x-hidden">
+      {/* ── NAV ── */}
+      <nav className="relative z-20 flex items-center justify-between px-6 md:px-12 py-5 max-w-7xl mx-auto">
+        <Link to="/" className="flex items-center gap-3">
+          <Logo variant="compact" className="text-2xl" />
+        </Link>
+        <div className="flex items-center gap-3">
+          <Link to="/explore"><Button variant="ghost" className="text-white/60 hover:text-white hover:bg-white/5">Explore</Button></Link>
+          <Link to="/entities"><Button variant="ghost" className="text-white/60 hover:text-white hover:bg-white/5">Entities</Button></Link>
+          <Link to="/analytics"><Button variant="ghost" className="text-white/60 hover:text-white hover:bg-white/5 hidden md:inline-flex">Analytics</Button></Link>
+          <Link to="/onboarding">
+            <Button className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white border-0">
+              Get Started
+            </Button>
           </Link>
-          <div className="flex items-center gap-4">
-            <Link to="/semantx">
-              <Button variant="ghost" className="text-muted-foreground hover:text-foreground">Search</Button>
-            </Link>
-            <Link to="/ocean">
-              <Button variant="ghost" className="text-muted-foreground hover:text-foreground">Ocean</Button>
-            </Link>
-            <Link to="/graph">
-              <Button variant="ghost" className="text-muted-foreground hover:text-foreground">Graph</Button>
-            </Link>
-            <Link to="/analytics">
-              <Button className="bg-gradient-to-r from-primary to-cyan-600 hover:from-primary/90 hover:to-cyan-700">
-                Get Started
-              </Button>
-            </Link>
-          </div>
-        </nav>
+        </div>
+      </nav>
 
-        {/* Hero Content */}
-        <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 text-center">
-          <Badge className="mb-6 px-4 py-2 bg-primary/20 text-primary border-primary/30">
-            <Sparkles className="w-4 h-4 mr-2" />
-            The Most Comprehensive Government Data Platform
-          </Badge>
-          
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black mb-6 leading-tight">
-            <span className="bg-gradient-to-r from-foreground via-muted-foreground to-foreground bg-clip-text text-transparent">
-              Intelligence at
-            </span>
+      {/* ── HERO ── */}
+      <section className="relative pt-16 pb-32 px-6">
+        {/* bg effects */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-cyan-500/8 rounded-full blur-[120px]" />
+          <div className="absolute top-40 right-0 w-[400px] h-[400px] bg-blue-600/10 rounded-full blur-[100px]" />
+        </div>
+
+        <div className="relative z-10 max-w-4xl mx-auto text-center">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+            <Badge className="mb-6 px-4 py-1.5 bg-cyan-500/10 text-cyan-400 border-cyan-500/20 text-sm font-medium">
+              <Zap className="w-3.5 h-3.5 mr-1.5" />
+              Live Intelligence · {stats.agencies} Agencies · {stats.states} States
+            </Badge>
+          </motion.div>
+
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            className="text-5xl md:text-7xl font-black leading-[1.05] mb-6 tracking-tight"
+          >
+            Government Contract
             <br />
-            <span className="bg-gradient-to-r from-primary via-cyan-400 to-teal-400 bg-clip-text text-transparent">
-              Your Fingertips
+            Intelligence.{' '}
+            <span className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+              Automated.
             </span>
-          </h1>
-          
-          <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mb-8">
-            Real-time access to federal contracts, grants, opportunities, and entity intelligence.
-            Powered by AI. Updated continuously. Always accurate.
-          </p>
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="text-lg md:text-xl text-white/50 max-w-2xl mx-auto mb-10"
+          >
+            Track competitors, discover opportunities, and win more contracts with
+            AI-powered federal intelligence.
+          </motion.p>
 
           {/* Search Bar */}
-          <div className="w-full max-w-2xl mb-12">
-            <div className="relative group">
-              <div className="absolute -inset-1 bg-gradient-to-r from-primary via-cyan-500 to-teal-500 rounded-2xl blur opacity-30 group-hover:opacity-50 transition duration-500" />
-              <div className="relative flex items-center bg-card rounded-xl border border-border overflow-hidden">
-                <Search className="w-6 h-6 text-muted-foreground ml-4" />
-                <Input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search entities, contracts, opportunities..."
-                  className="flex-1 bg-transparent border-none text-lg py-6 px-4 focus:ring-0 focus-visible:ring-0"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && searchQuery) {
-                      window.location.href = `/semantx?q=${encodeURIComponent(searchQuery)}`;
-                    }
-                  }}
-                />
-                <Link to={searchQuery ? `/semantx?q=${encodeURIComponent(searchQuery)}` : '/semantx'}>
-                  <Button className="m-2 bg-gradient-to-r from-primary to-cyan-600">
-                    <ArrowRight className="w-5 h-5" />
-                  </Button>
-                </Link>
-              </div>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="relative w-full max-w-xl mx-auto mb-8"
+          >
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-white/30" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => handleSearchInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()}
+                onBlur={() => setTimeout(() => setShowResults(false), 200)}
+                onFocus={() => searchResults.length > 0 && setShowResults(true)}
+                placeholder="Search organizations — try &quot;Lockheed Martin&quot;"
+                className="w-full pl-12 pr-28 py-4 h-14 bg-white/5 border-white/10 text-white placeholder:text-white/30 rounded-xl text-base focus:border-cyan-500/50 focus:ring-cyan-500/20"
+              />
+              <Button
+                onClick={handleSearchSubmit}
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 border-0 gap-1.5"
+              >
+                Search <ArrowRight className="w-4 h-4" />
+              </Button>
             </div>
-            
-            {/* Quick searches */}
-            <div className="flex flex-wrap justify-center gap-2 mt-4">
-              {['IT contractors Maryland', 'Healthcare Virginia', 'DoD cybersecurity', 'Small business', 'Construction DC'].map(q => (
-                <Badge 
-                  key={q} 
-                  variant="outline" 
-                  className="cursor-pointer hover:bg-primary/20 transition-colors"
-                  onClick={() => window.location.href = `/semantx?q=${encodeURIComponent(q)}`}
-                >
-                  {q}
-                </Badge>
-              ))}
-            </div>
-          </div>
+            {showResults && <SearchDropdown results={searchResults} onSelect={handleSearchSelect} />}
+          </motion.div>
 
-          {/* Quick Stats Preview */}
-          <div className="flex items-center gap-8 text-sm text-muted-foreground">
-            <span className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              Live Data
-            </span>
-            <span>{stats.entities.toLocaleString()} Entities</span>
-            <span>{stats.contracts.toLocaleString()} Contracts</span>
-            <span>{formatCurrency(stats.totalValue)} Indexed</span>
-          </div>
-        </div>
-
-        {/* Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-          <ChevronRight className="w-8 h-8 text-muted-foreground rotate-90" />
+          {/* CTA */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="flex flex-col items-center gap-3"
+          >
+            <Link to="/onboarding">
+              <Button size="lg" className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white border-0 text-base px-8 h-12 gap-2">
+                Start Free — No credit card required
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </Link>
+            <p className="text-xs text-white/30">Join government contractors using real-time intelligence</p>
+          </motion.div>
         </div>
       </section>
 
-      {/* Live Stats Section */}
-      <section className="relative py-24 px-6">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/5 to-transparent" />
-        
-        <div className="relative max-w-7xl mx-auto">
+      {/* ── STATS ── */}
+      <section className="relative py-20 px-6 border-y border-white/5">
+        <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/3 via-transparent to-transparent pointer-events-none" />
+        <div className="relative max-w-5xl mx-auto">
+          <p className="text-center text-sm text-white/40 mb-10 uppercase tracking-widest">
+            Tracking $574B+ in federal contracts across {stats.agencies} agencies and {stats.states} states
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+            <AnimatedStat value={stats.totalValue} label="Contract Value Indexed" prefix="$" />
+            <AnimatedStat value={stats.entities} label="Organizations Tracked" />
+            <AnimatedStat value={stats.relationships} label="Relationships Mapped" />
+          </div>
+        </div>
+      </section>
+
+      {/* ── FEATURES ── */}
+      <section className="py-24 px-6">
+        <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-black mb-4">
-              <span className="bg-gradient-to-r from-primary to-cyan-400 bg-clip-text text-transparent">
-                Live Intelligence
+            <h2 className="text-3xl md:text-4xl font-black mb-4">
+              Everything you need to{' '}
+              <span className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+                win more contracts
               </span>
             </h2>
-            <p className="text-muted-foreground text-lg">Updated continuously from 50+ government data sources</p>
-          </div>
-
-          {/* Big Value Display */}
-          <div className="text-center mb-16">
-            <p className="text-muted-foreground text-sm uppercase tracking-wider mb-2">Total Contract Value Indexed</p>
-            <p className="text-6xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400 font-mono">
-              {formatCurrency(stats.totalValue)}
+            <p className="text-white/40 text-lg max-w-xl mx-auto">
+              Real-time intelligence that turns public data into a competitive advantage.
             </p>
           </div>
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8">
-            <LiveStat value={stats.entities} label="Entities" icon={Building2} colorClass="from-blue-500/20 to-blue-600/30" />
-            <LiveStat value={stats.contracts} label="Contracts" icon={FileText} colorClass="from-green-500/20 to-green-600/30" />
-            <LiveStat value={stats.grants} label="Grants" icon={Award} colorClass="from-purple-500/20 to-purple-600/30" />
-            <LiveStat value={stats.opportunities} label="Opportunities" icon={Briefcase} colorClass="from-orange-500/20 to-orange-600/30" />
-            <LiveStat value={stats.relationships} label="Relationships" icon={GitBranch} colorClass="from-pink-500/20 to-pink-600/30" />
-            <LiveStat value={stats.agencies} label="Agencies" icon={Shield} colorClass="from-cyan-500/20 to-cyan-600/30" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {FEATURES.map((f, i) => (
+              <motion.div
+                key={f.title}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1, duration: 0.5 }}
+                className="group rounded-2xl border border-white/5 bg-white/[0.02] p-8 hover:border-white/10 hover:bg-white/[0.04] transition-all duration-300"
+              >
+                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${f.color} flex items-center justify-center mb-5`}>
+                  <f.icon className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-xl font-bold mb-3 text-white">{f.title}</h3>
+                <p className="text-white/40 leading-relaxed">{f.desc}</p>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Activity Ticker */}
-      {recentActivity.length > 0 && (
-        <section className="py-8 border-y border-border bg-card/50">
-          <ActivityTicker items={recentActivity} />
-        </section>
-      )}
+      {/* ── HOW IT WORKS ── */}
+      <section className="py-24 px-6 border-t border-white/5">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-black mb-16">
+            From search to strategy in{' '}
+            <span className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">seconds</span>
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              { step: '01', title: 'Search', desc: 'Find any contractor, agency, or market segment instantly.' },
+              { step: '02', title: 'Analyze', desc: 'See contract history, competitors, relationships, and AI insights.' },
+              { step: '03', title: 'Win', desc: 'Track opportunities, compare competitors, and position your bid to win.' },
+            ].map((s, i) => (
+              <motion.div
+                key={s.step}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.15 }}
+                className="text-center"
+              >
+                <div className="text-5xl font-black text-white/5 mb-4 font-mono">{s.step}</div>
+                <h3 className="text-xl font-bold text-white mb-2">{s.title}</h3>
+                <p className="text-white/40">{s.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-      {/* Top Entities Section */}
+      {/* ── FINAL CTA ── */}
       <section className="py-24 px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between mb-12">
-            <div>
-              <h2 className="text-3xl md:text-4xl font-black mb-2">Top Contractors</h2>
-              <p className="text-muted-foreground">Highest contract value entities in our database</p>
-            </div>
-            <Link to="/explore">
-              <Button variant="outline" className="group">
-                View All
-                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+        <div className="max-w-3xl mx-auto text-center">
+          <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-cyan-500/5 to-transparent p-12 md:p-16">
+            <h2 className="text-3xl md:text-4xl font-black mb-4">
+              Ready to see your competitive landscape?
+            </h2>
+            <p className="text-white/40 mb-8 text-lg">
+              Search any organization and get instant intelligence — contract history,
+              competitors, win rates, and market position.
+            </p>
+            <Link to="/onboarding">
+              <Button size="lg" className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white border-0 text-base px-10 h-12 gap-2">
+                Start Free — No credit card required
+                <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {topEntities.map((entity, i) => (
-              <Link key={entity.id} to={`/entity/${entity.id}`}>
-                <Card className="bg-card border-border hover:border-primary/50 transition-all duration-300 group cursor-pointer overflow-hidden">
-                  <CardContent className="p-6 relative">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${
-                          i === 0 ? 'from-yellow-500/20 to-amber-500/20' :
-                          i === 1 ? 'from-gray-400/20 to-gray-500/20' :
-                          i === 2 ? 'from-orange-600/20 to-orange-700/20' :
-                          'from-primary/20 to-primary/30'
-                        } flex items-center justify-center`}>
-                          {i < 3 ? (
-                            <Star className={`w-5 h-5 ${
-                              i === 0 ? 'text-yellow-400' :
-                              i === 1 ? 'text-gray-400' :
-                              'text-orange-500'
-                            }`} />
-                          ) : (
-                            <Building2 className="w-5 h-5 text-primary" />
-                          )}
-                        </div>
-                        <Badge variant="outline" className="text-xs">#{i + 1}</Badge>
-                      </div>
-                      {entity.opportunity_score && (
-                        <Badge className={`${
-                          entity.opportunity_score >= 80 ? 'bg-green-500/20 text-green-400' :
-                          entity.opportunity_score >= 60 ? 'bg-yellow-500/20 text-yellow-400' :
-                          'bg-muted text-muted-foreground'
-                        }`}>
-                          Score: {entity.opportunity_score}
-                        </Badge>
-                      )}
-                    </div>
-                    
-                    <h3 className="font-bold text-lg mb-2 group-hover:text-primary transition-colors line-clamp-1">
-                      {entity.canonical_name}
-                    </h3>
-                    
-                    <p className="text-3xl font-black text-green-400 font-mono mb-2">
-                      {formatCurrency(entity.total_contract_value)}
-                    </p>
-                    
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <span>{entity.contract_count} contracts</span>
-                      {entity.state && <Badge variant="outline">{entity.state}</Badge>}
-                    </div>
-
-                    {/* Hover effect bar */}
-                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-primary to-cyan-500 transform scale-x-0 group-hover:scale-x-100 transition-transform origin-left" />
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
         </div>
       </section>
 
-      {/* Recent Insights Section */}
-      {recentInsights.length > 0 && (
-        <section className="py-24 px-6 bg-gradient-to-b from-transparent via-purple-900/10 to-transparent">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex items-center justify-between mb-12">
-              <div>
-                <h2 className="text-3xl md:text-4xl font-black mb-2">Latest Insights</h2>
-                <p className="text-muted-foreground">AI-generated intelligence from the data</p>
-              </div>
-              <Link to="/ocean">
-                <Button variant="outline" className="group">
-                  View All
-                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                </Button>
-              </Link>
-            </div>
-
-            <div className="space-y-4">
-              {recentInsights.map((insight) => (
-                <Card key={insight.id} className={`bg-card border ${
-                  insight.severity === 'critical' ? 'border-destructive/30' :
-                  insight.severity === 'high' ? 'border-orange-500/30' :
-                  insight.severity === 'medium' ? 'border-yellow-500/30' :
-                  'border-border'
-                } hover:border-purple-500/50 transition-colors`}>
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-4">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        insight.severity === 'critical' ? 'bg-destructive/20' :
-                        insight.severity === 'high' ? 'bg-orange-500/20' :
-                        insight.severity === 'medium' ? 'bg-yellow-500/20' :
-                        'bg-primary/20'
-                      }`}>
-                        <Lightbulb className={`w-5 h-5 ${
-                          insight.severity === 'critical' ? 'text-destructive' :
-                          insight.severity === 'high' ? 'text-orange-400' :
-                          insight.severity === 'medium' ? 'text-yellow-400' :
-                          'text-primary'
-                        }`} />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-bold">{insight.title}</h3>
-                          <Badge variant="outline" className="text-xs">{insight.insight_type}</Badge>
-                        </div>
-                        <p className="text-muted-foreground">{insight.description}</p>
-                      </div>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(insight.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Features Section */}
-      <section className="py-24 px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-black mb-4">
-              <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-                Powered by Intelligence
-              </span>
-            </h2>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Built on a foundation of real government data, enhanced with AI-driven insights
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[
-              {
-                icon: Database,
-                title: 'Unified Data',
-                description: 'USASpending, SAM.gov, NIH, NSF, CMS, and 50+ more sources unified into one searchable platform.',
-                colorClass: 'from-blue-500/20 to-blue-600/20'
-              },
-              {
-                icon: GitBranch,
-                title: 'Relationship Graph',
-                description: 'Automatically discover competitors, partners, and industry connections between entities.',
-                colorClass: 'from-purple-500/20 to-purple-600/20'
-              },
-              {
-                icon: Zap,
-                title: 'Real-time Updates',
-                description: 'Continuous data ingestion keeps you up-to-date with the latest contracts and opportunities.',
-                colorClass: 'from-yellow-500/20 to-yellow-600/20'
-              },
-              {
-                icon: Lightbulb,
-                title: 'AI Insights',
-                description: 'Anomaly detection, trend analysis, and predictive intelligence powered by machine learning.',
-                colorClass: 'from-orange-500/20 to-orange-600/20'
-              },
-              {
-                icon: Search,
-                title: 'Semantic Search',
-                description: "Natural language search that understands what you're looking for, not just keywords.",
-                colorClass: 'from-cyan-500/20 to-cyan-600/20'
-              },
-              {
-                icon: Shield,
-                title: 'Verified Data',
-                description: 'Smart entity resolution ensures accurate, deduplicated records you can trust.',
-                colorClass: 'from-green-500/20 to-green-600/20'
-              }
-            ].map((feature) => (
-              <Card key={feature.title} className="bg-card border-border group hover:border-muted transition-colors">
-                <CardContent className="p-8">
-                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${feature.colorClass} flex items-center justify-center mb-6 
-                                  group-hover:scale-110 transition-transform`}>
-                    <feature.icon className="w-7 h-7 text-foreground" />
-                  </div>
-                  <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
-                  <p className="text-muted-foreground">{feature.description}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-24 px-6">
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="relative">
-            <div className="absolute -inset-4 bg-gradient-to-r from-primary/20 via-purple-500/20 to-cyan-500/20 rounded-3xl blur-xl" />
-            <Card className="relative bg-gradient-to-br from-card to-muted border-border">
-              <CardContent className="p-12">
-                <h2 className="text-4xl md:text-5xl font-black mb-6">
-                  Ready to dive in?
-                </h2>
-                <p className="text-xl text-muted-foreground mb-8">
-                  Start exploring the most comprehensive government data platform today.
-                </p>
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                  <Link to="/semantx">
-                    <Button size="lg" className="bg-gradient-to-r from-primary to-cyan-600 hover:from-primary/90 hover:to-cyan-700 text-lg px-8">
-                      <Search className="w-5 h-5 mr-2" />
-                      Start Searching
-                    </Button>
-                  </Link>
-                  <Link to="/ocean">
-                    <Button size="lg" variant="outline" className="text-lg px-8">
-                      <Play className="w-5 h-5 mr-2" />
-                      View Dashboard
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t border-border py-12 px-6">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+      {/* ── FOOTER ── */}
+      <footer className="border-t border-white/5 py-12 px-6">
+        <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
-            <Logo variant="compact" />
+            <Logo variant="compact" className="text-lg" />
+            <span className="text-white/30 text-sm">Government Contract Intelligence</span>
           </div>
-          <div className="flex items-center gap-6 text-sm text-muted-foreground">
-            <span>{stats.entities.toLocaleString()} entities</span>
-            <span>•</span>
-            <span>{stats.contracts.toLocaleString()} contracts</span>
-            <span>•</span>
-            <span>{stats.states} states</span>
-            <span>•</span>
-            <span>Updated in real-time</span>
+          <div className="flex items-center gap-6 text-sm text-white/30">
+            <Link to="/explore" className="hover:text-white/60 transition-colors">Explore</Link>
+            <Link to="/entities" className="hover:text-white/60 transition-colors">Entities</Link>
+            <Link to="/analytics" className="hover:text-white/60 transition-colors">Analytics</Link>
+            <Link to="/api-docs" className="hover:text-white/60 transition-colors">API</Link>
+            <Link to="/pricing" className="hover:text-white/60 transition-colors">Pricing</Link>
           </div>
-          <p className="text-sm text-muted-foreground">
-            © 2025 Based Data. All rights reserved.
-          </p>
+          <p className="text-white/20 text-sm">Built in Baltimore 🦀</p>
         </div>
       </footer>
-
-      {/* Add custom styles for animations */}
-      <style>{`
-        @keyframes scroll {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        .animate-scroll {
-          animation: scroll 30s linear infinite;
-        }
-      `}</style>
     </div>
   );
 }
