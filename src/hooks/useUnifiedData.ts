@@ -510,6 +510,97 @@ export function useExpiringContracts(monthsAhead = 12, limit = 30) {
   });
 }
 
+// ═══════════════════ ANALYTICS OVERVIEW ═══════════════════
+export function useAnalyticsOverview() {
+  return useQuery({
+    queryKey: ["analytics-overview"],
+    queryFn: async () => {
+      const [contracts, grants, entities, relationships] = await Promise.all([
+        supabase.from("contracts").select("base_and_all_options, awarding_agency, naics_code, pop_state, award_date"),
+        supabase.from("grants").select("total_funding, awarding_agency"),
+        supabase.from("core_entities").select("entity_type, state"),
+        supabase.from("core_relationships").select("relationship_type"),
+      ]);
+
+      // Aggregate by agency
+      const agencyMap = new Map<string, number>();
+      for (const c of contracts.data || []) {
+        if (c.awarding_agency) {
+          agencyMap.set(c.awarding_agency, (agencyMap.get(c.awarding_agency) || 0) + (Number(c.base_and_all_options) || 0));
+        }
+      }
+      const topAgencies = [...agencyMap.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([name, value]) => ({ name: name.length > 30 ? name.substring(0, 30) + "…" : name, value }));
+
+      // Aggregate by state
+      const stateMap = new Map<string, number>();
+      for (const c of contracts.data || []) {
+        if (c.pop_state) {
+          stateMap.set(c.pop_state, (stateMap.get(c.pop_state) || 0) + 1);
+        }
+      }
+      const topStates = [...stateMap.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 15)
+        .map(([state, count]) => ({ state, count }));
+
+      // Aggregate by NAICS
+      const naicsMap = new Map<string, number>();
+      for (const c of contracts.data || []) {
+        if (c.naics_code) {
+          naicsMap.set(c.naics_code, (naicsMap.get(c.naics_code) || 0) + 1);
+        }
+      }
+      const topNaics = [...naicsMap.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([code, count]) => ({ code, count }));
+
+      // Timeline (contracts by quarter)
+      const timelineMap = new Map<string, number>();
+      for (const c of contracts.data || []) {
+        if (c.award_date) {
+          const d = new Date(c.award_date);
+          const key = `${d.getFullYear()} Q${Math.ceil((d.getMonth() + 1) / 3)}`;
+          timelineMap.set(key, (timelineMap.get(key) || 0) + (Number(c.base_and_all_options) || 0));
+        }
+      }
+      const timeline = [...timelineMap.entries()]
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([quarter, value]) => ({ quarter, value }));
+
+      // Entity types
+      const typeMap = new Map<string, number>();
+      for (const e of entities.data || []) {
+        if (e.entity_type) {
+          typeMap.set(e.entity_type, (typeMap.get(e.entity_type) || 0) + 1);
+        }
+      }
+      const entityTypes = [...typeMap.entries()].map(([type, count]) => ({ type, count }));
+
+      const totalContractValue = (contracts.data || []).reduce((s, c) => s + (Number(c.base_and_all_options) || 0), 0);
+      const totalGrantValue = (grants.data || []).reduce((s, g) => s + (Number(g.total_funding) || 0), 0);
+
+      return {
+        totalContractValue,
+        totalGrantValue,
+        contractCount: (contracts.data || []).length,
+        grantCount: (grants.data || []).length,
+        entityCount: (entities.data || []).length,
+        relationshipCount: (relationships.data || []).length,
+        topAgencies,
+        topStates,
+        topNaics,
+        timeline,
+        entityTypes,
+      };
+    },
+    staleTime: STALE.dynamic,
+  });
+}
+
 // ═══════════════════ FLYWHEEL HEALTH ═══════════════════
 export function useFlywheelHealth() {
   return useQuery({
