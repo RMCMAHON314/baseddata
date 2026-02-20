@@ -1,495 +1,220 @@
-// BASED DATA - Opportunity Command Center
-// Real-time opportunity tracking with urgency indicators and calendar view
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+// BASED DATA - Opportunity Command Center - SMART FALLBACK
+// Since 0 opportunities exist, show recently awarded contracts + recompete radar
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import {
-  Target, Clock, Calendar, List, Grid3X3, Filter, Search, AlertTriangle,
-  ExternalLink, Building2, DollarSign, FileText, ChevronRight, Timer, X
+  Target, Clock, Info, Search, Building2, DollarSign, FileText,
+  ChevronRight, CalendarClock, AlertTriangle, TrendingUp
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
 
-interface Opportunity {
-  id: string;
-  title: string | null;
-  description: string | null;
-  department: string | null;
-  response_deadline: string | null;
-  posted_date: string | null;
-  award_ceiling: number | null;
-  set_aside: string | null;
-  naics_code: string | null;
-  psc_code: string | null;
-  pop_state: string | null;
-  notice_id: string | null;
-  ui_link: string | null;
-  is_active: boolean | null;
+function fmt(v: number | null) {
+  if (!v) return '$0';
+  if (v >= 1e9) return `$${(v / 1e9).toFixed(1)}B`;
+  if (v >= 1e6) return `$${(v / 1e6).toFixed(1)}M`;
+  if (v >= 1e3) return `$${(v / 1e3).toFixed(0)}K`;
+  return `$${v.toFixed(0)}`;
 }
 
-type UrgencyLevel = 'critical' | 'high' | 'medium' | 'low';
-
-const URGENCY_CONFIG: Record<UrgencyLevel, { label: string; color: string; bgColor: string }> = {
-  critical: { label: 'Critical', color: 'text-white', bgColor: 'bg-destructive' },
-  high: { label: 'Urgent', color: 'text-orange-700', bgColor: 'bg-orange-100' },
-  medium: { label: 'Soon', color: 'text-amber-700', bgColor: 'bg-amber-100' },
-  low: { label: 'Open', color: 'text-emerald-700', bgColor: 'bg-emerald-100' },
-};
-
-const SET_ASIDES = [
-  { value: 'all', label: 'All Set-Asides' },
-  { value: 'SBA', label: 'Small Business' },
-  { value: '8A', label: '8(a)' },
-  { value: 'SDVOSBC', label: 'SDVOSB' },
-  { value: 'WOSB', label: 'WOSB' },
-  { value: 'HZC', label: 'HUBZone' },
-  { value: 'NONE', label: 'Unrestricted' },
-];
-
-const AGENCIES = [
-  'Department of Defense', 'Department of Health and Human Services', 
-  'Department of Homeland Security', 'Department of Veterans Affairs',
-  'General Services Administration', 'Department of Energy'
-];
+function fmtDate(d: string | null) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
 
 export default function OpportunityCommandCenter() {
-  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'calendar'>('grid');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterSetAside, setFilterSetAside] = useState('all');
-  const [filterDeadline, setFilterDeadline] = useState('all');
-  const [selectedOpp, setSelectedOpp] = useState<Opportunity | null>(null);
+  const [search, setSearch] = useState('');
 
-  useEffect(() => {
-    loadOpportunities();
-  }, []);
-
-  const loadOpportunities = async () => {
-    setLoading(true);
-    
-    const { data, error } = await supabase
-      .from('opportunities')
-      .select('*')
-      .eq('is_active', true)
-      .gt('response_deadline', new Date().toISOString())
-      .order('response_deadline', { ascending: true })
-      .limit(100);
-
-    if (!error && data) {
-      setOpportunities(data);
-    }
-    setLoading(false);
-  };
-
-  const getUrgencyLevel = (deadline: string | null): UrgencyLevel => {
-    if (!deadline) return 'low';
-    const days = Math.ceil((new Date(deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-    if (days <= 7) return 'critical';
-    if (days <= 14) return 'high';
-    if (days <= 30) return 'medium';
-    return 'low';
-  };
-
-  const getDaysUntil = (deadline: string | null): string => {
-    if (!deadline) return 'No deadline';
-    const days = Math.ceil((new Date(deadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-    if (days === 0) return 'Due today!';
-    if (days === 1) return '1 day left';
-    if (days < 0) return 'Expired';
-    return `${days} days left`;
-  };
-
-  const formatCurrency = (value: number | null | undefined) => {
-    if (!value) return 'TBD';
-    if (value >= 1e9) return `$${(value / 1e9).toFixed(1)}B`;
-    if (value >= 1e6) return `$${(value / 1e6).toFixed(1)}M`;
-    if (value >= 1e3) return `$${(value / 1e3).toFixed(0)}K`;
-    return `$${value.toLocaleString()}`;
-  };
-
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  };
-
-  // Filter opportunities
-  const filteredOpps = opportunities.filter(opp => {
-    // Search filter
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      if (!opp.title?.toLowerCase().includes(q) && 
-          !opp.description?.toLowerCase().includes(q) &&
-          !opp.department?.toLowerCase().includes(q)) {
-        return false;
-      }
-    }
-
-    // Set-aside filter
-    if (filterSetAside !== 'all' && opp.set_aside !== filterSetAside) {
-      return false;
-    }
-
-    // Deadline filter
-    if (filterDeadline !== 'all') {
-      const urgency = getUrgencyLevel(opp.response_deadline);
-      if (filterDeadline === 'week' && urgency !== 'critical') return false;
-      if (filterDeadline === 'month' && urgency === 'low') return false;
-    }
-
-    return true;
+  // Recently awarded contracts
+  const { data: recent, isLoading: loadingRecent } = useQuery({
+    queryKey: ['recent-awards'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('contracts')
+        .select('id, awarding_agency, recipient_name, recipient_entity_id, base_and_all_options, award_date, naics_code, description')
+        .not('award_date', 'is', null)
+        .order('award_date', { ascending: false })
+        .limit(50);
+      return data || [];
+    },
   });
 
-  // Stats
-  const stats = {
-    total: filteredOpps.length,
-    critical: filteredOpps.filter(o => getUrgencyLevel(o.response_deadline) === 'critical').length,
-    totalValue: filteredOpps.reduce((sum, o) => sum + (o.award_ceiling || 0), 0),
-  };
+  // Expiring contracts (recompete radar)
+  const { data: expiring, isLoading: loadingExpiring } = useQuery({
+    queryKey: ['expiring-contracts'],
+    queryFn: async () => {
+      const now = new Date().toISOString();
+      const oneYear = new Date(Date.now() + 365 * 86400000).toISOString();
+      const { data } = await supabase
+        .from('contracts')
+        .select('id, awarding_agency, recipient_name, recipient_entity_id, base_and_all_options, end_date, naics_code, description')
+        .not('end_date', 'is', null)
+        .gt('end_date', now)
+        .lt('end_date', oneYear)
+        .order('end_date', { ascending: true })
+        .limit(30);
+      return data || [];
+    },
+  });
 
-  // Calendar data
-  const calendarData = filteredOpps.reduce((acc, opp) => {
-    if (opp.response_deadline) {
-      const date = opp.response_deadline.split('T')[0];
-      if (!acc[date]) acc[date] = [];
-      acc[date].push(opp);
-    }
-    return acc;
-  }, {} as Record<string, Opportunity[]>);
+  // Opportunity count check
+  const { data: oppCount } = useQuery({
+    queryKey: ['opportunity-count'],
+    queryFn: async () => {
+      const { count } = await supabase.from('opportunities').select('*', { count: 'exact', head: true });
+      return count || 0;
+    },
+  });
+
+  const filteredRecent = search
+    ? (recent || []).filter(c =>
+        c.awarding_agency?.toLowerCase().includes(search.toLowerCase()) ||
+        c.recipient_name?.toLowerCase().includes(search.toLowerCase()) ||
+        c.description?.toLowerCase().includes(search.toLowerCase())
+      )
+    : recent || [];
 
   return (
     <GlobalLayout>
       <div className="min-h-screen bg-background">
+        {/* Breadcrumb */}
+        <div className="container pt-4">
+          <nav className="flex items-center gap-1 text-sm text-muted-foreground">
+            <Link to="/" className="hover:text-foreground">Home</Link>
+            <ChevronRight className="h-3 w-3" />
+            <span className="text-foreground">Opportunities</span>
+          </nav>
+        </div>
+
         {/* Header */}
-        <div className="border-b border-border bg-gradient-to-r from-card via-card to-orange-50">
+        <div className="border-b border-border bg-card">
           <div className="container py-6">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-bold flex items-center gap-2">
-                  <Target className="h-6 w-6 text-primary" />
-                  Opportunity Command Center
-                </h1>
-                <p className="text-muted-foreground">Track and respond to active opportunities</p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)}>
-                  <TabsList>
-                    <TabsTrigger value="grid"><Grid3X3 className="h-4 w-4" /></TabsTrigger>
-                    <TabsTrigger value="list"><List className="h-4 w-4" /></TabsTrigger>
-                    <TabsTrigger value="calendar"><Calendar className="h-4 w-4" /></TabsTrigger>
-                  </TabsList>
-                </Tabs>
-              </div>
-            </div>
-
-            {/* Stats Row */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-              <Card className="p-4">
-                <p className="text-sm text-muted-foreground">Active Opportunities</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
-              </Card>
-              <Card className="p-4 border-destructive/30 bg-destructive/5">
-                <p className="text-sm text-muted-foreground">Due This Week</p>
-                <p className="text-2xl font-bold text-destructive">{stats.critical}</p>
-              </Card>
-              <Card className="p-4">
-                <p className="text-sm text-muted-foreground">Est. Total Value</p>
-                <p className="text-2xl font-bold text-primary">{formatCurrency(stats.totalValue)}</p>
-              </Card>
-              <Card className="p-4">
-                <p className="text-sm text-muted-foreground">Tracking</p>
-                <p className="text-2xl font-bold">24/7</p>
-              </Card>
-            </div>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <Target className="h-6 w-6 text-primary" />
+              Opportunity Command Center
+            </h1>
+            <p className="text-muted-foreground mt-1">Track awarded contracts and upcoming recompetes</p>
           </div>
         </div>
 
-        <div className="container py-6">
-          {/* Filters */}
-          <div className="flex flex-wrap gap-4 mb-6">
-            <div className="relative flex-1 min-w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search opportunities..."
-                className="pl-9"
-              />
-            </div>
-
-            <Select value={filterDeadline} onValueChange={setFilterDeadline}>
-              <SelectTrigger className="w-40">
-                <Clock className="h-4 w-4 mr-2" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Deadlines</SelectItem>
-                <SelectItem value="week">This Week</SelectItem>
-                <SelectItem value="month">This Month</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={filterSetAside} onValueChange={setFilterSetAside}>
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SET_ASIDES.map(sa => (
-                  <SelectItem key={sa.value} value={sa.value}>{sa.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Content */}
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[...Array(9)].map((_, i) => <Skeleton key={i} className="h-48" />)}
-            </div>
-          ) : filteredOpps.length === 0 ? (
-            <Card className="p-12 text-center">
-              <Target className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No Active Opportunities</h3>
-              <p className="text-muted-foreground">Check back later or adjust your filters</p>
-            </Card>
-          ) : viewMode === 'calendar' ? (
-            <CalendarView opportunities={filteredOpps} onSelect={setSelectedOpp} />
-          ) : (
-            <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-3'}>
-              {filteredOpps.map((opp, index) => (
-                <OpportunityCard 
-                  key={opp.id} 
-                  opportunity={opp} 
-                  index={index}
-                  onClick={() => setSelectedOpp(opp)}
-                  getUrgencyLevel={getUrgencyLevel}
-                  getDaysUntil={getDaysUntil}
-                  formatCurrency={formatCurrency}
-                />
-              ))}
+        <div className="container py-6 space-y-8">
+          {/* Info Banner */}
+          {oppCount === 0 && (
+            <div className="flex items-start gap-3 p-4 rounded-lg bg-blue-50 border border-blue-200 text-blue-800">
+              <Info className="h-5 w-5 mt-0.5 shrink-0" />
+              <div>
+                <p className="font-medium">📢 Live SAM.gov opportunities feed coming soon</p>
+                <p className="text-sm mt-1 text-blue-700">Tracking recently awarded contracts in the meantime — study these to find patterns and position for upcoming bids.</p>
+              </div>
             </div>
           )}
-        </div>
 
-        {/* Detail Modal */}
-        <Dialog open={!!selectedOpp} onOpenChange={() => setSelectedOpp(null)}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-auto">
-            {selectedOpp && (
-              <>
-                <DialogHeader>
-                  <div className="flex items-start justify-between gap-4">
-                    <DialogTitle className="text-xl">{selectedOpp.title || 'Untitled Opportunity'}</DialogTitle>
-                    <Badge className={URGENCY_CONFIG[getUrgencyLevel(selectedOpp.response_deadline)].bgColor}>
-                      <Timer className="h-3 w-3 mr-1" />
-                      {getDaysUntil(selectedOpp.response_deadline)}
-                    </Badge>
-                  </div>
-                </DialogHeader>
+          {/* Search */}
+          <div className="relative max-w-lg">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search awarded contracts..." className="pl-9" />
+          </div>
 
-                <div className="space-y-6">
-                  {/* Quick Stats */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 rounded-xl bg-secondary/50">
-                      <p className="text-sm text-muted-foreground">Award Ceiling</p>
-                      <p className="text-xl font-bold text-primary">{formatCurrency(selectedOpp.award_ceiling)}</p>
-                    </div>
-                    <div className="p-4 rounded-xl bg-secondary/50">
-                      <p className="text-sm text-muted-foreground">Deadline</p>
-                      <p className="text-xl font-bold">{formatDate(selectedOpp.response_deadline)}</p>
-                    </div>
-                  </div>
-
-                  {/* Details */}
-                  <div className="space-y-3">
-                    <DetailRow label="Department" value={selectedOpp.department} />
-                    <DetailRow label="Set-Aside" value={selectedOpp.set_aside} />
-                    <DetailRow label="NAICS" value={selectedOpp.naics_code} />
-                    <DetailRow label="PSC" value={selectedOpp.psc_code} />
-                    <DetailRow label="Location" value={selectedOpp.pop_state} />
-                    <DetailRow label="Posted" value={formatDate(selectedOpp.posted_date)} />
-                    <DetailRow label="Notice ID" value={selectedOpp.notice_id} />
-                  </div>
-
-                  {/* Description */}
-                  {selectedOpp.description && (
-                    <div>
-                      <p className="text-sm font-medium mb-2">Description</p>
-                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">{selectedOpp.description}</p>
-                    </div>
-                  )}
-
-                  {/* Actions */}
-                  <div className="flex gap-2">
-                    {selectedOpp.ui_link && (
-                      <a href={selectedOpp.ui_link} target="_blank" rel="noopener noreferrer" className="flex-1">
-                        <Button className="w-full btn-omni">
-                          <ExternalLink className="h-4 w-4 mr-2" />
-                          View on SAM.gov
-                        </Button>
-                      </a>
-                    )}
-                    <Button variant="outline">
-                      Track Opportunity
-                    </Button>
-                  </div>
-                </div>
-              </>
+          {/* Recently Awarded */}
+          <section>
+            <h2 className="text-lg font-bold flex items-center gap-2 mb-4">
+              <TrendingUp className="h-5 w-5 text-primary" />
+              Recently Awarded — Study These to Find Patterns
+            </h2>
+            {loadingRecent ? (
+              <div className="space-y-3">{[...Array(8)].map((_, i) => <Skeleton key={i} className="h-16" />)}</div>
+            ) : !filteredRecent.length ? (
+              <Card className="p-8 text-center text-muted-foreground">No contracts match your search.</Card>
+            ) : (
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead><tr className="bg-muted/50 text-left">
+                    <th className="p-3 font-medium">Agency</th>
+                    <th className="p-3 font-medium">Recipient</th>
+                    <th className="p-3 font-medium text-right">Value</th>
+                    <th className="p-3 font-medium hidden md:table-cell">Date</th>
+                    <th className="p-3 font-medium hidden lg:table-cell">NAICS</th>
+                    <th className="p-3 font-medium hidden xl:table-cell">Description</th>
+                  </tr></thead>
+                  <tbody>
+                    {filteredRecent.map(c => (
+                      <tr key={c.id} className="border-t hover:bg-muted/30">
+                        <td className="p-3 max-w-[180px] truncate">
+                          <Link to={`/agency/${encodeURIComponent(c.awarding_agency || '')}`} className="hover:text-primary hover:underline">
+                            {c.awarding_agency || '—'}
+                          </Link>
+                        </td>
+                        <td className="p-3 max-w-[180px] truncate">
+                          {c.recipient_entity_id ? (
+                            <Link to={`/entity/${c.recipient_entity_id}`} className="hover:text-primary hover:underline font-medium">
+                              {c.recipient_name || '—'}
+                            </Link>
+                          ) : c.recipient_name || '—'}
+                        </td>
+                        <td className="p-3 text-right font-mono font-semibold text-primary">{fmt(Number(c.base_and_all_options))}</td>
+                        <td className="p-3 hidden md:table-cell whitespace-nowrap">{fmtDate(c.award_date)}</td>
+                        <td className="p-3 hidden lg:table-cell"><Badge variant="secondary" className="font-mono text-xs">{c.naics_code || '—'}</Badge></td>
+                        <td className="p-3 hidden xl:table-cell max-w-[200px] truncate text-muted-foreground">{(c.description || '').slice(0, 60)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
-          </DialogContent>
-        </Dialog>
+          </section>
+
+          {/* Recompete Radar */}
+          {(expiring?.length || 0) > 0 && (
+            <section>
+              <h2 className="text-lg font-bold flex items-center gap-2 mb-4">
+                <CalendarClock className="h-5 w-5 text-amber-600" />
+                Expiring Within 12 Months — Potential Recompetes
+              </h2>
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead><tr className="bg-amber-50/50 text-left">
+                    <th className="p-3 font-medium">Agency</th>
+                    <th className="p-3 font-medium">Current Holder</th>
+                    <th className="p-3 font-medium text-right">Value</th>
+                    <th className="p-3 font-medium">Expires</th>
+                    <th className="p-3 font-medium hidden md:table-cell">NAICS</th>
+                  </tr></thead>
+                  <tbody>
+                    {(expiring || []).map(c => {
+                      const daysLeft = Math.ceil((new Date(c.end_date!).getTime() - Date.now()) / 86400000);
+                      return (
+                        <tr key={c.id} className="border-t hover:bg-muted/30">
+                          <td className="p-3 max-w-[180px] truncate">{c.awarding_agency || '—'}</td>
+                          <td className="p-3 max-w-[180px] truncate">
+                            {c.recipient_entity_id ? (
+                              <Link to={`/entity/${c.recipient_entity_id}`} className="hover:text-primary hover:underline font-medium">
+                                {c.recipient_name || '—'}
+                              </Link>
+                            ) : c.recipient_name || '—'}
+                          </td>
+                          <td className="p-3 text-right font-mono font-semibold text-primary">{fmt(Number(c.base_and_all_options))}</td>
+                          <td className="p-3 whitespace-nowrap">
+                            <Badge variant={daysLeft <= 90 ? 'destructive' : daysLeft <= 180 ? 'default' : 'secondary'}>
+                              {daysLeft} days
+                            </Badge>
+                          </td>
+                          <td className="p-3 hidden md:table-cell"><Badge variant="secondary" className="font-mono text-xs">{c.naics_code || '—'}</Badge></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+        </div>
       </div>
     </GlobalLayout>
-  );
-}
-
-// Opportunity Card Component
-interface OppCardProps {
-  opportunity: Opportunity;
-  index: number;
-  onClick: () => void;
-  getUrgencyLevel: (deadline: string | null) => UrgencyLevel;
-  getDaysUntil: (deadline: string | null) => string;
-  formatCurrency: (value: number | null | undefined) => string;
-}
-
-function OpportunityCard({ opportunity, index, onClick, getUrgencyLevel, getDaysUntil, formatCurrency }: OppCardProps) {
-  const urgency = getUrgencyLevel(opportunity.response_deadline);
-  const config = URGENCY_CONFIG[urgency];
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.02 }}
-    >
-      <Card 
-        className={`p-4 cursor-pointer transition-all hover:shadow-lg hover:border-primary/30 ${urgency === 'critical' ? 'border-destructive/50' : ''}`}
-        onClick={onClick}
-      >
-        <div className="flex items-start justify-between gap-2 mb-3">
-          <Badge className={`${config.bgColor} ${config.color}`}>
-            <Timer className="h-3 w-3 mr-1" />
-            {getDaysUntil(opportunity.response_deadline)}
-          </Badge>
-          {opportunity.set_aside && (
-            <Badge variant="outline">{opportunity.set_aside}</Badge>
-          )}
-        </div>
-
-        <h3 className="font-semibold line-clamp-2 mb-2">{opportunity.title || 'Untitled'}</h3>
-        
-        <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-          {opportunity.department}
-        </p>
-
-        <div className="flex items-center justify-between">
-          <span className="text-lg font-bold font-mono text-primary">
-            {formatCurrency(opportunity.award_ceiling)}
-          </span>
-          <ChevronRight className="h-5 w-5 text-muted-foreground" />
-        </div>
-
-        {opportunity.naics_code && (
-          <Badge variant="secondary" className="mt-2 text-xs font-mono">{opportunity.naics_code}</Badge>
-        )}
-      </Card>
-    </motion.div>
-  );
-}
-
-// Calendar View Component
-interface CalendarViewProps {
-  opportunities: Opportunity[];
-  onSelect: (opp: Opportunity) => void;
-}
-
-function CalendarView({ opportunities, onSelect }: CalendarViewProps) {
-  const today = new Date();
-  const currentMonth = today.getMonth();
-  const currentYear = today.getFullYear();
-  
-  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-  const firstDay = new Date(currentYear, currentMonth, 1).getDay();
-  
-  const oppsByDate = opportunities.reduce((acc, opp) => {
-    if (opp.response_deadline) {
-      const date = new Date(opp.response_deadline);
-      if (date.getMonth() === currentMonth && date.getFullYear() === currentYear) {
-        const day = date.getDate();
-        if (!acc[day]) acc[day] = [];
-        acc[day].push(opp);
-      }
-    }
-    return acc;
-  }, {} as Record<number, Opportunity[]>);
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-7 gap-1">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-            <div key={day} className="text-center text-sm font-medium text-muted-foreground py-2">
-              {day}
-            </div>
-          ))}
-          
-          {[...Array(firstDay)].map((_, i) => (
-            <div key={`empty-${i}`} className="p-2" />
-          ))}
-          
-          {[...Array(daysInMonth)].map((_, i) => {
-            const day = i + 1;
-            const opps = oppsByDate[day] || [];
-            const isToday = day === today.getDate();
-            
-            return (
-              <div 
-                key={day} 
-                className={`p-2 min-h-24 border rounded-lg ${isToday ? 'border-primary bg-primary/5' : 'border-border'}`}
-              >
-                <span className={`text-sm ${isToday ? 'font-bold text-primary' : ''}`}>{day}</span>
-                <div className="mt-1 space-y-1">
-                  {opps.slice(0, 3).map(opp => (
-                    <button
-                      key={opp.id}
-                      onClick={() => onSelect(opp)}
-                      className="w-full text-left text-xs p-1 rounded bg-primary/10 text-primary truncate hover:bg-primary/20 transition-colors"
-                    >
-                      {opp.title?.slice(0, 20) || 'Opp'}
-                    </button>
-                  ))}
-                  {opps.length > 3 && (
-                    <span className="text-xs text-muted-foreground">+{opps.length - 3} more</span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-// Detail Row Component
-function DetailRow({ label, value }: { label: string; value: string | null | undefined }) {
-  if (!value) return null;
-  return (
-    <div className="flex items-start justify-between gap-4">
-      <span className="text-sm text-muted-foreground shrink-0">{label}</span>
-      <span className="text-sm text-right">{value}</span>
-    </div>
   );
 }

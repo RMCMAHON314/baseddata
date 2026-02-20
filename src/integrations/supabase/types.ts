@@ -1378,6 +1378,78 @@ export type Database = {
           },
         ]
       }
+      core_facts_summary: {
+        Row: {
+          earliest_date: string | null
+          entity_id: string | null
+          fact_count: number | null
+          fact_type: string
+          id: string
+          latest_date: string | null
+          latest_value: string | null
+          sample_values: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          earliest_date?: string | null
+          entity_id?: string | null
+          fact_count?: number | null
+          fact_type: string
+          id?: string
+          latest_date?: string | null
+          latest_value?: string | null
+          sample_values?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          earliest_date?: string | null
+          entity_id?: string | null
+          fact_count?: number | null
+          fact_type?: string
+          id?: string
+          latest_date?: string | null
+          latest_value?: string | null
+          sample_values?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "core_facts_summary_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "core_facts_summary_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "core_facts_summary_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "core_facts_summary_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "core_facts_summary_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       core_feedback: {
         Row: {
           created_at: string | null
