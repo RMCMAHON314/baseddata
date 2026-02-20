@@ -53,19 +53,30 @@ export default function SavedSearches() {
   });
 
   const runSearch = (filters: any) => {
+    if (!filters) { navigate('/explore'); return; }
+    if (filters?.entity_id) { navigate(`/entity/${filters.entity_id}`); return; }
     const params = new URLSearchParams();
-    if (filters?.search || filters?.query) params.set('q', filters.search || filters.query || '');
-    if (filters?.states?.length) params.set('states', filters.states.join(','));
-    if (filters?.entity_id) {
-      navigate(`/entity/${filters.entity_id}`);
-      return;
-    }
+    // Support both old and new filter formats
+    if (filters.state) params.set('state', filters.state);
+    if (filters.agency) params.set('agency', filters.agency);
+    if (filters.naics) params.set('naics', filters.naics);
+    if (filters.setAside) params.set('setAside', filters.setAside);
+    if (filters.keyword) params.set('keyword', filters.keyword);
+    // Legacy support
+    if (filters?.search || filters?.query) params.set('keyword', filters.search || filters.query || '');
+    if (filters?.states?.length) params.set('state', filters.states[0]);
     navigate(`/explore?${params.toString()}`);
   };
 
   const formatFilters = (filters: any): string => {
     if (!filters) return 'No filters';
     const parts: string[] = [];
+    if (filters.state) parts.push(`state=${filters.state}`);
+    if (filters.agency) parts.push(`agency=${filters.agency}`);
+    if (filters.naics) parts.push(`naics=${filters.naics}`);
+    if (filters.setAside) parts.push(`set-aside=${filters.setAside}`);
+    if (filters.keyword) parts.push(`keyword="${filters.keyword}"`);
+    // Legacy
     if (filters.search || filters.query) parts.push(`"${filters.search || filters.query}"`);
     if (filters.states?.length) parts.push(`States: ${filters.states.join(', ')}`);
     if (filters.entity_id) parts.push('Entity watchlist');

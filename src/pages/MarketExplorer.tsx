@@ -1,569 +1,515 @@
-// BASED DATA - Market Explorer
-// Interactive market analysis with filters, results grid, and analytics
-import { useState, useEffect, useCallback } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+// BASED DATA - Market Explorer — Contract-based filtering with real data
+import { useState, useEffect, useMemo } from 'react';
+import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Search, Filter, Grid3X3, List, Download, ChevronDown, X, Building2,
-  MapPin, DollarSign, FileText, TrendingUp, BarChart3, Loader2, SlidersHorizontal, Network, BookmarkPlus
+  Search, Filter, Download, Building2, DollarSign, SlidersHorizontal,
+  BookmarkPlus, X, ChevronRight, Loader2, Compass, Users, FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Slider } from '@/components/ui/slider';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { supabase } from '@/integrations/supabase/client';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { NetworkGraph } from '@/components/visualizations/NetworkGraph';
-import { SavedSearchManager } from '@/components/saved-searches/SavedSearchManager';
+import { useMarketExplorer, useMarketFilterOptions, useSaveSearch } from '@/hooks';
+import { useDebounce } from '@/hooks/useDebounce';
+import { useExportCSV } from '@/hooks/useExportData';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { toast } from 'sonner';
 
-interface Entity {
-  id: string;
-  canonical_name: string;
-  entity_type: string | null;
-  state: string | null;
-  city: string | null;
-  naics_codes: string[] | null;
-  business_types: string[] | null;
-  total_contract_value: number | null;
-  contract_count: number | null;
-  opportunity_score: number | null;
+interface MarketFilters {
+  state?: string;
+  agency?: string;
+  naics?: string;
+  setAside?: string;
+  keyword?: string;
 }
 
-interface Filters {
-  search: string;
-  states: string[];
-  naicsCodes: string[];
-  businessTypes: string[];
-  minValue: number;
-  maxValue: number;
-  entityTypes: string[];
+function fmt(v: number | null) {
+  if (!v) return '$0';
+  if (v >= 1e9) return `$${(v / 1e9).toFixed(1)}B`;
+  if (v >= 1e6) return `$${(v / 1e6).toFixed(1)}M`;
+  if (v >= 1e3) return `$${(v / 1e3).toFixed(0)}K`;
+  return `$${v.toFixed(0)}`;
 }
 
-const US_STATES = [
-  'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA',
-  'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
-  'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC', 'SD', 'TN', 'TX', 'UT', 'VT',
-  'VA', 'WA', 'WV', 'WI', 'WY', 'DC'
-];
+function fmtDate(d: string | null) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
 
-const BUSINESS_TYPES = [
-  'Small Business', '8(a)', 'HUBZone', 'WOSB', 'SDVOSB', 'Large Business', 'Non-Profit'
+const QUICK_FILTERS = [
+  { label: 'Maryland + DoD', filters: { state: 'MD', agency: 'DEPT OF DEFENSE' } },
+  { label: 'Virginia IT', filters: { state: 'VA', naics: '541512' } },
+  { label: 'Small Business', filters: { setAside: 'SBA' } },
 ];
-
-const QUICK_REGIONS = [
-  { label: 'DMV', states: ['DC', 'MD', 'VA'] },
-  { label: 'Northeast', states: ['NY', 'NJ', 'PA', 'CT', 'MA'] },
-  { label: 'Southeast', states: ['FL', 'GA', 'NC', 'SC', 'AL'] },
-  { label: 'Southwest', states: ['TX', 'AZ', 'NM', 'OK'] },
-  { label: 'West Coast', states: ['CA', 'WA', 'OR'] },
-];
-
-const CHART_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#EC4899'];
 
 export default function MarketExplorer() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [entities, setEntities] = useState<Entity[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [showFilters, setShowFilters] = useState(true);
-  const [totalCount, setTotalCount] = useState(0);
-  const [page, setPage] = useState(0);
-  const pageSize = 50;
+  const navigate = useNavigate();
 
-  const [filters, setFilters] = useState<Filters>({
-    search: searchParams.get('q') || '',
-    states: searchParams.get('states')?.split(',').filter(Boolean) || [],
-    naicsCodes: [],
-    businessTypes: [],
-    minValue: 0,
-    maxValue: 10000000000,
-    entityTypes: [],
+  // Initialize filters from URL params
+  const [filters, setFilters] = useState<MarketFilters>({
+    state: searchParams.get('state') || undefined,
+    agency: searchParams.get('agency') || undefined,
+    naics: searchParams.get('naics') || undefined,
+    setAside: searchParams.get('setAside') || undefined,
+    keyword: searchParams.get('keyword') || undefined,
   });
+  const [naicsInput, setNaicsInput] = useState(filters.naics || '');
+  const [keywordInput, setKeywordInput] = useState(filters.keyword || '');
+  const debouncedNaics = useDebounce(naicsInput, 500);
+  const debouncedKeyword = useDebounce(keywordInput, 500);
 
-  const [analytics, setAnalytics] = useState({
-    totalMarketValue: 0,
-    topContractors: [] as { name: string; value: number }[],
-    stateBreakdown: [] as { name: string; value: number }[],
-  });
+  // Save search modal
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [saveName, setSaveName] = useState('');
+  const [saveNotify, setSaveNotify] = useState(false);
 
-  // Advanced analytics state
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  // Mobile filter drawer
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+
+  // Sorting
+  const [sortField, setSortField] = useState<string>('base_and_all_options');
+  const [sortAsc, setSortAsc] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const PAGE_SIZE = 25;
+
+  // Update filters when debounced inputs change
+  useEffect(() => {
+    setFilters(f => ({ ...f, naics: debouncedNaics || undefined }));
+  }, [debouncedNaics]);
 
   useEffect(() => {
-    loadEntities();
-  }, [filters, page]);
+    setFilters(f => ({ ...f, keyword: debouncedKeyword || undefined }));
+  }, [debouncedKeyword]);
 
-  const loadEntities = async () => {
-    setLoading(true);
-    
-    let query = supabase
-      .from('core_entities')
-      .select('*', { count: 'exact' })
-      .eq('is_canonical', true)
-      .gt('total_contract_value', filters.minValue)
-      .order('total_contract_value', { ascending: false })
-      .range(page * pageSize, (page + 1) * pageSize - 1);
+  // Sync filters to URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (filters.state) params.set('state', filters.state);
+    if (filters.agency) params.set('agency', filters.agency);
+    if (filters.naics) params.set('naics', filters.naics);
+    if (filters.setAside) params.set('setAside', filters.setAside);
+    if (filters.keyword) params.set('keyword', filters.keyword);
+    setSearchParams(params, { replace: true });
+    setCurrentPage(0);
+  }, [filters]);
 
-    if (filters.search) {
-      query = query.ilike('canonical_name', `%${filters.search}%`);
+  const hasFilters = Object.values(filters).some(Boolean);
+  const activeFilterCount = Object.values(filters).filter(Boolean).length;
+
+  // Data hooks
+  const { data: filterOptions, isLoading: loadingOptions } = useMarketFilterOptions();
+  const { data: results, isLoading: loadingResults, isFetching } = useMarketExplorer(filters);
+  const saveSearchMutation = useSaveSearch();
+  const { exportToCSV } = useExportCSV();
+
+  // Computed market summary
+  const summary = useMemo(() => {
+    if (!results || results.length === 0) return null;
+    const totalValue = results.reduce((s, c) => s + (Number(c.base_and_all_options) || 0), 0);
+    const uniqueEntities = new Set(results.map(c => c.recipient_entity_id).filter(Boolean));
+    return {
+      totalValue,
+      contractorCount: uniqueEntities.size,
+      contractCount: results.length,
+      avgSize: results.length > 0 ? totalValue / results.length : 0,
+    };
+  }, [results]);
+
+  // Top 5 contractors bar chart data
+  const topContractors = useMemo(() => {
+    if (!results) return [];
+    const entityMap = new Map<string, { name: string; id: string; value: number }>();
+    for (const c of results) {
+      const entity = c.entity as any;
+      if (!entity?.id) continue;
+      const existing = entityMap.get(entity.id) || { name: entity.canonical_name || 'Unknown', id: entity.id, value: 0 };
+      existing.value += Number(c.base_and_all_options) || 0;
+      entityMap.set(entity.id, existing);
     }
-    if (filters.states.length > 0) {
-      query = query.in('state', filters.states);
-    }
-    if (filters.businessTypes.length > 0) {
-      query = query.overlaps('business_types', filters.businessTypes);
-    }
+    return [...entityMap.values()].sort((a, b) => b.value - a.value).slice(0, 5);
+  }, [results]);
 
-    const { data, count, error } = await query;
+  // Sorted + paginated results
+  const displayResults = useMemo(() => {
+    if (!results) return [];
+    const sorted = [...results].sort((a, b) => {
+      const aVal = (a as any)[sortField];
+      const bVal = (b as any)[sortField];
+      if (aVal == null && bVal == null) return 0;
+      if (aVal == null) return 1;
+      if (bVal == null) return -1;
+      if (typeof aVal === 'string') return sortAsc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      return sortAsc ? aVal - bVal : bVal - aVal;
+    });
+    return sorted.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
+  }, [results, sortField, sortAsc, currentPage]);
 
-    if (!error && data) {
-      setEntities(data);
-      setTotalCount(count || 0);
-
-      // Calculate analytics
-      const totalValue = data.reduce((sum, e) => sum + (e.total_contract_value || 0), 0);
-      const topContractors = data.slice(0, 10).map(e => ({
-        name: e.canonical_name.slice(0, 20),
-        value: e.total_contract_value || 0,
-      }));
-
-      // State breakdown
-      const stateMap = data.reduce((acc, e) => {
-        if (e.state) {
-          acc[e.state] = (acc[e.state] || 0) + (e.total_contract_value || 0);
-        }
-        return acc;
-      }, {} as Record<string, number>);
-
-      const stateBreakdown = Object.entries(stateMap)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 8)
-        .map(([name, value]) => ({ name, value }));
-
-      setAnalytics({ totalMarketValue: totalValue, topContractors, stateBreakdown });
-    }
-
-    setLoading(false);
-  };
-
-  const formatCurrency = (value: number | null) => {
-    if (!value) return '$0';
-    if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
-    if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
-    if (value >= 1e3) return `$${(value / 1e3).toFixed(0)}K`;
-    return `$${value.toLocaleString()}`;
-  };
-
-  const toggleState = (state: string) => {
-    setFilters(f => ({
-      ...f,
-      states: f.states.includes(state) 
-        ? f.states.filter(s => s !== state)
-        : [...f.states, state]
-    }));
-    setPage(0);
-  };
-
-  const toggleBusinessType = (type: string) => {
-    setFilters(f => ({
-      ...f,
-      businessTypes: f.businessTypes.includes(type)
-        ? f.businessTypes.filter(t => t !== type)
-        : [...f.businessTypes, type]
-    }));
-    setPage(0);
-  };
+  const totalPages = results ? Math.ceil(results.length / PAGE_SIZE) : 0;
 
   const clearFilters = () => {
-    setFilters({
-      search: '',
-      states: [],
-      naicsCodes: [],
-      businessTypes: [],
-      minValue: 0,
-      maxValue: 10000000000,
-      entityTypes: [],
-    });
-    setPage(0);
+    setFilters({});
+    setNaicsInput('');
+    setKeywordInput('');
   };
 
-  const hasActiveFilters = filters.states.length > 0 || filters.businessTypes.length > 0 || filters.minValue > 0;
-
-  const exportCSV = () => {
-    const headers = ['Name', 'Type', 'State', 'City', 'Contract Value', 'Contracts', 'NAICS Codes'];
-    const rows = entities.map(e => [
-      e.canonical_name,
-      e.entity_type || '',
-      e.state || '',
-      e.city || '',
-      e.total_contract_value?.toString() || '0',
-      e.contract_count?.toString() || '0',
-      e.naics_codes?.join(';') || '',
-    ]);
-    const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'market-explorer-export.csv';
-    a.click();
+  const handleSort = (field: string) => {
+    if (sortField === field) setSortAsc(!sortAsc);
+    else { setSortField(field); setSortAsc(false); }
   };
+
+  const handleSaveSearch = async () => {
+    if (!saveName.trim()) return;
+    try {
+      await saveSearchMutation.mutateAsync({
+        name: saveName,
+        query: Object.entries(filters).filter(([, v]) => v).map(([k, v]) => `${k}=${v}`).join('&'),
+        filters: filters as Record<string, unknown>,
+        notify: saveNotify,
+      });
+      toast.success('Search saved!', {
+        description: 'View in Saved Searches.',
+        action: { label: 'View', onClick: () => navigate('/saved-searches') },
+      });
+      setSaveOpen(false);
+      setSaveName('');
+      setSaveNotify(false);
+    } catch {
+      toast.error('Failed to save search. Are you signed in?');
+    }
+  };
+
+  const handleExport = () => {
+    if (!results) return;
+    exportToCSV(
+      results.map(c => ({
+        recipient: (c.entity as any)?.canonical_name || c.recipient_name || '',
+        agency: c.awarding_agency || '',
+        value: c.base_and_all_options || 0,
+        award_date: c.award_date || '',
+        naics: c.naics_code || '',
+        state: c.pop_state || '',
+        description: c.description || '',
+      })),
+      'market-explorer'
+    );
+  };
+
+  // Filter controls component (shared between desktop sidebar and mobile drawer)
+  const FilterControls = () => (
+    <div className="space-y-5">
+      {/* State */}
+      <div>
+        <Label className="text-sm font-medium mb-1.5 block">State</Label>
+        <Select value={filters.state || ''} onValueChange={v => setFilters(f => ({ ...f, state: v || undefined }))}>
+          <SelectTrigger><SelectValue placeholder="All states" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">All states</SelectItem>
+            {(filterOptions?.states || []).map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Agency */}
+      <div>
+        <Label className="text-sm font-medium mb-1.5 block">Agency</Label>
+        <Select value={filters.agency || ''} onValueChange={v => setFilters(f => ({ ...f, agency: v || undefined }))}>
+          <SelectTrigger><SelectValue placeholder="All agencies" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">All agencies</SelectItem>
+            {(filterOptions?.agencies || []).map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* NAICS */}
+      <div>
+        <Label className="text-sm font-medium mb-1.5 block">NAICS Code</Label>
+        <Input value={naicsInput} onChange={e => setNaicsInput(e.target.value)} placeholder="e.g. 541512" />
+      </div>
+
+      {/* Set-Aside */}
+      <div>
+        <Label className="text-sm font-medium mb-1.5 block">Set-Aside</Label>
+        <Select value={filters.setAside || ''} onValueChange={v => setFilters(f => ({ ...f, setAside: v || undefined }))}>
+          <SelectTrigger><SelectValue placeholder="All types" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">All types</SelectItem>
+            {(filterOptions?.setAsides || []).map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Keyword */}
+      <div>
+        <Label className="text-sm font-medium mb-1.5 block">Keyword</Label>
+        <Input value={keywordInput} onChange={e => setKeywordInput(e.target.value)} placeholder="Search descriptions..." />
+      </div>
+
+      <div className="flex gap-2 pt-2">
+        <Button onClick={clearFilters} variant="outline" size="sm" className="flex-1">Clear All</Button>
+      </div>
+    </div>
+  );
 
   return (
     <GlobalLayout>
       <div className="min-h-screen bg-background">
+        {/* Breadcrumb */}
+        <div className="container pt-4">
+          <nav className="flex items-center gap-1 text-sm text-muted-foreground">
+            <Link to="/" className="hover:text-foreground">Home</Link>
+            <ChevronRight className="h-3 w-3" />
+            <span className="text-foreground">Market Explorer</span>
+          </nav>
+        </div>
+
         {/* Header */}
         <div className="border-b border-border bg-card">
           <div className="container py-6">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <h1 className="text-2xl font-bold">Market Explorer</h1>
-                <p className="text-muted-foreground">Discover and analyze government contractors</p>
+                <h1 className="text-2xl font-bold flex items-center gap-2">
+                  <Compass className="h-6 w-6 text-primary" />
+                  Market Explorer
+                </h1>
+                <p className="text-muted-foreground mt-1">Filter contracts by state, agency, NAICS, and more</p>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}>
-                  {viewMode === 'grid' ? <List className="h-4 w-4" /> : <Grid3X3 className="h-4 w-4" />}
-                </Button>
-                <Button 
-                  variant={showAdvanced ? "secondary" : "outline"} 
-                  size="sm" 
-                  onClick={() => setShowAdvanced(!showAdvanced)}
-                >
-                  <Network className="h-4 w-4 mr-2" />
-                  {showAdvanced ? 'Hide' : 'Show'} Network
-                </Button>
-                <Button variant="outline" size="sm" onClick={exportCSV}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Export
-                </Button>
-              </div>
-            </div>
-
-            {/* Search Bar */}
-            <div className="mt-4 flex gap-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
-                  value={filters.search}
-                  onChange={(e) => {
-                    setFilters(f => ({ ...f, search: e.target.value }));
-                    setPage(0);
-                  }}
-                  placeholder="Search contractors, agencies, keywords..."
-                  className="pl-10 h-12 text-lg"
-                />
-              </div>
-              <Button 
-                variant={showFilters ? "secondary" : "outline"}
-                onClick={() => setShowFilters(!showFilters)}
-                className="gap-2"
-              >
-                <SlidersHorizontal className="h-4 w-4" />
-                Filters
-                {hasActiveFilters && (
-                  <Badge variant="secondary" className="ml-1">{filters.states.length + filters.businessTypes.length}</Badge>
+                {hasFilters && (
+                  <Button variant="outline" size="sm" onClick={() => setSaveOpen(true)} className="gap-1.5">
+                    <BookmarkPlus className="h-4 w-4" />Save Search
+                  </Button>
                 )}
-              </Button>
+                <Button variant="outline" size="sm" onClick={handleExport} disabled={!results?.length}>
+                  <Download className="h-4 w-4 mr-1.5" />Export
+                </Button>
+                {/* Mobile filter trigger */}
+                <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
+                  <SheetTrigger asChild>
+                    <Button variant="outline" size="sm" className="lg:hidden gap-1.5">
+                      <SlidersHorizontal className="h-4 w-4" />Filters
+                      {activeFilterCount > 0 && <Badge variant="secondary" className="ml-1">{activeFilterCount}</Badge>}
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="left" className="w-[300px]">
+                    <SheetHeader><SheetTitle>Filters</SheetTitle></SheetHeader>
+                    <div className="mt-6"><FilterControls /></div>
+                  </SheetContent>
+                </Sheet>
+              </div>
             </div>
           </div>
         </div>
 
         <div className="container py-6">
           <div className="flex gap-6">
-            {/* Filters Sidebar */}
-            <AnimatePresence>
-              {showFilters && (
-                <motion.aside
-                  initial={{ width: 0, opacity: 0 }}
-                  animate={{ width: 280, opacity: 1 }}
-                  exit={{ width: 0, opacity: 0 }}
-                  className="shrink-0 overflow-hidden"
-                >
-                  <Card className="sticky top-24">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base">Filters</CardTitle>
-                        {hasActiveFilters && (
-                          <Button variant="ghost" size="sm" onClick={clearFilters}>Clear all</Button>
-                        )}
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      {/* Quick Regions */}
-                      <div>
-                        <p className="text-sm font-medium mb-2">Quick Regions</p>
-                        <div className="flex flex-wrap gap-2">
-                          {QUICK_REGIONS.map(region => (
-                            <Button
-                              key={region.label}
-                              variant={region.states.every(s => filters.states.includes(s)) ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => {
-                                const allSelected = region.states.every(s => filters.states.includes(s));
-                                setFilters(f => ({
-                                  ...f,
-                                  states: allSelected 
-                                    ? f.states.filter(s => !region.states.includes(s))
-                                    : [...new Set([...f.states, ...region.states])]
-                                }));
-                                setPage(0);
-                              }}
-                            >
-                              {region.label}
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* States */}
-                      <div>
-                        <p className="text-sm font-medium mb-2">States</p>
-                        <ScrollArea className="h-40">
-                          <div className="grid grid-cols-4 gap-1">
-                            {US_STATES.map(state => (
-                              <Button
-                                key={state}
-                                variant={filters.states.includes(state) ? "default" : "ghost"}
-                                size="sm"
-                                className="h-8 px-2 text-xs"
-                                onClick={() => toggleState(state)}
-                              >
-                                {state}
-                              </Button>
-                            ))}
-                          </div>
-                        </ScrollArea>
-                      </div>
-
-                      {/* Business Types */}
-                      <div>
-                        <p className="text-sm font-medium mb-2">Business Size</p>
-                        <div className="space-y-2">
-                          {BUSINESS_TYPES.map(type => (
-                            <label key={type} className="flex items-center gap-2 cursor-pointer">
-                              <Checkbox
-                                checked={filters.businessTypes.includes(type)}
-                                onCheckedChange={() => toggleBusinessType(type)}
-                              />
-                              <span className="text-sm">{type}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Min Value */}
-                      <div>
-                        <p className="text-sm font-medium mb-2">
-                          Min Contract Value: {formatCurrency(filters.minValue)}
-                        </p>
-                        <Slider
-                          value={[filters.minValue]}
-                          min={0}
-                          max={100000000}
-                          step={1000000}
-                          onValueChange={([v]) => {
-                            setFilters(f => ({ ...f, minValue: v }));
-                            setPage(0);
-                          }}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.aside>
-              )}
-            </AnimatePresence>
+            {/* Desktop Filter Sidebar */}
+            <aside className="hidden lg:block w-[280px] shrink-0">
+              <Card className="sticky top-20">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Filter className="h-4 w-4" />Filters
+                    </CardTitle>
+                    {activeFilterCount > 0 && (
+                      <Badge variant="secondary">{activeFilterCount} active</Badge>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent><FilterControls /></CardContent>
+              </Card>
+            </aside>
 
             {/* Main Content */}
             <div className="flex-1 min-w-0">
-              {/* Analytics Panel */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-                <Card className="p-4">
-                  <p className="text-sm text-muted-foreground">Total Market Value</p>
-                  <p className="text-3xl font-bold text-gradient-omni">{formatCurrency(analytics.totalMarketValue)}</p>
-                  <p className="text-sm text-muted-foreground">{totalCount.toLocaleString()} entities</p>
-                </Card>
-
-                <Card className="lg:col-span-2">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Top Contractors</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-32">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={analytics.topContractors.slice(0, 5)} layout="vertical">
-                          <XAxis type="number" hide />
-                          <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 10 }} />
-                          <Tooltip formatter={(v: number) => formatCurrency(v)} />
-                          <Bar dataKey="value" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Results Header */}
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-sm text-muted-foreground">
-                  Showing {entities.length} of {totalCount.toLocaleString()} results
-                </p>
-                {page > 0 && (
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(0, p - 1))}>
-                      Previous
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => setPage(p => p + 1)} disabled={entities.length < pageSize}>
-                      Next
-                    </Button>
-                  </div>
-                )}
-              </div>
-
-              {/* Results Grid */}
-              {loading ? (
-                <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4' : 'space-y-3'}>
-                  {[...Array(9)].map((_, i) => <Skeleton key={i} className="h-48" />)}
-                </div>
-              ) : entities.length === 0 ? (
+              {/* No filters prompt */}
+              {!hasFilters && !loadingResults && (
                 <Card className="p-12 text-center">
-                  <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Results Found</h3>
-                  <p className="text-muted-foreground mb-4">Try adjusting your filters or search query</p>
-                  <Button onClick={clearFilters}>Clear Filters</Button>
+                  <Compass className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Select filters to explore the market</h3>
+                  <p className="text-muted-foreground mb-6">Choose a state, agency, or NAICS code to discover contracts</p>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {QUICK_FILTERS.map(qf => (
+                      <Button key={qf.label} variant="outline" size="sm" onClick={() => {
+                        setFilters(qf.filters);
+                        if (qf.filters.naics) setNaicsInput(qf.filters.naics);
+                      }}>
+                        {qf.label}
+                      </Button>
+                    ))}
+                  </div>
                 </Card>
-              ) : (
-                <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4' : 'space-y-3'}>
-                  {entities.map((entity, index) => (
-                    <motion.div
-                      key={entity.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.02 }}
-                    >
-                      <Link to={`/entity/${entity.id}`}>
-                        <Card className="p-4 h-full hover:border-primary/30 hover:shadow-lg transition-all cursor-pointer">
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold truncate">{entity.canonical_name}</h3>
-                              <p className="text-sm text-muted-foreground">
-                                {entity.entity_type} • {entity.city}, {entity.state}
-                              </p>
-                            </div>
-                            {entity.opportunity_score && entity.opportunity_score >= 70 && (
-                              <Badge className="bg-amber-100 text-amber-700 shrink-0">
-                                <TrendingUp className="h-3 w-3 mr-1" />
-                                Hot
-                              </Badge>
-                            )}
-                          </div>
+              )}
 
-                          <div className="grid grid-cols-2 gap-4 mb-3">
-                            <div>
-                              <p className="text-xs text-muted-foreground">Contract Value</p>
-                              <p className="font-mono font-semibold text-primary">
-                                {formatCurrency(entity.total_contract_value)}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-muted-foreground">Contracts</p>
-                              <p className="font-semibold">{entity.contract_count || 0}</p>
-                            </div>
-                          </div>
-
-                          {entity.naics_codes && entity.naics_codes.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {entity.naics_codes.slice(0, 3).map(code => (
-                                <Badge key={code} variant="secondary" className="text-xs font-mono">{code}</Badge>
-                              ))}
-                              {entity.naics_codes.length > 3 && (
-                                <Badge variant="secondary" className="text-xs">+{entity.naics_codes.length - 3}</Badge>
-                              )}
-                            </div>
-                          )}
-
-                          {entity.business_types && entity.business_types.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {entity.business_types.slice(0, 2).map(type => (
-                                <Badge key={type} variant="outline" className="text-xs">{type}</Badge>
-                              ))}
-                            </div>
-                          )}
-                        </Card>
-                      </Link>
-                    </motion.div>
-                  ))}
+              {/* Loading */}
+              {hasFilters && loadingResults && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24" />)}
+                  </div>
+                  <Skeleton className="h-48" />
+                  <div className="space-y-3">{[...Array(6)].map((_, i) => <Skeleton key={i} className="h-14" />)}</div>
                 </div>
               )}
 
-              {/* Pagination */}
-              {!loading && entities.length > 0 && (
-                <div className="flex justify-center gap-2 mt-6">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setPage(p => Math.max(0, p - 1))}
-                    disabled={page === 0}
-                  >
-                    Previous
-                  </Button>
-                  <Button variant="outline" disabled>
-                    Page {page + 1}
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setPage(p => p + 1)}
-                    disabled={entities.length < pageSize}
-                  >
-                    Next
-                  </Button>
-                </div>
-              )}
+              {/* Results */}
+              {hasFilters && !loadingResults && (
+                <>
+                  {/* Market Summary */}
+                  {summary && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                      <Card className="p-4">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Addressable</p>
+                        <p className="text-2xl font-bold text-primary mt-1">{fmt(summary.totalValue)}</p>
+                      </Card>
+                      <Card className="p-4">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Contractors</p>
+                        <p className="text-2xl font-bold mt-1">{summary.contractorCount}</p>
+                      </Card>
+                      <Card className="p-4">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Contracts Found</p>
+                        <p className="text-2xl font-bold mt-1">{summary.contractCount}</p>
+                      </Card>
+                      <Card className="p-4">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide">Avg Size</p>
+                        <p className="text-2xl font-bold mt-1">{fmt(summary.avgSize)}</p>
+                      </Card>
+                    </div>
+                  )}
 
-              {/* Advanced Analytics Section */}
-              {showAdvanced && (
-                <div className="mt-8 space-y-6">
-                  {/* Network Graph */}
-                  <Card className="p-4">
-                    <CardHeader className="px-0 pt-0">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <Network className="h-5 w-5 text-primary" />
-                        Entity Relationship Network
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="px-0">
-                      <NetworkGraph height={500} />
-                    </CardContent>
-                  </Card>
+                  {/* Top 5 Contractors Chart */}
+                  {topContractors.length > 0 && (
+                    <Card className="mb-6">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          <Users className="h-4 w-4" />Top 5 Contractors
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="h-40">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={topContractors} layout="vertical">
+                              <XAxis type="number" hide />
+                              <YAxis type="category" dataKey="name" width={140} tick={{ fontSize: 11 }} />
+                              <Tooltip formatter={(v: number) => fmt(v)} />
+                              <Bar
+                                dataKey="value"
+                                fill="hsl(var(--primary))"
+                                radius={[0, 4, 4, 0]}
+                                cursor="pointer"
+                                onClick={(data: any) => data?.id && navigate(`/entity/${data.id}`)}
+                              />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
 
-                  {/* Saved Searches */}
-                  <SavedSearchManager
-                    currentFilters={{
-                      states: filters.states,
-                      businessTypes: filters.businessTypes,
-                      minValue: filters.minValue,
-                      search: filters.search
-                    }}
-                    onLoadSearch={(loadedFilters) => {
-                      setFilters(f => ({
-                        ...f,
-                        states: (loadedFilters.states as string[]) || f.states,
-                        businessTypes: (loadedFilters.businessTypes as string[]) || f.businessTypes,
-                        minValue: (loadedFilters.minValue as number) || f.minValue,
-                        search: (loadedFilters.search as string) || f.search
-                      }));
-                      setPage(0);
-                    }}
-                  />
-                </div>
+                  {/* Results Table */}
+                  {results && results.length === 0 ? (
+                    <Card className="p-12 text-center">
+                      <Search className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">No contracts match these filters</h3>
+                      <p className="text-muted-foreground">Try broadening your search.</p>
+                    </Card>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-sm text-muted-foreground">
+                          {results?.length || 0} results · Page {currentPage + 1} of {totalPages || 1}
+                          {isFetching && <Loader2 className="inline h-3 w-3 ml-2 animate-spin" />}
+                        </p>
+                      </div>
+                      <div className="border rounded-lg overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="bg-muted/50 text-left">
+                              <th className="p-3 font-medium cursor-pointer hover:text-primary" onClick={() => handleSort('recipient_name')}>Recipient</th>
+                              <th className="p-3 font-medium cursor-pointer hover:text-primary hidden md:table-cell" onClick={() => handleSort('awarding_agency')}>Agency</th>
+                              <th className="p-3 font-medium cursor-pointer hover:text-primary text-right" onClick={() => handleSort('base_and_all_options')}>Value</th>
+                              <th className="p-3 font-medium cursor-pointer hover:text-primary hidden md:table-cell" onClick={() => handleSort('award_date')}>Award Date</th>
+                              <th className="p-3 font-medium hidden lg:table-cell">NAICS</th>
+                              <th className="p-3 font-medium hidden lg:table-cell">State</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {displayResults.map(c => {
+                              const entity = c.entity as any;
+                              return (
+                                <tr key={c.id} className="border-t hover:bg-muted/30">
+                                  <td className="p-3 max-w-[200px] truncate">
+                                    {entity?.id ? (
+                                      <Link to={`/entity/${entity.id}`} className="hover:text-primary hover:underline font-medium">
+                                        {entity.canonical_name || c.recipient_name || '—'}
+                                      </Link>
+                                    ) : (c.recipient_name || '—')}
+                                  </td>
+                                  <td className="p-3 max-w-[200px] truncate hidden md:table-cell">
+                                    <Link to={`/agency/${encodeURIComponent(c.awarding_agency || '')}`} className="hover:text-primary hover:underline">
+                                      {c.awarding_agency || '—'}
+                                    </Link>
+                                  </td>
+                                  <td className="p-3 text-right font-mono font-semibold text-primary">{fmt(Number(c.base_and_all_options))}</td>
+                                  <td className="p-3 hidden md:table-cell whitespace-nowrap">{fmtDate(c.award_date)}</td>
+                                  <td className="p-3 hidden lg:table-cell">
+                                    <Badge variant="secondary" className="font-mono text-xs">{c.naics_code || '—'}</Badge>
+                                  </td>
+                                  <td className="p-3 hidden lg:table-cell">{c.pop_state || '—'}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                      {/* Pagination */}
+                      {totalPages > 1 && (
+                        <div className="flex justify-center gap-2 mt-4">
+                          <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(0, p - 1))} disabled={currentPage === 0}>Previous</Button>
+                          <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage >= totalPages - 1}>Next</Button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </>
               )}
             </div>
           </div>
         </div>
+
+        {/* Save Search Dialog */}
+        <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader><DialogTitle>Save This Search</DialogTitle></DialogHeader>
+            <div className="space-y-4 py-2">
+              <div>
+                <Label htmlFor="search-name">Name this search</Label>
+                <Input id="search-name" value={saveName} onChange={e => setSaveName(e.target.value)} placeholder="e.g. Maryland Cybersecurity" className="mt-1.5" />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="notify-toggle">Notify me of changes</Label>
+                <Switch id="notify-toggle" checked={saveNotify} onCheckedChange={setSaveNotify} />
+              </div>
+              <p className="text-xs text-muted-foreground">Filters: {Object.entries(filters).filter(([, v]) => v).map(([k, v]) => `${k}=${v}`).join(', ') || 'None'}</p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setSaveOpen(false)}>Cancel</Button>
+              <Button onClick={handleSaveSearch} disabled={!saveName.trim() || saveSearchMutation.isPending}>
+                {saveSearchMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : null}
+                Save
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </GlobalLayout>
   );
