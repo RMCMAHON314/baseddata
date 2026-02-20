@@ -21,10 +21,10 @@ import { toast } from 'sonner';
 // ── Helpers ──
 function fmt(value: number | null) {
   if (!value) return '$0';
-  if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
-  if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
-  if (value >= 1e3) return `$${(value / 1e3).toFixed(0)}K`;
-  return `$${value.toFixed(0)}`;
+  if (value >= 1e9) return '$' + (value / 1e9).toFixed(2) + 'B';
+  if (value >= 1e6) return '$' + (value / 1e6).toFixed(2) + 'M';
+  if (value >= 1e3) return '$' + (value / 1e3).toFixed(0) + 'K';
+  return '$' + value.toFixed(0);
 }
 
 function fmtDate(d: string | null) {
@@ -59,7 +59,7 @@ export default function EntityIntelligenceHub() {
       const [contracts, grants, rels] = await Promise.all([
         supabase.from('contracts').select('id, base_and_all_options', { count: 'exact' }).eq('recipient_entity_id', id!),
         supabase.from('grants').select('id, award_amount', { count: 'exact' }).eq('recipient_entity_id', id!),
-        supabase.from('core_relationships').select('id', { count: 'exact' }).or(`from_entity_id.eq.${id},to_entity_id.eq.${id}`),
+        supabase.from('core_relationships').select('id', { count: 'exact' }).or("from_entity_id.eq." + id + ",to_entity_id.eq." + id),
       ]);
       const contractVal = (contracts.data || []).reduce((s, c) => s + (Number(c.base_and_all_options) || 0), 0);
       const grantVal = (grants.data || []).reduce((s, g) => s + (Number(g.award_amount) || 0), 0);
@@ -96,7 +96,8 @@ export default function EntityIntelligenceHub() {
     if (!user) { toast.error('Sign in to save watchlists'); return; }
     const { error } = await supabase.from('saved_searches').insert({
       user_id: user.id,
-      name: `Watch: ${entity?.canonical_name}`,
+      name: 'Watch: ' + (entity?.canonical_name || ''),
+      query: 'entity:' + (id || ''),
       filters: { entity_id: id },
       notify_on_change: true,
     });
@@ -113,11 +114,11 @@ export default function EntityIntelligenceHub() {
       ...(contracts || []).map(c => ['Contract', c.awarding_agency, c.base_and_all_options, c.award_date, c.description?.slice(0, 100)]),
       ...(grants || []).map(g => ['Grant', g.awarding_agency, g.award_amount, g.award_date, g.project_title?.slice(0, 100)]),
     ];
-    const csv = rows.map(r => r.map(c => `"${c || ''}"`).join(',')).join('\n');
+    const csv = rows.map(r => r.map(c => '"' + (c || '') + '"').join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `${entity?.canonical_name || 'entity'}-profile.csv`;
+    a.download = (entity?.canonical_name || 'entity') + '-profile.csv';
     a.click();
     toast.success('Profile exported');
   };
@@ -195,16 +196,16 @@ export default function EntityIntelligenceHub() {
                   <div className="relative w-20 h-20">
                     <svg viewBox="0 0 100 100" className="w-20 h-20 -rotate-90">
                       <circle cx="50" cy="50" r="42" fill="none" stroke="hsl(var(--border))" strokeWidth="8" />
-                      <circle cx="50" cy="50" r="42" fill="none" stroke={!healthScore ? 'hsl(var(--muted-foreground))' : healthScore > 50 ? 'hsl(var(--success))' : 'hsl(var(--warning))'} strokeWidth="8" strokeDasharray={`${(healthScore || 0) * 2.64} 264`} strokeLinecap="round" />
+                      <circle cx="50" cy="50" r="42" fill="none" stroke={!healthScore ? 'hsl(var(--muted-foreground))' : healthScore > 50 ? 'hsl(var(--success))' : 'hsl(var(--warning))'} strokeWidth="8" strokeDasharray={String((healthScore || 0) * 2.64) + " 264"} strokeLinecap="round" />
                     </svg>
-                    <span className={`absolute inset-0 flex items-center justify-center text-lg font-bold ${healthColor}`}>
+                    <span className={"absolute inset-0 flex items-center justify-center text-lg font-bold " + healthColor}>
                       {healthScore || '—'}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">{healthLabel}</p>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Button variant="outline" size="sm" className="gap-1.5" onClick={() => navigate(`/compare?entities=${id}`)}>
+                  <Button variant="outline" size="sm" className="gap-1.5" onClick={() => navigate("/compare?entities=" + id)}>
                     <GitCompare className="h-4 w-4" />Compare
                   </Button>
                   <Button variant="outline" size="sm" className="gap-1.5" onClick={saveToWatchlist}>
@@ -288,7 +289,7 @@ function ContractsTab({ entityId }: { entityId: string }) {
     if (!data?.rows.length) return;
     const csv = [
       ['Date', 'Agency', 'Description', 'Value', 'NAICS'].join(','),
-      ...data.rows.map(c => [fmtDate(c.award_date), c.awarding_agency, `"${(c.description || '').slice(0, 80).replace(/"/g, "'')}"`, c.base_and_all_options, c.naics_code].join(','))
+      ...data.rows.map(c => [fmtDate(c.award_date), c.awarding_agency, '"' + (c.description || '').slice(0, 80).replace(/"/g, "'") + '"', c.base_and_all_options, c.naics_code].join(','))
     ].join('\n');
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
@@ -518,7 +519,7 @@ function RelationshipsTab({ entityId }: { entityId: string }) {
                   <span className="font-medium truncate">{(other as any)?.canonical_name || 'Unknown'}</span>
                   <div className="flex items-center gap-2">
                     <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div className="h-full bg-primary rounded-full" style={{ width: `${(r.confidence || 0) * 100}%` }} />
+                      <div className="h-full bg-primary rounded-full" style={{ width: String((r.confidence || 0) * 100) + "%" }} />
                     </div>
                     <span className="text-xs text-muted-foreground w-8">{Math.round((r.confidence || 0) * 100)}%</span>
                     <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -585,7 +586,7 @@ function TimelineTab({ entityId }: { entityId: string }) {
             <div className="absolute -left-3.5 top-1 w-3 h-3 rounded-full bg-primary border-2 border-background" />
             <div className="flex-1 pb-4">
               <div className="flex items-center gap-2 mb-1">
-                <Badge className={`text-xs ${colorClass}`}>{factType.replace(/_/g, ' ')}</Badge>
+                <Badge className={"text-xs " + colorClass}>{factType.replace(/_/g, ' ')}</Badge>
                 {count && <span className="text-xs text-muted-foreground">×{count}</span>}
               </div>
               <p className="text-sm">{String(value || '')}</p>
@@ -637,7 +638,7 @@ function InsightsSidebar({ entityId }: { entityId: string }) {
           const style = SEVERITY_STYLES[insight.severity || 'info'] || SEVERITY_STYLES.info;
           const Icon = style.icon;
           return (
-            <div key={insight.id} className={`rounded-lg border p-3 ${style.color}`}>
+            <div key={insight.id} className={"rounded-lg border p-3 " + style.color}>
               <div className="flex items-start gap-2">
                 <Icon className="h-4 w-4 mt-0.5 shrink-0" />
                 <div>
@@ -678,3 +679,4 @@ function Pagination({ page, setPage, total, pageSize }: { page: number; setPage:
     </div>
   );
 }
+
