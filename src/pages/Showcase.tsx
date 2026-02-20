@@ -32,24 +32,27 @@ function useAnimatedCounter(target: number, duration = 2000) {
   return { count, ref };
 }
 
-function AnimatedStat({ value, label, prefix = '' }: { value: number; label: string; prefix?: string }) {
-  const { count, ref } = useAnimatedCounter(value);
-  const fmt = (n: number) => {
-    if (n >= 1e12) return `${(n / 1e12).toFixed(1)}T`;
-    if (n >= 1e9) return `${(n / 1e9).toFixed(1)}B`;
-    if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
-    if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`;
-    return n.toLocaleString();
-  };
-  return (
-    <div ref={ref} className="text-center">
-      <p className="text-4xl md:text-5xl font-black font-mono tracking-tight text-white">
-        {prefix}{fmt(count)}
-      </p>
-      <p className="text-sm text-cyan-300/70 mt-2 font-medium uppercase tracking-wider">{label}</p>
-    </div>
-  );
-}
+const AnimatedStat = React.forwardRef<HTMLDivElement, { value: number; label: string; prefix?: string }>(
+  ({ value, label, prefix = '' }, _forwardedRef) => {
+    const { count, ref } = useAnimatedCounter(value);
+    const fmt = (n: number) => {
+      if (n >= 1e12) return `${(n / 1e12).toFixed(1)}T`;
+      if (n >= 1e9) return `${(n / 1e9).toFixed(1)}B`;
+      if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
+      if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`;
+      return n.toLocaleString();
+    };
+    return (
+      <div ref={ref} className="text-center">
+        <p className="text-4xl md:text-5xl font-black font-mono tracking-tight text-white">
+          {prefix}{fmt(count)}
+        </p>
+        <p className="text-sm text-cyan-300/70 mt-2 font-medium uppercase tracking-wider">{label}</p>
+      </div>
+    );
+  }
+);
+AnimatedStat.displayName = 'AnimatedStat';
 
 /* ── search results dropdown ── */
 function SearchDropdown({ results, onSelect }: { results: any[]; onSelect: (id: string) => void }) {
