@@ -111,11 +111,11 @@ export default function Showcase() {
     const [entities, rels, valueRes, statesRes, agenciesRes] = await Promise.all([
       supabase.from('core_entities').select('*', { count: 'exact', head: true }),
       supabase.from('core_relationships').select('*', { count: 'exact', head: true }),
-      supabase.from('contracts').select('base_and_all_options').limit(1000),
+      supabase.from('contracts').select('award_amount').limit(1000),
       supabase.from('core_entities').select('state').not('state', 'is', null).limit(1000),
       supabase.from('contracts').select('awarding_agency').not('awarding_agency', 'is', null).limit(1000),
     ]);
-    const totalValue = (valueRes.data || []).reduce((s, c) => s + (Number(c.base_and_all_options) || 0), 0);
+    const totalValue = (valueRes.data || []).reduce((s, c) => s + (Number(c.award_amount) || 0), 0);
     const uniqueStates = new Set((statesRes.data || []).map(e => e.state)).size;
     const uniqueAgencies = new Set((agenciesRes.data || []).map(c => c.awarding_agency)).size;
     setStats({

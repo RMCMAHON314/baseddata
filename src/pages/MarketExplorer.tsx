@@ -76,7 +76,7 @@ export default function MarketExplorer() {
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   // Sorting
-  const [sortField, setSortField] = useState<string>('base_and_all_options');
+  const [sortField, setSortField] = useState<string>('award_amount');
   const [sortAsc, setSortAsc] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const PAGE_SIZE = 25;
@@ -114,7 +114,7 @@ export default function MarketExplorer() {
   // Computed market summary
   const summary = useMemo(() => {
     if (!results || results.length === 0) return null;
-    const totalValue = results.reduce((s, c) => s + (Number(c.base_and_all_options) || 0), 0);
+    const totalValue = results.reduce((s, c) => s + (Number(c.award_amount) || 0), 0);
     const uniqueEntities = new Set(results.map(c => c.recipient_entity_id).filter(Boolean));
     return {
       totalValue,
@@ -132,7 +132,7 @@ export default function MarketExplorer() {
       const entity = c.entity as any;
       if (!entity?.id) continue;
       const existing = entityMap.get(entity.id) || { name: entity.canonical_name || 'Unknown', id: entity.id, value: 0 };
-      existing.value += Number(c.base_and_all_options) || 0;
+      existing.value += Number(c.award_amount) || 0;
       entityMap.set(entity.id, existing);
     }
     return [...entityMap.values()].sort((a, b) => b.value - a.value).slice(0, 5);
@@ -193,7 +193,7 @@ export default function MarketExplorer() {
       results.map(c => ({
         recipient: (c.entity as any)?.canonical_name || c.recipient_name || '',
         agency: c.awarding_agency || '',
-        value: c.base_and_all_options || 0,
+        value: c.award_amount || 0,
         award_date: c.award_date || '',
         naics: c.naics_code || '',
         state: c.pop_state || '',
@@ -436,7 +436,7 @@ export default function MarketExplorer() {
                             <tr className="bg-muted/50 text-left">
                               <th className="p-3 font-medium cursor-pointer hover:text-primary" onClick={() => handleSort('recipient_name')}>Recipient</th>
                               <th className="p-3 font-medium cursor-pointer hover:text-primary hidden md:table-cell" onClick={() => handleSort('awarding_agency')}>Agency</th>
-                              <th className="p-3 font-medium cursor-pointer hover:text-primary text-right" onClick={() => handleSort('base_and_all_options')}>Value</th>
+                              <th className="p-3 font-medium cursor-pointer hover:text-primary text-right" onClick={() => handleSort('award_amount')}>Value</th>
                               <th className="p-3 font-medium cursor-pointer hover:text-primary hidden md:table-cell" onClick={() => handleSort('award_date')}>Award Date</th>
                               <th className="p-3 font-medium hidden lg:table-cell">NAICS</th>
                               <th className="p-3 font-medium hidden lg:table-cell">State</th>
@@ -459,7 +459,7 @@ export default function MarketExplorer() {
                                       {c.awarding_agency || '—'}
                                     </Link>
                                   </td>
-                                  <td className="p-3 text-right font-mono font-semibold text-primary">{fmt(Number(c.base_and_all_options))}</td>
+                                  <td className="p-3 text-right font-mono font-semibold text-primary">{fmt(Number(c.award_amount))}</td>
                                   <td className="p-3 hidden md:table-cell whitespace-nowrap">{fmtDate(c.award_date)}</td>
                                   <td className="p-3 hidden lg:table-cell">
                                     <Badge variant="secondary" className="font-mono text-xs">{c.naics_code || '—'}</Badge>

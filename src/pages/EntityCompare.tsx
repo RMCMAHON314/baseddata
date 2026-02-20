@@ -59,22 +59,22 @@ export default function EntityCompare() {
       for (const eid of entityIds) {
         const [entityRes, contractsRes, grantsRes, relsRes, healthRes, topAgencyRes] = await Promise.all([
           supabase.from('core_entities').select('*').eq('id', eid).single(),
-          supabase.from('contracts').select('base_and_all_options', { count: 'exact' }).eq('recipient_entity_id', eid),
+          supabase.from('contracts').select('award_amount', { count: 'exact' }).eq('recipient_entity_id', eid),
           supabase.from('grants').select('id', { count: 'exact', head: true }).eq('recipient_entity_id', eid),
           supabase.from('core_relationships').select('id', { count: 'exact', head: true }).or(`from_entity_id.eq.${eid},to_entity_id.eq.${eid}`),
           supabase.from('entity_health_scores').select('overall_score').eq('entity_id', eid).order('calculated_at', { ascending: false }).limit(1).maybeSingle(),
-          supabase.from('contracts').select('awarding_agency, base_and_all_options').eq('recipient_entity_id', eid).not('awarding_agency', 'is', null).limit(100),
+          supabase.from('contracts').select('awarding_agency, award_amount').eq('recipient_entity_id', eid).not('awarding_agency', 'is', null).limit(100),
         ]);
 
         const e = entityRes.data;
         if (!e) continue;
 
-        const contractValue = (contractsRes.data || []).reduce((s, c) => s + (Number(c.base_and_all_options) || 0), 0);
+        const contractValue = (contractsRes.data || []).reduce((s, c) => s + (Number(c.award_amount) || 0), 0);
         
         // Find top agency
         const agencyMap = new Map<string, number>();
         for (const c of topAgencyRes.data || []) {
-          agencyMap.set(c.awarding_agency!, (agencyMap.get(c.awarding_agency!) || 0) + (Number(c.base_and_all_options) || 0));
+          agencyMap.set(c.awarding_agency!, (agencyMap.get(c.awarding_agency!) || 0) + (Number(c.award_amount) || 0));
         }
         const topAgency = [...agencyMap.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || null;
 
