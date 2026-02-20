@@ -16,8 +16,10 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/Logo';
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
 
 const NAV_ITEMS = [
+  { path: '/', label: 'Dashboard', icon: Database },
   { path: '/explore', label: 'Explore', icon: Compass },
   { path: '/entities', label: 'Entities', icon: Building2 },
   { path: '/opportunities', label: 'Opportunities', icon: Target },
@@ -174,7 +176,22 @@ export function GlobalLayout({ children }: { children: React.ReactNode }) {
         </AnimatePresence>
       </header>
 
+      {/* Breadcrumbs on inner pages */}
+      {location.pathname !== '/' && (
+        <div className="container">
+          <Breadcrumbs />
+        </div>
+      )}
+
       <main className="flex-1">{children}</main>
+
+      {/* Footer */}
+      <footer className="border-t border-border bg-card py-6 mt-12">
+        <div className="container flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
+          <span>Built in Baltimore 🦀 by Infinite Data Solutions</span>
+          <span>Powered by USASpending.gov, SAM.gov, NIH, NSF data</span>
+        </div>
+      </footer>
     </div>
   );
 }
