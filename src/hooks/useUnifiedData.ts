@@ -487,6 +487,29 @@ export function useRecentContracts(limit = 50) {
   });
 }
 
+// ═══════════════════ EXPIRING CONTRACTS ═══════════════════
+export function useExpiringContracts(monthsAhead = 12, limit = 30) {
+  return useQuery({
+    queryKey: ["expiring-contracts", monthsAhead, limit],
+    queryFn: async () => {
+      const futureDate = new Date();
+      futureDate.setMonth(futureDate.getMonth() + monthsAhead);
+
+      const { data, error } = await supabase
+        .from("contracts")
+        .select("*, entity:core_entities!contracts_recipient_entity_id_fkey(id, canonical_name)")
+        .not("end_date", "is", null)
+        .gte("end_date", new Date().toISOString())
+        .lte("end_date", futureDate.toISOString())
+        .order("end_date", { ascending: true })
+        .limit(limit);
+      if (error) throw error;
+      return data;
+    },
+    staleTime: STALE.dynamic,
+  });
+}
+
 // ═══════════════════ FLYWHEEL HEALTH ═══════════════════
 export function useFlywheelHealth() {
   return useQuery({
