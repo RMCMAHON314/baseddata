@@ -83,14 +83,6 @@ export default function OpportunityCommandCenter() {
   return (
     <GlobalLayout>
       <div className="min-h-screen bg-background">
-        {/* Breadcrumb */}
-        <div className="container pt-4">
-          <nav className="flex items-center gap-1 text-sm text-muted-foreground">
-            <Link to="/" className="hover:text-foreground">Home</Link>
-            <ChevronRight className="h-3 w-3" />
-            <span className="text-foreground">Opportunities</span>
-          </nav>
-        </div>
 
         {/* Header */}
         <div className="border-b border-border bg-card">

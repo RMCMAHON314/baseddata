@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Bookmark, ChevronRight, Play, Trash2, Bell, BellOff, Calendar } from 'lucide-react';
+import { Bookmark, Play, Trash2, Bell, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -87,13 +87,6 @@ export default function SavedSearches() {
   return (
     <GlobalLayout>
       <div className="min-h-screen bg-background">
-        <div className="container pt-4">
-          <nav className="flex items-center gap-1 text-sm text-muted-foreground">
-            <Link to="/" className="hover:text-foreground">Home</Link>
-            <ChevronRight className="h-3 w-3" />
-            <span className="text-foreground">Saved Searches</span>
-          </nav>
-        </div>
 
         <div className="border-b border-border bg-card">
           <div className="container py-6">
