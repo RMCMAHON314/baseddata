@@ -605,9 +605,9 @@ function InsightsSidebar({ entityId }: { entityId: string }) {
     queryKey: ['entity-insights', entityId],
     queryFn: async () => {
       const { data } = await supabase
-        .from('insights')
+        .from('core_derived_insights')
         .select('*')
-        .contains('entity_ids', [entityId])
+        .contains('related_entities', [entityId])
         .order('created_at', { ascending: false })
         .limit(10);
       return data || [];
