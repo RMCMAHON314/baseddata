@@ -117,11 +117,11 @@ export default function EntityCompare() {
     setSearchParams(newIds.length ? { entities: newIds.join(',') } : {});
   };
 
-  const METRICS = [
+  const METRICS: Array<{ key: string; label: string; format: (v: any) => string; icon: any; noHighlight?: boolean }> = [
     { key: 'contractValue', label: 'Total Contract Value', format: fmt, icon: DollarSign },
-    { key: 'contractCount', label: 'Contracts', format: (v: number) => v.toLocaleString(), icon: FileText },
-    { key: 'grantCount', label: 'Grants', format: (v: number) => v.toLocaleString(), icon: Award },
-    { key: 'relationshipCount', label: 'Relationships', format: (v: number) => v.toLocaleString(), icon: Users },
+    { key: 'contractCount', label: 'Contracts', format: (v: number) => v?.toLocaleString() || '0', icon: FileText },
+    { key: 'grantCount', label: 'Grants', format: (v: number) => v?.toLocaleString() || '0', icon: Award },
+    { key: 'relationshipCount', label: 'Relationships', format: (v: number) => v?.toLocaleString() || '0', icon: Users },
     { key: 'healthScore', label: 'Health Score', format: (v: number | null) => v?.toString() || 'N/A', icon: Heart },
     { key: 'topAgency', label: 'Top Agency', format: (v: string | null) => v || 'N/A', icon: Building2, noHighlight: true },
   ];
@@ -214,7 +214,7 @@ export default function EntityCompare() {
                           const isMax = !m.noHighlight && typeof val === 'number' && val === maxVal && numericValues.length > 1;
                           return (
                             <td key={p.id} className={`p-3 font-mono ${isMax ? 'bg-emerald-50 font-semibold text-emerald-700' : ''}`}>
-                              {m.format(val)}
+                              {m.format(val as any)}
                             </td>
                           );
                         })}
