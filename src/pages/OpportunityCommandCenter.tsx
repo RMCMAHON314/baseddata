@@ -37,7 +37,7 @@ export default function OpportunityCommandCenter() {
     queryFn: async () => {
       const { data } = await supabase
         .from('contracts')
-        .select('id, awarding_agency, recipient_name, recipient_entity_id, base_and_all_options, award_date, naics_code, description')
+        .select('id, awarding_agency, recipient_name, recipient_entity_id, award_amount, award_date, naics_code, description')
         .not('award_date', 'is', null)
         .order('award_date', { ascending: false })
         .limit(50);
@@ -53,7 +53,7 @@ export default function OpportunityCommandCenter() {
       const oneYear = new Date(Date.now() + 365 * 86400000).toISOString();
       const { data } = await supabase
         .from('contracts')
-        .select('id, awarding_agency, recipient_name, recipient_entity_id, base_and_all_options, end_date, naics_code, description')
+        .select('id, awarding_agency, recipient_name, recipient_entity_id, award_amount, end_date, naics_code, description')
         .not('end_date', 'is', null)
         .gt('end_date', now)
         .lt('end_date', oneYear)
@@ -149,7 +149,7 @@ export default function OpportunityCommandCenter() {
                             </Link>
                           ) : c.recipient_name || '—'}
                         </td>
-                        <td className="p-3 text-right font-mono font-semibold text-primary">{fmt(Number(c.base_and_all_options))}</td>
+                        <td className="p-3 text-right font-mono font-semibold text-primary">{fmt(Number(c.award_amount))}</td>
                         <td className="p-3 hidden md:table-cell whitespace-nowrap">{fmtDate(c.award_date)}</td>
                         <td className="p-3 hidden lg:table-cell"><Badge variant="secondary" className="font-mono text-xs">{c.naics_code || '—'}</Badge></td>
                         <td className="p-3 hidden xl:table-cell max-w-[200px] truncate text-muted-foreground">{(c.description || '').slice(0, 60)}</td>
@@ -190,7 +190,7 @@ export default function OpportunityCommandCenter() {
                               </Link>
                             ) : c.recipient_name || '—'}
                           </td>
-                          <td className="p-3 text-right font-mono font-semibold text-primary">{fmt(Number(c.base_and_all_options))}</td>
+                          <td className="p-3 text-right font-mono font-semibold text-primary">{fmt(Number(c.award_amount))}</td>
                           <td className="p-3 whitespace-nowrap">
                             <Badge variant={daysLeft <= 90 ? 'destructive' : daysLeft <= 180 ? 'default' : 'secondary'}>
                               {daysLeft} days

@@ -57,11 +57,11 @@ export default function EntityIntelligenceHub() {
     queryKey: ['entity-stats', id],
     queryFn: async () => {
       const [contracts, grants, rels] = await Promise.all([
-        supabase.from('contracts').select('id, base_and_all_options', { count: 'exact' }).eq('recipient_entity_id', id!),
+        supabase.from('contracts').select('id, award_amount', { count: 'exact' }).eq('recipient_entity_id', id!),
         supabase.from('grants').select('id, award_amount', { count: 'exact' }).eq('recipient_entity_id', id!),
         supabase.from('core_relationships').select('id', { count: 'exact' }).or("from_entity_id.eq." + id + ",to_entity_id.eq." + id),
       ]);
-      const contractVal = (contracts.data || []).reduce((s, c) => s + (Number(c.base_and_all_options) || 0), 0);
+      const contractVal = (contracts.data || []).reduce((s, c) => s + (Number(c.award_amount) || 0), 0);
       const grantVal = (grants.data || []).reduce((s, g) => s + (Number(g.award_amount) || 0), 0);
       return {
         contractCount: contracts.count || 0,
@@ -111,7 +111,7 @@ export default function EntityIntelligenceHub() {
     const { data: grants } = await supabase.from('grants').select('*').eq('recipient_entity_id', id!).limit(200);
     const rows = [
       ['Type', 'Agency', 'Value', 'Date', 'Description'],
-      ...(contracts || []).map(c => ['Contract', c.awarding_agency, c.base_and_all_options, c.award_date, c.description?.slice(0, 100)]),
+      ...(contracts || []).map(c => ['Contract', c.awarding_agency, c.award_amount, c.award_date, c.description?.slice(0, 100)]),
       ...(grants || []).map(g => ['Grant', g.awarding_agency, g.award_amount, g.award_date, g.project_title?.slice(0, 100)]),
     ];
     const csv = rows.map(r => r.map(c => '"' + (c || '') + '"').join(',')).join('\n');
@@ -279,7 +279,7 @@ function ContractsTab({ entityId }: { entityId: string }) {
         .from('contracts')
         .select('*', { count: 'exact' })
         .eq('recipient_entity_id', entityId)
-        .order('base_and_all_options', { ascending: false, nullsFirst: false })
+        .order('award_amount', { ascending: false, nullsFirst: false })
         .range(page * PAGE, (page + 1) * PAGE - 1);
       return { rows: data || [], total: count || 0 };
     },
@@ -289,7 +289,7 @@ function ContractsTab({ entityId }: { entityId: string }) {
     if (!data?.rows.length) return;
     const csv = [
       ['Date', 'Agency', 'Description', 'Value', 'NAICS'].join(','),
-      ...data.rows.map(c => [fmtDate(c.award_date), c.awarding_agency, '"' + (c.description || '').slice(0, 80).replace(/"/g, "'") + '"', c.base_and_all_options, c.naics_code].join(','))
+      ...data.rows.map(c => [fmtDate(c.award_date), c.awarding_agency, '"' + (c.description || '').slice(0, 80).replace(/"/g, "'") + '"', c.award_amount, c.naics_code].join(','))
     ].join('\n');
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
@@ -330,7 +330,7 @@ function ContractsTab({ entityId }: { entityId: string }) {
                     </Link>
                   </td>
                   <td className="p-3 max-w-[300px] truncate hidden md:table-cell text-muted-foreground">{(c.description || '').slice(0, 80)}</td>
-                  <td className="p-3 text-right font-mono font-semibold text-primary">{fmt(Number(c.base_and_all_options))}</td>
+                  <td className="p-3 text-right font-mono font-semibold text-primary">{fmt(Number(c.award_amount))}</td>
                   <td className="p-3 hidden lg:table-cell"><Badge variant="secondary" className="font-mono text-xs">{c.naics_code || '—'}</Badge></td>
                 </tr>
                 {expanded === c.id && (
@@ -421,7 +421,7 @@ function CompetitorsTab({ entityId }: { entityId: string }) {
       // Find competitors who share agencies
       const { data: competitors } = await supabase
         .from('contracts')
-        .select('recipient_entity_id, recipient_name, awarding_agency, base_and_all_options')
+        .select('recipient_entity_id, recipient_name, awarding_agency, award_amount')
         .in('awarding_agency', myAgencies.slice(0, 10))
         .neq('recipient_entity_id', entityId)
         .not('recipient_entity_id', 'is', null)
@@ -433,7 +433,7 @@ function CompetitorsTab({ entityId }: { entityId: string }) {
         const key = c.recipient_entity_id;
         if (!key) continue;
         const existing = map.get(key) || { id: key, name: c.recipient_name || 'Unknown', total: 0, count: 0, agencies: new Set() };
-        existing.total += Number(c.base_and_all_options) || 0;
+        existing.total += Number(c.award_amount) || 0;
         existing.count++;
         if (c.awarding_agency) existing.agencies.add(c.awarding_agency);
         map.set(key, existing);

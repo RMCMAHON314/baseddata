@@ -45,12 +45,12 @@ export function usePlatformStats() {
     queryFn: async () => {
       const [entities, contracts, relationships] = await Promise.all([
         supabase.from("core_entities").select("*", { count: "exact", head: true }),
-        supabase.from("contracts").select("base_and_all_options"),
+        supabase.from("contracts").select("award_amount"),
         supabase.from("core_relationships").select("*", { count: "exact", head: true }),
       ]);
 
       const totalContractValue = (contracts.data || []).reduce(
-        (sum, c) => sum + (Number(c.base_and_all_options) || 0), 0
+        (sum, c) => sum + (Number(c.award_amount) || 0), 0
       );
 
       return {
@@ -73,7 +73,7 @@ export function useEntities(options?: {
       let query = supabase
         .from("core_entities")
         .select("*")
-        .order("total_contract_value", { ascending: false, nullsFirst: false });
+        .order("award_amount", { ascending: false, nullsFirst: false });
 
       if (options?.search) query = query.ilike("canonical_name", `%${options.search}%`);
       if (options?.type) query = query.eq("entity_type", options.type);
@@ -114,7 +114,7 @@ export function useEntityContracts(entityId: string) {
         .from("contracts")
         .select("*")
         .eq("recipient_entity_id", entityId)
-        .order("base_and_all_options", { ascending: false, nullsFirst: false })
+        .order("award_amount", { ascending: false, nullsFirst: false })
         .limit(100);
       if (error) throw error;
       return data;
@@ -243,7 +243,7 @@ export function useEntityCompetitors(entityId: string) {
       // Step 2: Find other entities with contracts at same agencies
       const { data, error } = await supabase
         .from("contracts")
-        .select("recipient_entity_id, awarding_agency, base_and_all_options")
+        .select("recipient_entity_id, awarding_agency, award_amount")
         .in("awarding_agency", myAgencies)
         .neq("recipient_entity_id", entityId)
         .not("recipient_entity_id", "is", null);
@@ -260,7 +260,7 @@ export function useEntityCompetitors(entityId: string) {
           contractCount: 0,
           agencies: new Set<string>(),
         };
-        existing.totalValue += Number(row.base_and_all_options) || 0;
+        existing.totalValue += Number(row.award_amount) || 0;
         existing.contractCount += 1;
         if (row.awarding_agency) existing.agencies.add(row.awarding_agency);
         entityMap.set(row.recipient_entity_id, existing);
@@ -301,7 +301,7 @@ export function useMarketExplorer(filters: {
       let query = supabase
         .from("contracts")
         .select("*, entity:core_entities!contracts_recipient_entity_id_fkey(id, canonical_name, entity_type)")
-        .order("base_and_all_options", { ascending: false, nullsFirst: false })
+        .order("award_amount", { ascending: false, nullsFirst: false })
         .limit(100);
 
       if (filters.state) query = query.eq("pop_state", filters.state);
@@ -351,7 +351,7 @@ export function useAgencyDetail(agencyName: string) {
       if (error) throw error;
 
       const contracts = data || [];
-      const totalValue = contracts.reduce((s, c) => s + (Number(c.base_and_all_options) || 0), 0);
+      const totalValue = contracts.reduce((s, c) => s + (Number(c.award_amount) || 0), 0);
       const vendorIds = [...new Set(contracts.map(c => c.recipient_entity_id).filter(Boolean))];
       const naicsCodes = [...new Set(contracts.map(c => c.naics_code).filter(Boolean))];
 
@@ -375,7 +375,7 @@ export function useAgencyTopContractors(agencyName: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contracts")
-        .select("recipient_entity_id, base_and_all_options")
+        .select("recipient_entity_id, award_amount")
         .eq("awarding_agency", agencyName)
         .not("recipient_entity_id", "is", null);
       if (error) throw error;
@@ -384,7 +384,7 @@ export function useAgencyTopContractors(agencyName: string) {
       for (const c of data || []) {
         if (!c.recipient_entity_id) continue;
         const existing = entityMap.get(c.recipient_entity_id) || { total: 0, count: 0 };
-        existing.total += Number(c.base_and_all_options) || 0;
+        existing.total += Number(c.award_amount) || 0;
         existing.count += 1;
         entityMap.set(c.recipient_entity_id, existing);
       }
@@ -516,7 +516,7 @@ export function useAnalyticsOverview() {
     queryKey: ["analytics-overview"],
     queryFn: async () => {
       const [contracts, grants, entities, relationships] = await Promise.all([
-        supabase.from("contracts").select("base_and_all_options, awarding_agency, naics_code, pop_state, award_date"),
+        supabase.from("contracts").select("award_amount, awarding_agency, naics_code, pop_state, award_date"),
         supabase.from("grants").select("total_funding, awarding_agency"),
         supabase.from("core_entities").select("entity_type, state"),
         supabase.from("core_relationships").select("relationship_type"),
@@ -526,7 +526,7 @@ export function useAnalyticsOverview() {
       const agencyMap = new Map<string, number>();
       for (const c of contracts.data || []) {
         if (c.awarding_agency) {
-          agencyMap.set(c.awarding_agency, (agencyMap.get(c.awarding_agency) || 0) + (Number(c.base_and_all_options) || 0));
+          agencyMap.set(c.awarding_agency, (agencyMap.get(c.awarding_agency) || 0) + (Number(c.award_amount) || 0));
         }
       }
       const topAgencies = [...agencyMap.entries()]
@@ -564,7 +564,7 @@ export function useAnalyticsOverview() {
         if (c.award_date) {
           const d = new Date(c.award_date);
           const key = `${d.getFullYear()} Q${Math.ceil((d.getMonth() + 1) / 3)}`;
-          timelineMap.set(key, (timelineMap.get(key) || 0) + (Number(c.base_and_all_options) || 0));
+          timelineMap.set(key, (timelineMap.get(key) || 0) + (Number(c.award_amount) || 0));
         }
       }
       const timeline = [...timelineMap.entries()]
@@ -580,7 +580,7 @@ export function useAnalyticsOverview() {
       }
       const entityTypes = [...typeMap.entries()].map(([type, count]) => ({ type, count }));
 
-      const totalContractValue = (contracts.data || []).reduce((s, c) => s + (Number(c.base_and_all_options) || 0), 0);
+      const totalContractValue = (contracts.data || []).reduce((s, c) => s + (Number(c.award_amount) || 0), 0);
       const totalGrantValue = (grants.data || []).reduce((s, g) => s + (Number(g.total_funding) || 0), 0);
 
       return {

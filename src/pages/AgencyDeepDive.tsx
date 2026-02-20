@@ -42,7 +42,7 @@ export default function AgencyDeepDive() {
       if (c.naics_code) {
         const ex = map.get(c.naics_code) || { count: 0, value: 0 };
         ex.count++;
-        ex.value += Number(c.base_and_all_options) || 0;
+        ex.value += Number(c.award_amount) || 0;
         map.set(c.naics_code, ex);
       }
     }
@@ -60,7 +60,7 @@ export default function AgencyDeepDive() {
       if (c.award_date) {
         const d = new Date(c.award_date);
         const key = `${d.getFullYear()} Q${Math.floor(d.getMonth() / 3) + 1}`;
-        qMap.set(key, (qMap.get(key) || 0) + (Number(c.base_and_all_options) || 0));
+        qMap.set(key, (qMap.get(key) || 0) + (Number(c.award_amount) || 0));
       }
     }
     return [...qMap.entries()]
