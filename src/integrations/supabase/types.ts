@@ -7509,7 +7509,7 @@ export type Database = {
         }
         Returns: string
       }
-      sync_all_entity_stats: { Args: never; Returns: number }
+      sync_all_entity_stats: { Args: never; Returns: undefined }
       sync_entity_contract_stats: {
         Args: { p_entity_id: string }
         Returns: undefined
