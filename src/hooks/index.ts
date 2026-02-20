@@ -2,6 +2,8 @@
 // Single entry point for all data access hooks
 
 export * from "./useUnifiedData";
+export * from "./useEntityData";
+export * from "./useMarketData";
 export * from "./useExportData";
 export * from "./useDebounce";
 export * from "./useConnectionStatus";

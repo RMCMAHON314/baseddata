@@ -61,12 +61,18 @@ export class EnrichmentFlywheel {
       }
       
       // 3. Find entities without health scores
-      const { data: unscoredEntities } = await supabase
+      const { data: scoredIds } = await supabase
+        .from('entity_health_scores')
+        .select('entity_id');
+      const scoredSet = new Set((scoredIds || []).map(r => r.entity_id));
+
+      const { data: allCanonical } = await supabase
         .from('core_entities')
         .select('id')
         .eq('is_canonical', true)
-        .not('id', 'in', supabase.from('entity_health_scores').select('entity_id'))
-        .limit(10);
+        .limit(100);
+
+      const unscoredEntities = (allCanonical || []).filter(e => !scoredSet.has(e.id)).slice(0, 10);
       
       // Calculate health scores for unscored entities
       for (const entity of unscoredEntities || []) {
