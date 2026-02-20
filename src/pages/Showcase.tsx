@@ -78,19 +78,19 @@ const FEATURES = [
   {
     icon: Shield,
     title: 'Competitive Intelligence',
-    desc: 'Know who\'s winning contracts, where they operate, and how to position against them.',
+    desc: 'See who wins contracts in your space, which agencies they serve, and how they team.',
     color: 'from-cyan-500 to-blue-600',
   },
   {
-    icon: Bell,
-    title: 'Opportunity Alerts',
-    desc: 'Get notified the moment contracts match your criteria. Never miss a bid window again.',
+    icon: Search,
+    title: 'Market Discovery',
+    desc: 'Filter by NAICS, agency, state, and set-aside to find your exact market.',
     color: 'from-violet-500 to-indigo-600',
   },
   {
-    icon: TrendingUp,
-    title: 'Win Probability',
-    desc: 'AI-scored likelihood before you invest in a proposal. Focus on the bids you can win.',
+    icon: Building2,
+    title: 'Entity Deep Dives',
+    desc: 'Full contract history, competitor analysis, and relationship mapping for any contractor.',
     color: 'from-emerald-500 to-teal-600',
   },
 ];
@@ -374,7 +374,10 @@ export default function Showcase() {
             <Link to="/api-docs" className="hover:text-white/60 transition-colors">API</Link>
             <Link to="/pricing" className="hover:text-white/60 transition-colors">Pricing</Link>
           </div>
-          <p className="text-white/20 text-sm">Built in Baltimore 🦀</p>
+          <div className="text-right">
+            <p className="text-white/20 text-sm">Built in Baltimore 🦀 by Infinite Data Solutions</p>
+            <p className="text-white/15 text-xs mt-1">Powered by USASpending.gov, SAM.gov, NIH, NSF data</p>
+          </div>
         </div>
       </footer>
     </div>
