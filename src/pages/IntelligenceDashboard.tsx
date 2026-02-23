@@ -392,6 +392,9 @@ export default function IntelligenceDashboard() {
             </CardContent>
           </Card>
 
+          {/* ── SECTION 6: Competition Intelligence (FPDS) ── */}
+          <CompetitionIntelligenceSection />
+
         </div>
       </div>
     </GlobalLayout>
@@ -434,5 +437,88 @@ function SetAsideCard({ sa }: { sa: any }) {
         )}
       </CollapsibleContent>
     </Collapsible>
+  );
+}
+
+function CompetitionIntelligenceSection() {
+  const { data, isLoading } = useQuery({
+    queryKey: ['competition-intelligence'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_competition_intelligence', {
+        p_naics: null, p_agency: null, p_state: null,
+      });
+      if (error) throw error;
+      return (data as any)?.[0] || null;
+    },
+  });
+
+  if (isLoading) return <Card><CardContent className="py-8"><Skeleton className="h-48" /></CardContent></Card>;
+  if (!data || Number(data.total_awards) === 0) return (
+    <Card>
+      <CardHeader><CardTitle className="flex items-center gap-2"><Shield className="h-5 w-5 text-primary" />Competition Intelligence (FPDS)</CardTitle></CardHeader>
+      <CardContent><p className="text-center text-muted-foreground py-8">Load FPDS data from the admin panel to see competition intelligence.</p></CardContent>
+    </Card>
+  );
+
+  const compBreakdown = data.competition_breakdown ? Object.entries(data.competition_breakdown).map(([name, value]) => ({ name: String(name).slice(0, 25), value: Number(value) })) : [];
+  const offersData = data.offers_distribution ? Object.entries(data.offers_distribution).map(([name, value]) => ({ name, value: Number(value) })) : [];
+
+  return (
+    <Card>
+      <CardHeader><CardTitle className="flex items-center gap-2"><Shield className="h-5 w-5 text-primary" />Competition Intelligence (FPDS)</CardTitle></CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="p-3 rounded-lg bg-muted/50">
+            <p className="text-xs text-muted-foreground">FPDS Awards</p>
+            <p className="text-2xl font-bold">{Number(data.total_awards).toLocaleString()}</p>
+          </div>
+          <div className="p-3 rounded-lg bg-muted/50">
+            <p className="text-xs text-muted-foreground">Avg Offers</p>
+            <p className="text-2xl font-bold">{data.avg_offers || '—'}</p>
+          </div>
+          <div className="p-3 rounded-lg bg-muted/50">
+            <p className="text-xs text-muted-foreground">Sole Source %</p>
+            <p className="text-2xl font-bold text-amber-600">{data.sole_source_pct || 0}%</p>
+          </div>
+          <div className="p-3 rounded-lg bg-muted/50">
+            <p className="text-xs text-muted-foreground">Full & Open %</p>
+            <p className="text-2xl font-bold text-emerald-600">{data.full_open_pct || 0}%</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {compBreakdown.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-2">Competition Type</p>
+              <div className="h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={compBreakdown} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={({ name, value }) => `${name} (${value})`} labelLine={false}>
+                      {compBreakdown.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
+          {offersData.length > 0 && (
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-2">Offers Distribution</p>
+              <div className="h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={offersData}>
+                    <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
