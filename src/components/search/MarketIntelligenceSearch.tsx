@@ -9,7 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Search, DollarSign, Users, BarChart3, Clock, AlertTriangle,
-  Building2, ArrowRight, TrendingUp, Calendar, ChevronRight, Briefcase
+  Building2, ArrowRight, TrendingUp, Calendar, ChevronRight, Briefcase,
+  Lightbulb, Handshake
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
@@ -23,6 +24,8 @@ interface MarketData {
   recompetes: { count: number; value: number };
   opportunities: any[];
   entities: any[];
+  sbirData?: { count: number; value: number; topFirms: any[] };
+  teamingData?: { pairs: any[] };
 }
 
 const BAR_COLORS = [
@@ -86,13 +89,24 @@ export function MarketIntelligenceSearch({ variant = 'full' }: { variant?: 'full
         recompetePromise = Promise.resolve(supabase.rpc('get_recompete_pipeline', { p_state: parsed.state })).catch(() => ({ data: [] }));
       }
 
-      const [contractRes, entityRes, oppRes, hhiRes, recompeteRes] = await Promise.all([
-        contractQ, entityQ, oppQ, hhiPromise, recompetePromise
+      // SBIR query
+      let sbirQ = supabase.from('sbir_awards').select('firm, award_amount, phase, agency').order('award_amount', { ascending: false }).limit(100);
+      if (parsed.state) sbirQ = sbirQ.eq('state', parsed.state);
+      if (parsed.entityQuery) sbirQ = sbirQ.ilike('firm', `%${parsed.entityQuery}%`);
+
+      // Subawards / teaming query
+      let subQ = supabase.from('subawards').select('prime_recipient_name, sub_awardee_name, subaward_amount, awarding_agency').order('subaward_amount', { ascending: false }).limit(50);
+      if (parsed.state) subQ = subQ.eq('sub_awardee_state', parsed.state);
+
+      const [contractRes, entityRes, oppRes, hhiRes, recompeteRes, sbirRes, subRes] = await Promise.all([
+        contractQ, entityQ, oppQ, hhiPromise, recompetePromise, sbirQ, subQ
       ]);
 
       const contracts = contractRes.data || [];
       const entities = entityRes.data || [];
       const opportunities = oppRes.data || [];
+      const sbirRaw = sbirRes.data || [];
+      const subRaw = subRes.data || [];
 
       // Aggregate top players
       const playerMap = new Map<string, number>();
@@ -129,6 +143,23 @@ export function MarketIntelligenceSearch({ variant = 'full' }: { variant?: 'full
       const recompetes = recompeteRes?.data || [];
       const recompeteValue = recompetes.reduce((s: number, r: any) => s + (Number(r.award_amount) || 0), 0);
 
+      // SBIR aggregation
+      const sbirValue = sbirRaw.reduce((s: number, a: any) => s + (Number(a.award_amount) || 0), 0);
+      const sbirFirmMap = new Map<string, number>();
+      sbirRaw.forEach((a: any) => { if (a.firm) sbirFirmMap.set(a.firm, (sbirFirmMap.get(a.firm) || 0) + (Number(a.award_amount) || 0)); });
+      const sbirTopFirms = Array.from(sbirFirmMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, value]) => ({ name, value }));
+
+      // Teaming pairs
+      const teamingMap = new Map<string, { prime: string; sub: string; value: number; count: number }>();
+      subRaw.forEach((s: any) => {
+        const key = `${s.prime_recipient_name}→${s.sub_awardee_name}`;
+        const existing = teamingMap.get(key) || { prime: s.prime_recipient_name, sub: s.sub_awardee_name, value: 0, count: 0 };
+        existing.value += Number(s.subaward_amount) || 0;
+        existing.count++;
+        teamingMap.set(key, existing);
+      });
+      const teamingPairs = Array.from(teamingMap.values()).sort((a, b) => b.value - a.value).slice(0, 5);
+
       setData({
         contracts,
         topPlayers,
@@ -139,6 +170,8 @@ export function MarketIntelligenceSearch({ variant = 'full' }: { variant?: 'full
         recompetes: { count: recompetes.length, value: recompeteValue },
         opportunities,
         entities,
+        sbirData: sbirRaw.length > 0 ? { count: sbirRaw.length, value: sbirValue, topFirms: sbirTopFirms } : undefined,
+        teamingData: teamingPairs.length > 0 ? { pairs: teamingPairs } : undefined,
       });
     } catch (err) {
       console.error('Market search error:', err);
@@ -309,8 +342,51 @@ export function MarketIntelligenceSearch({ variant = 'full' }: { variant?: 'full
               </CardContent>
             </Card>
           </div>
+          {/* Row 3.5: SBIR Innovation + Teaming Intelligence */}
+          {(data.sbirData || data.teamingData) && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {data.sbirData && (
+                <Card>
+                  <CardContent className="p-5 flex items-start gap-4">
+                    <div className="p-3 rounded-xl bg-violet-500/10"><Lightbulb className="w-6 h-6 text-violet-500" /></div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold">SBIR Innovation</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {data.sbirData.count} awards · {formatCurrency(data.sbirData.value)} total
+                      </p>
+                      {data.sbirData.topFirms.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {data.sbirData.topFirms.slice(0, 3).map((f, i) => (
+                            <p key={i} className="text-xs text-muted-foreground truncate">{f.name} — {formatCurrency(f.value)}</p>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              {data.teamingData && (
+                <Card>
+                  <CardContent className="p-5 flex items-start gap-4">
+                    <div className="p-3 rounded-xl bg-emerald-500/10"><Handshake className="w-6 h-6 text-emerald-500" /></div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold">Teaming Intelligence</p>
+                      <p className="text-sm text-muted-foreground mt-1">Top prime→sub relationships</p>
+                      <div className="mt-2 space-y-1">
+                        {data.teamingData.pairs.slice(0, 3).map((p, i) => (
+                          <p key={i} className="text-xs text-muted-foreground truncate">
+                            {p.prime} → {p.sub} ({formatCurrency(p.value)}, {p.count}×)
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
 
-          {/* Row 4: Opportunities */}
+
           {data.opportunities.length > 0 && (
             <Card>
               <CardHeader><CardTitle className="flex items-center gap-2"><Briefcase className="w-5 h-5" /> Active Opportunities</CardTitle></CardHeader>

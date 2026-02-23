@@ -225,6 +225,9 @@ export default function EntityIntelligenceHub() {
               <div className="metric-card"><p className="text-xs text-muted-foreground uppercase tracking-wider">Grants</p><p className="metric-value">{stats?.grantCount?.toLocaleString() || '0'}</p></div>
               <div className="metric-card"><p className="text-xs text-muted-foreground uppercase tracking-wider">Relationships</p><p className="metric-value">{stats?.relationshipCount?.toLocaleString() || '0'}</p></div>
             </div>
+
+            {/* Cross-Source 360° Profile */}
+            <CrossSourceProfile entityName={entity.canonical_name} />
           </div>
         </div>
 
@@ -846,6 +849,71 @@ function RiskTab({ entityName }: { entityName: string }) {
         </Card>
       </div>
     </div>
+  );
+}
+
+// ── CROSS-SOURCE 360° PROFILE ──
+function CrossSourceProfile({ entityName }: { entityName: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['cross-source-profile', entityName],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_cross_source_profile', { p_name: entityName });
+      if (error) return null;
+      return (data as any)?.[0] || null;
+    },
+    enabled: !!entityName,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  if (isLoading || !data) return null;
+  const hasCrossData = (data.sbir_count > 0) || data.sam_status || data.is_excluded || (data.sub_prime_count > 0);
+  if (!hasCrossData) return null;
+
+  return (
+    <Card className="mt-4 border-primary/20 bg-primary/5">
+      <CardContent className="p-4">
+        <p className="text-xs font-semibold uppercase tracking-wider text-primary mb-3">Cross-Source Intelligence</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+          {data.sbir_count > 0 && (
+            <div>
+              <p className="text-xs text-muted-foreground">SBIR Innovation</p>
+              <p className="font-semibold">{data.sbir_count} awards · {fmt(Number(data.sbir_value))}</p>
+              {data.sbir_phases?.length > 0 && <p className="text-xs text-muted-foreground">Phases: {data.sbir_phases.join(', ')}</p>}
+            </div>
+          )}
+          <div>
+            <p className="text-xs text-muted-foreground">SAM Registration</p>
+            <Badge className={data.sam_status === 'Active' ? 'bg-emerald-100 text-emerald-700' : data.sam_status ? 'bg-amber-100 text-amber-700' : 'bg-muted text-muted-foreground'}>
+              {data.sam_status || 'Not Found'}
+            </Badge>
+            {data.sam_cage && <p className="text-xs text-muted-foreground mt-0.5">CAGE: {data.sam_cage}</p>}
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Exclusion Status</p>
+            <Badge className={data.is_excluded ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}>
+              {data.is_excluded ? '⚠️ EXCLUDED' : 'CLEAR'}
+            </Badge>
+          </div>
+          {(data.sub_prime_count > 0 || data.sub_to_count > 0) && (
+            <div>
+              <p className="text-xs text-muted-foreground">Teaming Network</p>
+              <p className="font-semibold">Prime→{data.sub_prime_count} subs · Sub→{data.sub_to_count} primes</p>
+              <p className="text-xs text-muted-foreground">{fmt(Number(data.sub_prime_value))} subcontracted</p>
+            </div>
+          )}
+          {(data.women_owned === 'Y' || data.hubzone === 'Y' || data.disadvantaged === 'Y') && (
+            <div>
+              <p className="text-xs text-muted-foreground">Diversity</p>
+              <div className="flex flex-wrap gap-1 mt-0.5">
+                {data.women_owned === 'Y' && <Badge variant="outline" className="text-xs">Woman-Owned</Badge>}
+                {data.hubzone === 'Y' && <Badge variant="outline" className="text-xs">HUBZone</Badge>}
+                {data.disadvantaged === 'Y' && <Badge variant="outline" className="text-xs">Disadvantaged</Badge>}
+              </div>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

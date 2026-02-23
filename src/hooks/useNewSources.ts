@@ -72,11 +72,36 @@ export function useFpdsAwards(filters?: { department?: string; naics?: string; s
   });
 }
 
+export function useSubawards(filters?: { state?: string; prime?: string }) {
+  return useQuery({
+    queryKey: ['subawards', filters],
+    queryFn: async () => {
+      let query = supabase.from('subawards').select('*').order('subaward_amount', { ascending: false }).limit(100);
+      if (filters?.state) query = query.eq('sub_awardee_state', filters.state);
+      if (filters?.prime) query = query.ilike('prime_recipient_name', `%${filters.prime}%`);
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+export function useVacuumRuns() {
+  return useQuery({
+    queryKey: ['vacuum-runs'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('vacuum_runs').select('*').order('started_at', { ascending: false }).limit(10);
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
 export function useAllSourceCounts() {
   return useQuery({
     queryKey: ['all-source-counts'],
     queryFn: async () => {
-      const [contracts, opps, sbir, samEnts, excl, nsf, fpds, grants, entities] = await Promise.all([
+      const [contracts, opps, sbir, samEnts, excl, nsf, fpds, grants, entities, subs] = await Promise.all([
         supabase.from('contracts').select('*', { count: 'exact', head: true }),
         supabase.from('opportunities').select('*', { count: 'exact', head: true }),
         supabase.from('sbir_awards').select('*', { count: 'exact', head: true }),
@@ -86,6 +111,7 @@ export function useAllSourceCounts() {
         supabase.from('fpds_awards').select('*', { count: 'exact', head: true }),
         supabase.from('grants').select('*', { count: 'exact', head: true }),
         supabase.from('core_entities').select('*', { count: 'exact', head: true }),
+        supabase.from('subawards').select('*', { count: 'exact', head: true }),
       ]);
       return {
         contracts: contracts.count || 0,
@@ -97,7 +123,8 @@ export function useAllSourceCounts() {
         fpds: fpds.count || 0,
         grants: grants.count || 0,
         entities: entities.count || 0,
-        totalRecords: (contracts.count || 0) + (opps.count || 0) + (sbir.count || 0) + (samEnts.count || 0) + (excl.count || 0) + (nsf.count || 0) + (fpds.count || 0) + (grants.count || 0),
+        subawards: subs.count || 0,
+        totalRecords: (contracts.count || 0) + (opps.count || 0) + (sbir.count || 0) + (samEnts.count || 0) + (excl.count || 0) + (nsf.count || 0) + (fpds.count || 0) + (grants.count || 0) + (subs.count || 0),
       };
     },
     staleTime: 30 * 1000,
