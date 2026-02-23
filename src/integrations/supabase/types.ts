@@ -7976,6 +7976,8 @@ export type Database = {
         Args: never
         Returns: {
           data_sources: number
+          distinct_agencies: number
+          distinct_states: number
           last_vacuum_at: string
           last_vacuum_loaded: number
           total_contract_value: number
@@ -7987,6 +7989,7 @@ export type Database = {
           total_grants: number
           total_idv_value: number
           total_idvs: number
+          total_labor_rates: number
           total_nsf: number
           total_opportunities: number
           total_records: number

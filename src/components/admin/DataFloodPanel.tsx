@@ -59,6 +59,7 @@ export const DataFloodPanel = () => {
     { emoji: '🔭', label: 'NSF Awards', value: ps?.total_nsf },
     { emoji: '📊', label: 'FPDS Awards', value: ps?.total_fpds },
     { emoji: '🤝', label: 'Subawards', value: ps?.total_subawards },
+    { emoji: '💵', label: 'Labor Rates', value: ps?.total_labor_rates },
     { emoji: '👥', label: 'Entities', value: ps?.total_entities },
     { emoji: '🔗', label: 'Relationships', value: ps?.total_relationships },
   ];
@@ -85,7 +86,7 @@ export const DataFloodPanel = () => {
                   <Bomb className="h-6 w-6 text-destructive" />
                   <div>
                     <h3 className="text-lg font-bold">VACUUM ALL DATA</h3>
-                    <p className="text-sm text-muted-foreground">9 sources · All 50 states · Auto-enriching</p>
+                    <p className="text-sm text-muted-foreground">10 sources · All 50 states · Auto-enriching</p>
                   </div>
                 </div>
                 {lastRun && (

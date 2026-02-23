@@ -109,6 +109,32 @@ export function useVacuumRuns() {
   });
 }
 
+export function useGsaLaborRates(keyword?: string) {
+  return useQuery({
+    queryKey: ['gsa-labor-rates', keyword],
+    queryFn: async () => {
+      let query = (supabase.from as any)('gsa_labor_rates').select('*').order('current_price', { ascending: false }).limit(200);
+      if (keyword) query = query.ilike('labor_category', `%${keyword}%`);
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!keyword,
+  });
+}
+
+export function useLaborRateStats(keyword: string) {
+  return useQuery({
+    queryKey: ['labor-rate-stats', keyword],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_labor_rate_stats' as any, { p_keyword: keyword });
+      if (error) throw error;
+      return (data as any)?.[0] || null;
+    },
+    enabled: !!keyword && keyword.length > 2,
+  });
+}
+
 // Legacy — kept for backward compat but prefer usePlatformStats
 export function useAllSourceCounts() {
   return usePlatformStats();

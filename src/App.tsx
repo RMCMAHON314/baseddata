@@ -33,6 +33,7 @@ const Search = lazy(() => import("./pages/Search"));
 const OceanDashboard = lazy(() => import("./pages/OceanDashboard"));
 const Healthcare = lazy(() => import("./pages/Healthcare"));
 const Education = lazy(() => import("./pages/Education"));
+const LaborRatesExplorer = lazy(() => import("./pages/LaborRatesExplorer"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -83,6 +84,7 @@ const App = () => {
                 {/* Verticals */}
                 <Route path="/healthcare" element={<Healthcare />} />
                 <Route path="/education" element={<Education />} />
+                <Route path="/labor-rates" element={<LaborRatesExplorer />} />
 
                 {/* System */}
                 <Route path="/ocean" element={<OceanDashboard />} />
