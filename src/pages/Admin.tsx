@@ -61,13 +61,15 @@ export default function Admin() {
       return;
     }
 
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('is_admin')
-      .eq('id', user.id)
-      .single();
+    // Server-side admin check via user_roles table (not client-side profile field)
+    const { data: roleData } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'admin')
+      .maybeSingle();
 
-    if (!profile?.is_admin) {
+    if (!roleData) {
       navigate('/');
       return;
     }
