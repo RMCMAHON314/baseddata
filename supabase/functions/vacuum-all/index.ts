@@ -427,7 +427,50 @@ serve(async (req) => {
     results.push({ source: 'nsf_awards', loaded: totalLoaded, errors: sourceErrors, pages: keywords.length * 3 })
   }
 
-  // ========== SOURCE 8: FPDS Competition Data (NEW) ==========
+  // ========== SOURCE 8: GSA CALC+ LABOR RATES — FREE, NO KEY ==========
+  if (['full'].includes(mode)) {
+    const keywords = ['software engineer','project manager','cybersecurity','data scientist','systems administrator','business analyst','cloud architect','program manager','help desk','network engineer','security analyst','devops','database administrator','technical writer','quality assurance']
+    let totalLoaded = 0
+    const sourceErrors: string[] = []
+
+    for (const kw of keywords) {
+      for (let page = 1; page <= 5; page++) {
+        try {
+          const url = `https://api.gsa.gov/acquisition/calc/v3/api/ceilingrates/?keyword=${encodeURIComponent(kw)}&page=${page}&page_size=100&ordering=current_price&sort=desc`
+          const res = await safeFetch(url)
+          if (!res || !res.ok) { sourceErrors.push(`CALC ${kw} p${page}: ${res?.status}`); break }
+          const data = await res.json()
+          const rates = data?.hits || data?.results || []
+          if (!Array.isArray(rates) || !rates.length) break
+          for (const r of rates) {
+            if (!r.labor_category || !r.vendor_name) continue
+            const { error } = await supabase.from('gsa_labor_rates').upsert({
+              labor_category: r.labor_category,
+              vendor_name: r.vendor_name,
+              idv_piid: r.idv_piid,
+              current_price: parseFloat(r.current_price) || null,
+              second_year_price: parseFloat(r.second_year_price) || null,
+              next_year_price: parseFloat(r.next_year_price) || null,
+              min_years_experience: parseInt(r.min_years_experience) || null,
+              education_level: r.education_level,
+              business_size: r.business_size,
+              security_clearance: r.security_clearance,
+              site: r.site,
+              schedule: r.schedule,
+              sin: r.sin,
+              updated_at: new Date().toISOString()
+            }, { onConflict: 'vendor_name,idv_piid,labor_category', ignoreDuplicates: true })
+            if (!error) totalLoaded++
+          }
+          if (rates.length < 100) break
+          await new Promise(r => setTimeout(r, 200))
+        } catch (e: any) { sourceErrors.push(`CALC ${kw}: ${e.message}`); break }
+      }
+    }
+    results.push({ source: 'gsa_labor_rates', loaded: totalLoaded, errors: sourceErrors, pages: keywords.length * 5 })
+  }
+
+  // ========== SOURCE 9: FPDS Competition Data ==========
   if (['full'].includes(mode) && SAM_KEY) {
     const deptCodes = ['9700','7000','3600','4700','8000','1400','1500','6900','8900','2000']
     let totalLoaded = 0

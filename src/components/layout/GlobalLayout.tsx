@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Building2, Target, BarChart3, Menu, X,
   Bell, User, LogOut, Settings, Bookmark, GitCompare,
-  ChevronRight, Database, FileText, Compass, Brain, Beaker
+  ChevronRight, Database, FileText, Compass, Brain, Beaker, DollarSign
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,12 +19,12 @@ import { Logo } from '@/components/Logo';
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
 
 const NAV_ITEMS = [
-  { path: '/', label: 'Dashboard', icon: Database },
   { path: '/explore', label: 'Explore', icon: Compass },
   { path: '/entities', label: 'Entities', icon: Building2 },
   { path: '/opportunities', label: 'Opportunities', icon: Target },
   { path: '/intelligence', label: 'Intelligence', icon: Brain },
   { path: '/sbir', label: 'SBIR', icon: Beaker },
+  { path: '/labor-rates', label: 'Labor Rates', icon: FileText },
   { path: '/analytics', label: 'Analytics', icon: BarChart3 },
 ];
 
