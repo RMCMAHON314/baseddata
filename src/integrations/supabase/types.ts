@@ -7664,6 +7664,22 @@ export type Database = {
           total_value: number
         }[]
       }
+      compute_market_opportunity: {
+        Args: { p_naics?: string; p_state?: string }
+        Returns: {
+          active_contractors: number
+          active_opportunities: number
+          concentration: string
+          hhi: number
+          opportunity_score: number
+          opportunity_value: number
+          recompete_count: number
+          recompete_value: number
+          sbir_awards_count: number
+          sbir_value: number
+          total_contract_value: number
+        }[]
+      }
       count_unresolved_records: { Args: never; Returns: number }
       create_record_relationship: {
         Args: {
@@ -7864,6 +7880,32 @@ export type Database = {
           total_value: number
         }[]
       }
+      get_cross_source_profile: {
+        Args: { p_name: string }
+        Returns: {
+          contract_count: number
+          disadvantaged: string
+          entity_name: string
+          exclusion_detail: string
+          hubzone: string
+          is_excluded: boolean
+          naics_codes: string[]
+          sam_cage: string
+          sam_expiration: string
+          sam_status: string
+          sbir_count: number
+          sbir_phases: string[]
+          sbir_value: number
+          states: string[]
+          sub_prime_count: number
+          sub_prime_value: number
+          sub_to_count: number
+          sub_to_value: number
+          top_agencies: Json
+          total_contract_value: number
+          women_owned: string
+        }[]
+      }
       get_entity_360: { Args: { p_entity_id: string }; Returns: Json }
       get_entity_network: {
         Args: { p_depth?: number; p_entity_id: string; p_min_strength?: number }
@@ -7965,6 +8007,17 @@ export type Database = {
           total_insights: number
           total_records: number
           total_relationships: number
+        }[]
+      }
+      get_teaming_network: {
+        Args: { p_entity_name?: string; p_limit?: number; p_state?: string }
+        Returns: {
+          agencies: string[]
+          prime_name: string
+          relationship: string
+          sub_count: number
+          sub_name: string
+          total_sub_value: number
         }[]
       }
       get_under_explored_entities: {
