@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { DataFloodPanel } from '@/components/admin/DataFloodPanel';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -144,7 +145,10 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="p-6">
+      <div className="p-6 space-y-6">
+        {/* Data Flood Admin Controls */}
+        <DataFloodPanel />
+
         {/* Stats Row */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
           <StatCard

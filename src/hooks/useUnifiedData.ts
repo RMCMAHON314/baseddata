@@ -81,6 +81,36 @@ export function useEntities(options?: {
 export { useEntity, useEntityContracts, useEntityGrants, useEntityRelationships, useEntityInsights, useEntityFacts, useEntityHealth, useEntityCompetitors } from "./useEntityData";
 export { useMarketExplorer, useMarketFilterOptions, useAgencyDetail, useAgencyTopContractors } from "./useMarketData";
 
+// ═══════════════════ OPPORTUNITIES ═══════════════════
+export function useOpportunities(filters?: {
+  active?: boolean;
+  department?: string;
+  naics?: string;
+  setAside?: string;
+  limit?: number;
+}) {
+  return useQuery({
+    queryKey: [...QUERY_KEYS.opportunities, filters],
+    queryFn: async () => {
+      let query = supabase
+        .from('opportunities')
+        .select('*')
+        .order('posted_date', { ascending: false })
+        .limit(filters?.limit || 50);
+
+      if (filters?.active !== undefined) query = query.eq('is_active', filters.active);
+      if (filters?.department) query = query.ilike('department', `%${filters.department}%`);
+      if (filters?.naics) query = query.eq('naics_code', filters.naics);
+      if (filters?.setAside) query = query.eq('set_aside_code', filters.setAside);
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    },
+    staleTime: STALE.dynamic,
+  });
+}
+
 // ═══════════════════ SAVED SEARCHES ═══════════════════
 export function useSavedSearches() {
   return useQuery({

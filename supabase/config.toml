@@ -47,3 +47,12 @@ verify_jwt = false
 
 [functions.infinite-algorithm]
 verify_jwt = false
+
+[functions.usaspending-bulk-load]
+verify_jwt = false
+
+[functions.sam-opportunities-load]
+verify_jwt = false
+
+[functions.data-flood]
+verify_jwt = false

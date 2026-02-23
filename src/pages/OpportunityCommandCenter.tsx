@@ -1,11 +1,9 @@
-// BASED DATA - Opportunity Command Center - SMART FALLBACK
-// Since 0 opportunities exist, show recently awarded contracts + recompete radar
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Target, Clock, Info, Search, Building2, DollarSign, FileText,
-  ChevronRight, CalendarClock, AlertTriangle, TrendingUp
+  Target, Clock, Info, Search, DollarSign,
+  ChevronRight, CalendarClock, TrendingUp, Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,8 +26,26 @@ function fmtDate(d: string | null) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+function daysUntil(d: string | null) {
+  if (!d) return null;
+  return Math.ceil((new Date(d).getTime() - Date.now()) / 86400000);
+}
+
 export default function OpportunityCommandCenter() {
   const [search, setSearch] = useState('');
+
+  // Live SAM.gov opportunities
+  const { data: opportunities, isLoading: loadingOpps } = useQuery({
+    queryKey: ['live-opportunities'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('opportunities')
+        .select('*')
+        .order('posted_date', { ascending: false })
+        .limit(100);
+      return data || [];
+    },
+  });
 
   // Recently awarded contracts
   const { data: recent, isLoading: loadingRecent } = useQuery({
@@ -63,14 +79,15 @@ export default function OpportunityCommandCenter() {
     },
   });
 
-  // Opportunity count check
-  const { data: oppCount } = useQuery({
-    queryKey: ['opportunity-count'],
-    queryFn: async () => {
-      const { count } = await supabase.from('opportunities').select('*', { count: 'exact', head: true });
-      return count || 0;
-    },
-  });
+  const hasOpportunities = (opportunities?.length || 0) > 0;
+
+  const filteredOpps = search
+    ? (opportunities || []).filter(o =>
+        o.title?.toLowerCase().includes(search.toLowerCase()) ||
+        o.department?.toLowerCase().includes(search.toLowerCase()) ||
+        o.awardee_name?.toLowerCase().includes(search.toLowerCase())
+      )
+    : opportunities || [];
 
   const filteredRecent = search
     ? (recent || []).filter(c =>
@@ -83,7 +100,6 @@ export default function OpportunityCommandCenter() {
   return (
     <GlobalLayout>
       <div className="min-h-screen bg-background">
-
         {/* Header */}
         <div className="border-b border-border bg-card">
           <div className="container py-6">
@@ -91,18 +107,24 @@ export default function OpportunityCommandCenter() {
               <Target className="h-6 w-6 text-primary" />
               Opportunity Command Center
             </h1>
-            <p className="text-muted-foreground mt-1">Track awarded contracts and upcoming recompetes</p>
+            <p className="text-muted-foreground mt-1">
+              {hasOpportunities
+                ? `${opportunities!.length} live SAM.gov opportunities + contract intelligence`
+                : 'Track awarded contracts and upcoming recompetes'}
+            </p>
           </div>
         </div>
 
         <div className="container py-6 space-y-8">
-          {/* Info Banner */}
-          {oppCount === 0 && (
-            <div className="flex items-start gap-3 p-4 rounded-lg bg-blue-50 border border-blue-200 text-blue-800">
-              <Info className="h-5 w-5 mt-0.5 shrink-0" />
+          {/* Info Banner — only when no opportunities */}
+          {!hasOpportunities && !loadingOpps && (
+            <div className="flex items-start gap-3 p-4 rounded-lg bg-muted border border-border">
+              <Info className="h-5 w-5 mt-0.5 shrink-0 text-primary" />
               <div>
-                <p className="font-medium">📢 Live SAM.gov opportunities feed coming soon</p>
-                <p className="text-sm mt-1 text-blue-700">Tracking recently awarded contracts in the meantime — study these to find patterns and position for upcoming bids.</p>
+                <p className="font-medium">📢 SAM.gov opportunities feed ready</p>
+                <p className="text-sm mt-1 text-muted-foreground">
+                  Go to Dashboard → Data Flood Controls → "Load SAM Opportunities" to pull live data from SAM.gov.
+                </p>
               </div>
             </div>
           )}
@@ -110,8 +132,57 @@ export default function OpportunityCommandCenter() {
           {/* Search */}
           <div className="relative max-w-lg">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search awarded contracts..." className="pl-9" />
+            <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search opportunities & contracts..." className="pl-9" />
           </div>
+
+          {/* === LIVE SAM.GOV OPPORTUNITIES === */}
+          {hasOpportunities && (
+            <section>
+              <h2 className="text-lg font-bold flex items-center gap-2 mb-4">
+                <Zap className="h-5 w-5 text-primary" />
+                Live SAM.gov Opportunities ({filteredOpps.length})
+              </h2>
+              {loadingOpps ? (
+                <div className="space-y-3">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-24" />)}</div>
+              ) : (
+                <div className="grid gap-3 md:grid-cols-2">
+                  {filteredOpps.map(opp => {
+                    const days = daysUntil(opp.response_deadline);
+                    return (
+                      <Card key={opp.id} className="hover:border-primary/40 transition-colors">
+                        <CardContent className="p-4 space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <h3 className="font-semibold text-sm line-clamp-2">{opp.title || 'Untitled'}</h3>
+                            {days !== null && days > 0 && (
+                              <Badge variant={days <= 7 ? 'destructive' : days <= 30 ? 'default' : 'secondary'} className="shrink-0 text-xs">
+                                {days}d left
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground">{opp.department}</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {opp.notice_type && <Badge variant="outline" className="text-xs">{opp.notice_type}</Badge>}
+                            {opp.naics_code && <Badge variant="secondary" className="text-xs font-mono">{opp.naics_code}</Badge>}
+                            {opp.set_aside && <Badge variant="secondary" className="text-xs">{opp.set_aside}</Badge>}
+                          </div>
+                          <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
+                            <span>Posted: {fmtDate(opp.posted_date)}</span>
+                            {opp.response_deadline && <span>Due: {fmtDate(opp.response_deadline)}</span>}
+                          </div>
+                          {opp.awardee_name && (
+                            <div className="text-xs bg-muted rounded px-2 py-1 mt-1">
+                              <span className="font-medium">Awardee:</span> {opp.awardee_name}
+                              {opp.award_amount && <span className="ml-2 font-mono text-primary">{fmt(Number(opp.award_amount))}</span>}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          )}
 
           {/* Recently Awarded */}
           <section>
@@ -170,7 +241,7 @@ export default function OpportunityCommandCenter() {
               </h2>
               <div className="border rounded-lg overflow-hidden">
                 <table className="w-full text-sm">
-                  <thead><tr className="bg-amber-50/50 text-left">
+                  <thead><tr className="bg-muted/50 text-left">
                     <th className="p-3 font-medium">Agency</th>
                     <th className="p-3 font-medium">Current Holder</th>
                     <th className="p-3 font-medium text-right">Value</th>
