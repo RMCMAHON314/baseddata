@@ -6546,6 +6546,69 @@ export type Database = {
         }
         Relationships: []
       }
+      subawards: {
+        Row: {
+          awarding_agency: string | null
+          awarding_sub_agency: string | null
+          created_at: string | null
+          id: string
+          naics_code: string | null
+          prime_award_id: string | null
+          prime_recipient_name: string | null
+          prime_recipient_uei: string | null
+          source: string | null
+          sub_awardee_city: string | null
+          sub_awardee_country: string | null
+          sub_awardee_name: string | null
+          sub_awardee_state: string | null
+          sub_awardee_zip: string | null
+          subaward_action_date: string | null
+          subaward_amount: number | null
+          subaward_description: string | null
+          subaward_number: string | null
+        }
+        Insert: {
+          awarding_agency?: string | null
+          awarding_sub_agency?: string | null
+          created_at?: string | null
+          id?: string
+          naics_code?: string | null
+          prime_award_id?: string | null
+          prime_recipient_name?: string | null
+          prime_recipient_uei?: string | null
+          source?: string | null
+          sub_awardee_city?: string | null
+          sub_awardee_country?: string | null
+          sub_awardee_name?: string | null
+          sub_awardee_state?: string | null
+          sub_awardee_zip?: string | null
+          subaward_action_date?: string | null
+          subaward_amount?: number | null
+          subaward_description?: string | null
+          subaward_number?: string | null
+        }
+        Update: {
+          awarding_agency?: string | null
+          awarding_sub_agency?: string | null
+          created_at?: string | null
+          id?: string
+          naics_code?: string | null
+          prime_award_id?: string | null
+          prime_recipient_name?: string | null
+          prime_recipient_uei?: string | null
+          source?: string | null
+          sub_awardee_city?: string | null
+          sub_awardee_country?: string | null
+          sub_awardee_name?: string | null
+          sub_awardee_state?: string | null
+          sub_awardee_zip?: string | null
+          subaward_action_date?: string | null
+          subaward_amount?: number | null
+          subaward_description?: string | null
+          subaward_number?: string | null
+        }
+        Relationships: []
+      }
       subscription_plans: {
         Row: {
           alerts_limit: number | null
@@ -7087,6 +7150,45 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      vacuum_runs: {
+        Row: {
+          completed_at: string | null
+          duration_seconds: number | null
+          errors: Json | null
+          id: string
+          results: Json | null
+          started_at: string | null
+          status: string | null
+          total_errors: number | null
+          total_loaded: number | null
+          trigger: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          duration_seconds?: number | null
+          errors?: Json | null
+          id?: string
+          results?: Json | null
+          started_at?: string | null
+          status?: string | null
+          total_errors?: number | null
+          total_loaded?: number | null
+          trigger?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          duration_seconds?: number | null
+          errors?: Json | null
+          id?: string
+          results?: Json | null
+          started_at?: string | null
+          status?: string | null
+          total_errors?: number | null
+          total_loaded?: number | null
+          trigger?: string | null
         }
         Relationships: []
       }
