@@ -3963,6 +3963,66 @@ export type Database = {
           },
         ]
       }
+      gsa_labor_rates: {
+        Row: {
+          business_size: string | null
+          created_at: string | null
+          current_price: number | null
+          education_level: string | null
+          id: string
+          idv_piid: string | null
+          labor_category: string
+          min_years_experience: number | null
+          next_year_price: number | null
+          schedule: string | null
+          second_year_price: number | null
+          security_clearance: string | null
+          sin: string | null
+          site: string | null
+          source: string | null
+          updated_at: string | null
+          vendor_name: string | null
+        }
+        Insert: {
+          business_size?: string | null
+          created_at?: string | null
+          current_price?: number | null
+          education_level?: string | null
+          id?: string
+          idv_piid?: string | null
+          labor_category: string
+          min_years_experience?: number | null
+          next_year_price?: number | null
+          schedule?: string | null
+          second_year_price?: number | null
+          security_clearance?: string | null
+          sin?: string | null
+          site?: string | null
+          source?: string | null
+          updated_at?: string | null
+          vendor_name?: string | null
+        }
+        Update: {
+          business_size?: string | null
+          created_at?: string | null
+          current_price?: number | null
+          education_level?: string | null
+          id?: string
+          idv_piid?: string | null
+          labor_category?: string
+          min_years_experience?: number | null
+          next_year_price?: number | null
+          schedule?: string | null
+          second_year_price?: number | null
+          security_clearance?: string | null
+          sin?: string | null
+          site?: string | null
+          source?: string | null
+          updated_at?: string | null
+          vendor_name?: string | null
+        }
+        Relationships: []
+      }
       health_checks: {
         Row: {
           checked_at: string | null
