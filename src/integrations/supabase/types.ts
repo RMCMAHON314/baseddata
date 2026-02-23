@@ -866,6 +866,7 @@ export type Database = {
           awarding_sub_agency: string | null
           base_and_all_options: number | null
           competition_type: string | null
+          contract_category: string | null
           contract_type: string | null
           created_at: string | null
           description: string | null
@@ -912,6 +913,7 @@ export type Database = {
           awarding_sub_agency?: string | null
           base_and_all_options?: number | null
           competition_type?: string | null
+          contract_category?: string | null
           contract_type?: string | null
           created_at?: string | null
           description?: string | null
@@ -958,6 +960,7 @@ export type Database = {
           awarding_sub_agency?: string | null
           base_and_all_options?: number | null
           competition_type?: string | null
+          contract_category?: string | null
           contract_type?: string | null
           created_at?: string | null
           description?: string | null
@@ -3827,7 +3830,9 @@ export type Database = {
           assistance_type: string | null
           award_amount: number | null
           award_date: string | null
+          award_id: string | null
           awarding_agency: string | null
+          awarding_sub_agency: string | null
           cfda_number: string | null
           cfda_title: string | null
           created_at: string | null
@@ -3835,9 +3840,12 @@ export type Database = {
           end_date: string | null
           fain: string | null
           funding_agency: string | null
+          grant_category: string | null
           grant_id: string | null
           grant_type: string | null
           id: string
+          pop_city: string | null
+          pop_state: string | null
           project_title: string | null
           raw_data: Json | null
           recipient_city: string | null
@@ -3849,12 +3857,15 @@ export type Database = {
           source: string | null
           start_date: string | null
           total_funding: number | null
+          updated_at: string | null
         }
         Insert: {
           assistance_type?: string | null
           award_amount?: number | null
           award_date?: string | null
+          award_id?: string | null
           awarding_agency?: string | null
+          awarding_sub_agency?: string | null
           cfda_number?: string | null
           cfda_title?: string | null
           created_at?: string | null
@@ -3862,9 +3873,12 @@ export type Database = {
           end_date?: string | null
           fain?: string | null
           funding_agency?: string | null
+          grant_category?: string | null
           grant_id?: string | null
           grant_type?: string | null
           id?: string
+          pop_city?: string | null
+          pop_state?: string | null
           project_title?: string | null
           raw_data?: Json | null
           recipient_city?: string | null
@@ -3876,12 +3890,15 @@ export type Database = {
           source?: string | null
           start_date?: string | null
           total_funding?: number | null
+          updated_at?: string | null
         }
         Update: {
           assistance_type?: string | null
           award_amount?: number | null
           award_date?: string | null
+          award_id?: string | null
           awarding_agency?: string | null
+          awarding_sub_agency?: string | null
           cfda_number?: string | null
           cfda_title?: string | null
           created_at?: string | null
@@ -3889,9 +3906,12 @@ export type Database = {
           end_date?: string | null
           fain?: string | null
           funding_agency?: string | null
+          grant_category?: string | null
           grant_id?: string | null
           grant_type?: string | null
           id?: string
+          pop_city?: string | null
+          pop_state?: string | null
           project_title?: string | null
           raw_data?: Json | null
           recipient_city?: string | null
@@ -3903,6 +3923,7 @@ export type Database = {
           source?: string | null
           start_date?: string | null
           total_funding?: number | null
+          updated_at?: string | null
         }
         Relationships: [
           {
