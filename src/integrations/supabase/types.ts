@@ -4712,8 +4712,17 @@ export type Database = {
       opportunities: {
         Row: {
           archive_date: string | null
+          award_amount: number | null
           award_ceiling: number | null
+          award_date: string | null
           award_floor: number | null
+          award_number: string | null
+          awardee_city: string | null
+          awardee_name: string | null
+          awardee_state: string | null
+          awardee_uei: string | null
+          base_type: string | null
+          classification_code: string | null
           created_at: string | null
           department: string | null
           description: string | null
@@ -4728,6 +4737,9 @@ export type Database = {
           pop_state: string | null
           pop_zip: string | null
           posted_date: string | null
+          primary_contact_email: string | null
+          primary_contact_name: string | null
+          primary_contact_phone: string | null
           psc_code: string | null
           raw_data: Json | null
           resource_links: Json | null
@@ -4735,7 +4747,9 @@ export type Database = {
           search_text: string | null
           search_vector: unknown
           set_aside: string | null
+          set_aside_code: string | null
           solicitation_number: string | null
+          source: string | null
           status: string | null
           sub_tier: string | null
           title: string
@@ -4744,8 +4758,17 @@ export type Database = {
         }
         Insert: {
           archive_date?: string | null
+          award_amount?: number | null
           award_ceiling?: number | null
+          award_date?: string | null
           award_floor?: number | null
+          award_number?: string | null
+          awardee_city?: string | null
+          awardee_name?: string | null
+          awardee_state?: string | null
+          awardee_uei?: string | null
+          base_type?: string | null
+          classification_code?: string | null
           created_at?: string | null
           department?: string | null
           description?: string | null
@@ -4760,6 +4783,9 @@ export type Database = {
           pop_state?: string | null
           pop_zip?: string | null
           posted_date?: string | null
+          primary_contact_email?: string | null
+          primary_contact_name?: string | null
+          primary_contact_phone?: string | null
           psc_code?: string | null
           raw_data?: Json | null
           resource_links?: Json | null
@@ -4767,7 +4793,9 @@ export type Database = {
           search_text?: string | null
           search_vector?: unknown
           set_aside?: string | null
+          set_aside_code?: string | null
           solicitation_number?: string | null
+          source?: string | null
           status?: string | null
           sub_tier?: string | null
           title: string
@@ -4776,8 +4804,17 @@ export type Database = {
         }
         Update: {
           archive_date?: string | null
+          award_amount?: number | null
           award_ceiling?: number | null
+          award_date?: string | null
           award_floor?: number | null
+          award_number?: string | null
+          awardee_city?: string | null
+          awardee_name?: string | null
+          awardee_state?: string | null
+          awardee_uei?: string | null
+          base_type?: string | null
+          classification_code?: string | null
           created_at?: string | null
           department?: string | null
           description?: string | null
@@ -4792,6 +4829,9 @@ export type Database = {
           pop_state?: string | null
           pop_zip?: string | null
           posted_date?: string | null
+          primary_contact_email?: string | null
+          primary_contact_name?: string | null
+          primary_contact_phone?: string | null
           psc_code?: string | null
           raw_data?: Json | null
           resource_links?: Json | null
@@ -4799,7 +4839,9 @@ export type Database = {
           search_text?: string | null
           search_vector?: unknown
           set_aside?: string | null
+          set_aside_code?: string | null
           solicitation_number?: string | null
+          source?: string | null
           status?: string | null
           sub_tier?: string | null
           title?: string
