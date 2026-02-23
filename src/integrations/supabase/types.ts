@@ -7142,6 +7142,18 @@ export type Database = {
         }
         Returns: undefined
       }
+      compute_market_concentration: {
+        Args: { p_agency?: string; p_naics?: string; p_state?: string }
+        Returns: {
+          concentration_level: string
+          contract_count: number
+          contractor_count: number
+          hhi_score: number
+          market_label: string
+          top_contractors: Json
+          total_value: number
+        }[]
+      }
       count_unresolved_records: { Args: never; Returns: number }
       create_record_relationship: {
         Args: {
@@ -7307,6 +7319,18 @@ export type Database = {
         }[]
       }
       get_admin_stats: { Args: never; Returns: Json }
+      get_agency_buying_patterns: {
+        Args: { p_agency?: string; p_naics?: string }
+        Returns: {
+          agency: string
+          contract_count: number
+          fiscal_quarter: string
+          is_peak: boolean
+          pct_of_annual: number
+          quarter_label: string
+          total_value: number
+        }[]
+      }
       get_entity_360: { Args: { p_entity_id: string }; Returns: Json }
       get_entity_network: {
         Args: { p_depth?: number; p_entity_id: string; p_min_strength?: number }
@@ -7338,6 +7362,36 @@ export type Database = {
           name: string
           priority: number
           slug: string
+        }[]
+      }
+      get_recompete_pipeline: {
+        Args: {
+          p_min_value?: number
+          p_months_ahead?: number
+          p_state?: string
+        }
+        Returns: {
+          award_amount: number
+          award_id: string
+          awarding_agency: string
+          contract_id: string
+          days_until_expiry: number
+          end_date: string
+          naics_code: string
+          pop_state: string
+          recipient_name: string
+          urgency: string
+        }[]
+      }
+      get_set_aside_analysis: {
+        Args: { p_naics?: string; p_set_aside?: string; p_state?: string }
+        Returns: {
+          avg_contract_value: number
+          contract_count: number
+          contractor_count: number
+          set_aside: string
+          top_contractors: Json
+          total_value: number
         }[]
       }
       get_system_health: {
@@ -7382,6 +7436,19 @@ export type Database = {
         }[]
       }
       get_user_dashboard: { Args: { p_user_id: string }; Returns: Json }
+      get_velocity_signals: {
+        Args: { p_limit?: number; p_months?: number; p_state?: string }
+        Returns: {
+          contract_growth_pct: number
+          entity_name: string
+          prior_contracts: number
+          prior_value: number
+          recent_contracts: number
+          recent_value: number
+          signal: string
+          value_growth_pct: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

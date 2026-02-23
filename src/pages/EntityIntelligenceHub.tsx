@@ -7,7 +7,7 @@ import {
   Building2, MapPin, Award, FileText, Users, TrendingUp, Shield,
   ChevronLeft, ChevronRight, Star, Target, DollarSign, Heart,
   Download, GitCompare, Clock, ExternalLink, ChevronDown, ChevronUp,
-  AlertTriangle, CheckCircle2, Info, Zap, BookmarkPlus
+  AlertTriangle, CheckCircle2, Info, Zap, BookmarkPlus, Brain
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -240,6 +240,7 @@ export default function EntityIntelligenceHub() {
                     { value: 'competitors', icon: Users, label: 'Competitors' },
                     { value: 'relationships', icon: Target, label: 'Relationships' },
                     { value: 'timeline', icon: Clock, label: 'Timeline' },
+                    { value: 'intelligence', icon: Brain, label: 'Intelligence' },
                   ].map(t => (
                     <TabsTrigger key={t.value} value={t.value} className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none gap-1.5">
                       <t.icon className="h-4 w-4" />{t.label}
@@ -252,6 +253,7 @@ export default function EntityIntelligenceHub() {
                 <TabsContent value="competitors" className="mt-6"><CompetitorsTab entityId={id!} /></TabsContent>
                 <TabsContent value="relationships" className="mt-6"><RelationshipsTab entityId={id!} /></TabsContent>
                 <TabsContent value="timeline" className="mt-6"><TimelineTab entityId={id!} /></TabsContent>
+                <TabsContent value="intelligence" className="mt-6"><IntelligenceTab entityName={entity.canonical_name} /></TabsContent>
               </Tabs>
             </div>
 
@@ -651,6 +653,135 @@ function InsightsSidebar({ entityId }: { entityId: string }) {
         })}
       </CardContent>
     </Card>
+  );
+}
+
+// ── INTELLIGENCE TAB ──
+function IntelligenceTab({ entityName }: { entityName: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['entity-intelligence', entityName],
+    queryFn: async () => {
+      const { data: contracts } = await supabase
+        .from('contracts')
+        .select('naics_code, awarding_agency, award_amount, award_date, end_date, set_aside_type, pop_state')
+        .ilike('recipient_name', `%${entityName}%`)
+        .order('award_amount', { ascending: false });
+
+      if (!contracts?.length) return null;
+
+      const totalValue = contracts.reduce((sum, c) => sum + (Number(c.award_amount) || 0), 0);
+      const topNaics = contracts.reduce((acc, c) => {
+        if (c.naics_code) acc[c.naics_code] = (acc[c.naics_code] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      const topAgencies = contracts.reduce((acc, c) => {
+        if (c.awarding_agency) acc[c.awarding_agency] = (acc[c.awarding_agency] || 0) + (Number(c.award_amount) || 0);
+        return acc;
+      }, {} as Record<string, number>);
+      
+      const expiringContracts = contracts.filter(c => {
+        if (!c.end_date) return false;
+        const end = new Date(c.end_date);
+        const monthsAway = (end.getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 30);
+        return monthsAway > 0 && monthsAway <= 12;
+      });
+
+      return {
+        totalValue,
+        contractCount: contracts.length,
+        topNaics: Object.entries(topNaics).sort((a, b) => b[1] - a[1]).slice(0, 5),
+        topAgencies: Object.entries(topAgencies).sort((a, b) => b[1] - a[1]).slice(0, 5),
+        expiringContracts,
+        expiringValue: expiringContracts.reduce((sum, c) => sum + (Number(c.award_amount) || 0), 0),
+        states: [...new Set(contracts.map(c => c.pop_state).filter(Boolean))],
+        setAsides: [...new Set(contracts.map(c => c.set_aside_type).filter(Boolean))],
+      };
+    },
+    staleTime: 5 * 60 * 1000,
+    enabled: !!entityName,
+  });
+
+  if (isLoading) return <div className="space-y-3">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20" />)}</div>;
+  if (!data) return <EmptyState icon={Brain} title="No intelligence data" desc="This entity needs contract data to generate intelligence." />;
+
+  const URGENCY_COLORS: Record<string, string> = {
+    critical: 'bg-red-100 text-red-700',
+    high: 'bg-orange-100 text-orange-700',
+    medium: 'bg-yellow-100 text-yellow-700',
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Summary Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="p-4"><p className="text-xs text-muted-foreground">Portfolio Value</p><p className="text-xl font-bold text-primary">{fmt(data.totalValue)}</p></Card>
+        <Card className="p-4"><p className="text-xs text-muted-foreground">Contracts</p><p className="text-xl font-bold">{data.contractCount}</p></Card>
+        <Card className="p-4"><p className="text-xs text-muted-foreground">Agencies</p><p className="text-xl font-bold">{data.topAgencies.length}</p></Card>
+        <Card className="p-4"><p className="text-xs text-muted-foreground">NAICS Codes</p><p className="text-xl font-bold">{data.topNaics.length}</p></Card>
+      </div>
+
+      {/* Recompete Exposure */}
+      {data.expiringContracts.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-amber-600" />Recompete Exposure ({data.expiringContracts.length} contracts, {fmt(data.expiringValue)})</CardTitle></CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {data.expiringContracts.slice(0, 5).map((c, i) => {
+                const daysLeft = Math.ceil((new Date(c.end_date!).getTime() - Date.now()) / 86400000);
+                const urgency = daysLeft <= 90 ? 'critical' : daysLeft <= 180 ? 'high' : 'medium';
+                return (
+                  <div key={i} className="flex items-center justify-between text-sm p-2 rounded bg-muted/30">
+                    <span className="truncate max-w-[200px]">{c.awarding_agency}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-primary">{fmt(Number(c.award_amount))}</span>
+                      <Badge className={URGENCY_COLORS[urgency]}>{daysLeft}d</Badge>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Agency Portfolio */}
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-sm">Agency Portfolio</CardTitle></CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            {data.topAgencies.map(([agency, value], i) => {
+              const pct = data.totalValue > 0 ? (value / data.totalValue) * 100 : 0;
+              return (
+                <div key={i} className="space-y-1">
+                  <div className="flex justify-between text-sm"><span className="truncate max-w-[250px]">{agency}</span><span className="font-mono text-primary">{fmt(value)}</span></div>
+                  <div className="h-1.5 bg-muted rounded-full overflow-hidden"><div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} /></div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* NAICS Concentration */}
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-sm">NAICS Concentration</CardTitle></CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            {data.topNaics.map(([code, count], i) => (
+              <Badge key={i} variant="secondary" className="font-mono">{code} ({count})</Badge>
+            ))}
+          </div>
+          {data.setAsides.length > 0 && (
+            <div className="mt-3 pt-3 border-t">
+              <p className="text-xs text-muted-foreground mb-1.5">Set-Asides Used</p>
+              <div className="flex flex-wrap gap-1.5">
+                {data.setAsides.map((sa, i) => <Badge key={i} variant="outline" className="text-xs">{sa}</Badge>)}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 

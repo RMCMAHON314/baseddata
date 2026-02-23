@@ -1,10 +1,11 @@
 // BASED DATA - Market Explorer — Contract-based filtering with real data
 import { useState, useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, Filter, Download, Building2, DollarSign, SlidersHorizontal,
-  BookmarkPlus, X, ChevronRight, Loader2, Compass, Users, FileText
+  BookmarkPlus, X, ChevronRight, Loader2, Compass, Users, FileText, Shield
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
+import { supabase } from '@/integrations/supabase/client';
 import { useMarketExplorer, useMarketFilterOptions, useSaveSearch } from '@/hooks';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useExportCSV } from '@/hooks/useExportData';
@@ -110,6 +112,22 @@ export default function MarketExplorer() {
   const { data: results, isLoading: loadingResults, isFetching } = useMarketExplorer(filters);
   const saveSearchMutation = useSaveSearch();
   const { exportToCSV } = useExportCSV();
+
+  // Market intelligence via HHI
+  const { data: marketIntel } = useQuery({
+    queryKey: ['market-intel-hhi', filters.naics, filters.agency, filters.state],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('compute_market_concentration', {
+        p_naics: filters.naics || null,
+        p_agency: filters.agency || null,
+        p_state: filters.state || null,
+      });
+      if (error) throw error;
+      return (data as any)?.[0] || null;
+    },
+    enabled: hasFilters,
+    staleTime: 5 * 60 * 1000,
+  });
 
   // Computed market summary
   const summary = useMemo(() => {
@@ -386,7 +404,32 @@ export default function MarketExplorer() {
                     </div>
                   )}
 
-                  {/* Top 5 Contractors Chart */}
+                  {/* Market Intelligence Card */}
+                  {marketIntel && (
+                    <Card className="mb-6 border-primary/20">
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          <Shield className={`h-5 w-5 mt-0.5 shrink-0 ${Number(marketIntel.hhi_score) > 2500 ? 'text-red-500' : Number(marketIntel.hhi_score) > 1500 ? 'text-amber-500' : 'text-emerald-500'}`} />
+                          <div>
+                            <p className="font-medium text-sm">
+                              Market Intelligence — HHI: {Number(marketIntel.hhi_score).toLocaleString()}
+                              <Badge variant="outline" className="ml-2 text-xs">{marketIntel.concentration_level}</Badge>
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              This market has {Number(marketIntel.contractor_count)} contractors competing for {fmt(Number(marketIntel.total_value))} in contracts.
+                            </p>
+                            {Number(marketIntel.hhi_score) > 2500 && (() => {
+                              const top = marketIntel.top_contractors?.[0] || (typeof marketIntel.top_contractors === 'string' ? JSON.parse(marketIntel.top_contractors)?.[0] : null);
+                              return top ? <p className="text-xs text-red-600 mt-1">⚠️ Highly concentrated — dominated by {top.name} ({top.share_pct}% share)</p> : null;
+                            })()}
+                            {Number(marketIntel.hhi_score) < 1500 && (
+                              <p className="text-xs text-emerald-600 mt-1">✅ Competitive market — good entry opportunity</p>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
                   {topContractors.length > 0 && (
                     <Card className="mb-6">
                       <CardHeader className="pb-2">
