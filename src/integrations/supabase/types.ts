@@ -8019,6 +8019,34 @@ export type Database = {
         }[]
       }
       get_flywheel_health: { Args: never; Returns: Json }
+      get_labor_rate_stats: {
+        Args: { p_keyword: string }
+        Returns: {
+          avg_rate: number
+          category_keyword: string
+          education_breakdown: Json
+          large_biz_avg: number
+          max_rate: number
+          median_rate: number
+          min_rate: number
+          small_biz_avg: number
+          total_rates: number
+          vendors_count: number
+        }[]
+      }
+      get_labor_rates: {
+        Args: { p_education?: string; p_keyword: string; p_size?: string }
+        Returns: {
+          business_size: string
+          clearance: string
+          contract_number: string
+          education: string
+          hourly_rate: number
+          labor_category: string
+          min_experience: number
+          vendor_name: string
+        }[]
+      }
       get_matched_sources: {
         Args: { p_query: string }
         Returns: {
@@ -8040,6 +8068,7 @@ export type Database = {
           distinct_states: number
           last_vacuum_at: string
           last_vacuum_loaded: number
+          last_vacuum_status: string
           total_contract_value: number
           total_contracts: number
           total_entities: number
