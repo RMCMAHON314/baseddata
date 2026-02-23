@@ -3539,6 +3539,108 @@ export type Database = {
         }
         Relationships: []
       }
+      fpds_awards: {
+        Row: {
+          award_type: string | null
+          base_and_all_options: number | null
+          completion_date: string | null
+          contracting_department: string | null
+          contracting_office: string | null
+          contracting_subtier: string | null
+          created_at: string | null
+          description_of_requirement: string | null
+          dollars_obligated: number | null
+          effective_date: string | null
+          extent_competed: string | null
+          funding_department: string | null
+          id: string
+          last_modified: string | null
+          modification_number: string | null
+          naics_code: string | null
+          number_of_offers: number | null
+          piid: string | null
+          pop_city: string | null
+          pop_state: string | null
+          psc_code: string | null
+          raw_data: Json | null
+          set_aside: string | null
+          solicitation_id: string | null
+          source: string | null
+          vendor_cage: string | null
+          vendor_city: string | null
+          vendor_name: string | null
+          vendor_state: string | null
+          vendor_uei: string | null
+          vendor_zip: string | null
+        }
+        Insert: {
+          award_type?: string | null
+          base_and_all_options?: number | null
+          completion_date?: string | null
+          contracting_department?: string | null
+          contracting_office?: string | null
+          contracting_subtier?: string | null
+          created_at?: string | null
+          description_of_requirement?: string | null
+          dollars_obligated?: number | null
+          effective_date?: string | null
+          extent_competed?: string | null
+          funding_department?: string | null
+          id?: string
+          last_modified?: string | null
+          modification_number?: string | null
+          naics_code?: string | null
+          number_of_offers?: number | null
+          piid?: string | null
+          pop_city?: string | null
+          pop_state?: string | null
+          psc_code?: string | null
+          raw_data?: Json | null
+          set_aside?: string | null
+          solicitation_id?: string | null
+          source?: string | null
+          vendor_cage?: string | null
+          vendor_city?: string | null
+          vendor_name?: string | null
+          vendor_state?: string | null
+          vendor_uei?: string | null
+          vendor_zip?: string | null
+        }
+        Update: {
+          award_type?: string | null
+          base_and_all_options?: number | null
+          completion_date?: string | null
+          contracting_department?: string | null
+          contracting_office?: string | null
+          contracting_subtier?: string | null
+          created_at?: string | null
+          description_of_requirement?: string | null
+          dollars_obligated?: number | null
+          effective_date?: string | null
+          extent_competed?: string | null
+          funding_department?: string | null
+          id?: string
+          last_modified?: string | null
+          modification_number?: string | null
+          naics_code?: string | null
+          number_of_offers?: number | null
+          piid?: string | null
+          pop_city?: string | null
+          pop_state?: string | null
+          psc_code?: string | null
+          raw_data?: Json | null
+          set_aside?: string | null
+          solicitation_id?: string | null
+          source?: string | null
+          vendor_cage?: string | null
+          vendor_city?: string | null
+          vendor_name?: string | null
+          vendor_state?: string | null
+          vendor_uei?: string | null
+          vendor_zip?: string | null
+        }
+        Relationships: []
+      }
       fused_records: {
         Row: {
           base_record_id: string
@@ -4628,6 +4730,69 @@ export type Database = {
           },
         ]
       }
+      nsf_awards: {
+        Row: {
+          abstract: string | null
+          agency: string | null
+          award_amount: number | null
+          award_number: string | null
+          created_at: string | null
+          exp_date: string | null
+          fund_agency: string | null
+          id: string
+          institution_city: string | null
+          institution_name: string | null
+          institution_state: string | null
+          institution_zip: string | null
+          pi_first_name: string | null
+          pi_last_name: string | null
+          program_element: string | null
+          source: string | null
+          start_date: string | null
+          title: string | null
+        }
+        Insert: {
+          abstract?: string | null
+          agency?: string | null
+          award_amount?: number | null
+          award_number?: string | null
+          created_at?: string | null
+          exp_date?: string | null
+          fund_agency?: string | null
+          id?: string
+          institution_city?: string | null
+          institution_name?: string | null
+          institution_state?: string | null
+          institution_zip?: string | null
+          pi_first_name?: string | null
+          pi_last_name?: string | null
+          program_element?: string | null
+          source?: string | null
+          start_date?: string | null
+          title?: string | null
+        }
+        Update: {
+          abstract?: string | null
+          agency?: string | null
+          award_amount?: number | null
+          award_number?: string | null
+          created_at?: string | null
+          exp_date?: string | null
+          fund_agency?: string | null
+          id?: string
+          institution_city?: string | null
+          institution_name?: string | null
+          institution_state?: string | null
+          institution_zip?: string | null
+          pi_first_name?: string | null
+          pi_last_name?: string | null
+          program_element?: string | null
+          source?: string | null
+          start_date?: string | null
+          title?: string | null
+        }
+        Relationships: []
+      }
       ocean_health_snapshots: {
         Row: {
           active_sources: number | null
@@ -5671,6 +5836,141 @@ export type Database = {
         }
         Relationships: []
       }
+      sam_entities: {
+        Row: {
+          business_types: Json | null
+          cage_code: string | null
+          congressional_district: string | null
+          created_at: string | null
+          dba_name: string | null
+          entity_structure: string | null
+          entity_url: string | null
+          expiration_date: string | null
+          id: string
+          legal_business_name: string | null
+          linked_entity_id: string | null
+          physical_address_line1: string | null
+          physical_city: string | null
+          physical_country: string | null
+          physical_state: string | null
+          physical_zip: string | null
+          purpose_of_registration: string | null
+          registration_date: string | null
+          registration_status: string | null
+          source: string | null
+          uei: string
+          updated_at: string | null
+        }
+        Insert: {
+          business_types?: Json | null
+          cage_code?: string | null
+          congressional_district?: string | null
+          created_at?: string | null
+          dba_name?: string | null
+          entity_structure?: string | null
+          entity_url?: string | null
+          expiration_date?: string | null
+          id?: string
+          legal_business_name?: string | null
+          linked_entity_id?: string | null
+          physical_address_line1?: string | null
+          physical_city?: string | null
+          physical_country?: string | null
+          physical_state?: string | null
+          physical_zip?: string | null
+          purpose_of_registration?: string | null
+          registration_date?: string | null
+          registration_status?: string | null
+          source?: string | null
+          uei: string
+          updated_at?: string | null
+        }
+        Update: {
+          business_types?: Json | null
+          cage_code?: string | null
+          congressional_district?: string | null
+          created_at?: string | null
+          dba_name?: string | null
+          entity_structure?: string | null
+          entity_url?: string | null
+          expiration_date?: string | null
+          id?: string
+          legal_business_name?: string | null
+          linked_entity_id?: string | null
+          physical_address_line1?: string | null
+          physical_city?: string | null
+          physical_country?: string | null
+          physical_state?: string | null
+          physical_zip?: string | null
+          purpose_of_registration?: string | null
+          registration_date?: string | null
+          registration_status?: string | null
+          source?: string | null
+          uei?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      sam_exclusions: {
+        Row: {
+          active_date: string | null
+          cage_code: string | null
+          city: string | null
+          classification: string | null
+          country: string | null
+          created_at: string | null
+          description: string | null
+          excluding_agency: string | null
+          exclusion_name: string | null
+          exclusion_program: string | null
+          exclusion_type: string | null
+          id: string
+          record_status: string | null
+          source: string | null
+          state: string | null
+          termination_date: string | null
+          uei: string | null
+        }
+        Insert: {
+          active_date?: string | null
+          cage_code?: string | null
+          city?: string | null
+          classification?: string | null
+          country?: string | null
+          created_at?: string | null
+          description?: string | null
+          excluding_agency?: string | null
+          exclusion_name?: string | null
+          exclusion_program?: string | null
+          exclusion_type?: string | null
+          id?: string
+          record_status?: string | null
+          source?: string | null
+          state?: string | null
+          termination_date?: string | null
+          uei?: string | null
+        }
+        Update: {
+          active_date?: string | null
+          cage_code?: string | null
+          city?: string | null
+          classification?: string | null
+          country?: string | null
+          created_at?: string | null
+          description?: string | null
+          excluding_agency?: string | null
+          exclusion_name?: string | null
+          exclusion_program?: string | null
+          exclusion_type?: string | null
+          id?: string
+          record_status?: string | null
+          source?: string | null
+          state?: string | null
+          termination_date?: string | null
+          uei?: string | null
+        }
+        Relationships: []
+      }
       saved_queries: {
         Row: {
           category: string | null
@@ -5755,6 +6055,102 @@ export type Database = {
           schedule?: string | null
           updated_at?: string | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      sbir_awards: {
+        Row: {
+          abstract: string | null
+          agency: string | null
+          award_amount: number | null
+          award_link: string | null
+          award_title: string | null
+          award_year: number | null
+          branch: string | null
+          city: string | null
+          company_url: string | null
+          contract: string | null
+          created_at: string | null
+          firm: string
+          hubzone_owned: string | null
+          id: string
+          number_employees: number | null
+          phase: string | null
+          pi_email: string | null
+          pi_name: string | null
+          poc_email: string | null
+          poc_name: string | null
+          poc_phone: string | null
+          program: string | null
+          socially_disadvantaged: string | null
+          source: string | null
+          state: string | null
+          uei: string | null
+          updated_at: string | null
+          women_owned: string | null
+          zip: string | null
+        }
+        Insert: {
+          abstract?: string | null
+          agency?: string | null
+          award_amount?: number | null
+          award_link?: string | null
+          award_title?: string | null
+          award_year?: number | null
+          branch?: string | null
+          city?: string | null
+          company_url?: string | null
+          contract?: string | null
+          created_at?: string | null
+          firm: string
+          hubzone_owned?: string | null
+          id?: string
+          number_employees?: number | null
+          phase?: string | null
+          pi_email?: string | null
+          pi_name?: string | null
+          poc_email?: string | null
+          poc_name?: string | null
+          poc_phone?: string | null
+          program?: string | null
+          socially_disadvantaged?: string | null
+          source?: string | null
+          state?: string | null
+          uei?: string | null
+          updated_at?: string | null
+          women_owned?: string | null
+          zip?: string | null
+        }
+        Update: {
+          abstract?: string | null
+          agency?: string | null
+          award_amount?: number | null
+          award_link?: string | null
+          award_title?: string | null
+          award_year?: number | null
+          branch?: string | null
+          city?: string | null
+          company_url?: string | null
+          contract?: string | null
+          created_at?: string | null
+          firm?: string
+          hubzone_owned?: string | null
+          id?: string
+          number_employees?: number | null
+          phase?: string | null
+          pi_email?: string | null
+          pi_name?: string | null
+          poc_email?: string | null
+          poc_name?: string | null
+          poc_phone?: string | null
+          program?: string | null
+          socially_disadvantaged?: string | null
+          source?: string | null
+          state?: string | null
+          uei?: string | null
+          updated_at?: string | null
+          women_owned?: string | null
+          zip?: string | null
         }
         Relationships: []
       }

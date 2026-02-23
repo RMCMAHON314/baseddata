@@ -89,6 +89,60 @@ export const DataFloodPanel = () => {
               </Button>
             </div>
 
+            <div className="border-t border-border pt-3 mt-1">
+              <p className="text-xs text-muted-foreground mb-2 font-semibold">New Data Sources</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <Button
+                  onClick={() => invoke('load-sbir', { agency: 'DOD', year: 2024 }, 'SBIR DOD')}
+                  disabled={!!loading} size="sm" variant="outline"
+                >
+                  {loading === 'SBIR DOD' ? '⏳ Loading...' : '🔬 SBIR Awards (DOD)'}
+                </Button>
+                <Button
+                  onClick={() => invoke('load-sbir', { agency: 'HHS', year: 2024 }, 'SBIR HHS')}
+                  disabled={!!loading} size="sm" variant="outline"
+                >
+                  {loading === 'SBIR HHS' ? '⏳ Loading...' : '🧬 SBIR Awards (HHS)'}
+                </Button>
+                <Button
+                  onClick={() => invoke('load-sam-entities', { state: 'MD' }, 'SAM Entities MD')}
+                  disabled={!!loading} size="sm" variant="outline"
+                >
+                  {loading === 'SAM Entities MD' ? '⏳ Loading...' : '🏢 SAM Entities (MD)'}
+                </Button>
+                <Button
+                  onClick={() => invoke('load-sam-entities', { state: 'VA' }, 'SAM Entities VA')}
+                  disabled={!!loading} size="sm" variant="outline"
+                >
+                  {loading === 'SAM Entities VA' ? '⏳ Loading...' : '🏛️ SAM Entities (VA)'}
+                </Button>
+                <Button
+                  onClick={() => invoke('load-sam-exclusions', {}, 'SAM Exclusions')}
+                  disabled={!!loading} size="sm" variant="destructive"
+                >
+                  {loading === 'SAM Exclusions' ? '⏳ Loading...' : '🚫 Load Exclusions'}
+                </Button>
+                <Button
+                  onClick={() => invoke('load-fpds', { department_code: '9700' }, 'FPDS DoD')}
+                  disabled={!!loading} size="sm" variant="outline"
+                >
+                  {loading === 'FPDS DoD' ? '⏳ Loading...' : '📋 FPDS Awards (DoD)'}
+                </Button>
+                <Button
+                  onClick={() => invoke('load-nsf', { keyword: 'cybersecurity' }, 'NSF Cyber')}
+                  disabled={!!loading} size="sm" variant="outline"
+                >
+                  {loading === 'NSF Cyber' ? '⏳ Loading...' : '🎓 NSF Awards (Cyber)'}
+                </Button>
+                <Button
+                  onClick={() => invoke('load-nsf', { keyword: 'artificial intelligence' }, 'NSF AI')}
+                  disabled={!!loading} size="sm" variant="outline"
+                >
+                  {loading === 'NSF AI' ? '⏳ Loading...' : '🤖 NSF Awards (AI)'}
+                </Button>
+              </div>
+            </div>
+
             {results && (
               <pre className="bg-muted rounded p-3 text-xs text-foreground overflow-auto max-h-48">
                 {JSON.stringify(results, null, 2)}

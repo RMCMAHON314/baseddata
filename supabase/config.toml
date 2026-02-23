@@ -59,3 +59,18 @@ verify_jwt = false
 
 [functions.scheduled-refresh]
 verify_jwt = false
+
+[functions.load-sbir]
+verify_jwt = false
+
+[functions.load-sam-entities]
+verify_jwt = false
+
+[functions.load-sam-exclusions]
+verify_jwt = false
+
+[functions.load-fpds]
+verify_jwt = false
+
+[functions.load-nsf]
+verify_jwt = false
