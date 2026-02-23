@@ -156,6 +156,15 @@ export const DataFloodPanel = () => {
               <Btn fn="scheduled-refresh" body={{}} label="Run Full Scheduled Refresh" emoji="🔄" variant="default" />
             </Section>
 
+            {/* VACUUM ENGINE */}
+            <Section title="🚀 Autonomous Vacuum Engine">
+              <Btn fn="vacuum-all" body={{ mode: 'quick' }} label="Quick Vacuum (5 states)" emoji="⚡" variant="secondary" />
+              <Btn fn="vacuum-all" body={{ mode: 'full' }} label="FULL VACUUM (all sources)" emoji="💣" variant="destructive" />
+              <Btn fn="vacuum-all" body={{ mode: 'contracts-only' }} label="Contracts Only" emoji="📄" />
+              <Btn fn="vacuum-all" body={{ mode: 'sbir-only' }} label="SBIR Only" emoji="🔬" />
+              <Btn fn="vacuum-all" body={{ mode: 'opportunities-only' }} label="Opportunities Only" emoji="📋" />
+            </Section>
+
             {results && (
               <pre className="bg-muted rounded p-3 text-xs text-foreground overflow-auto max-h-48">
                 {JSON.stringify(results, null, 2)}
