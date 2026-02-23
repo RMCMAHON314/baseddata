@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Building2, Target, BarChart3, Menu, X,
   Bell, User, LogOut, Settings, Bookmark, GitCompare,
-  ChevronRight, Database, FileText, Compass, Brain
+  ChevronRight, Database, FileText, Compass, Brain, Beaker
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +24,7 @@ const NAV_ITEMS = [
   { path: '/entities', label: 'Entities', icon: Building2 },
   { path: '/opportunities', label: 'Opportunities', icon: Target },
   { path: '/intelligence', label: 'Intelligence', icon: Brain },
+  { path: '/sbir', label: 'SBIR', icon: Beaker },
   { path: '/analytics', label: 'Analytics', icon: BarChart3 },
 ];
 

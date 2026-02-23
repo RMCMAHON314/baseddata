@@ -7538,6 +7538,18 @@ export type Database = {
         }
         Returns: undefined
       }
+      compute_entity_risk: {
+        Args: { p_entity_name: string }
+        Returns: {
+          concentration_risk: number
+          exclusion_status: string
+          recompete_exposure: number
+          registration_status: string
+          risk_level: string
+          risk_score: number
+          top_agency_pct: number
+        }[]
+      }
       compute_market_concentration: {
         Args: { p_agency?: string; p_naics?: string; p_state?: string }
         Returns: {
@@ -7591,6 +7603,17 @@ export type Database = {
           details: Json
           entity_id: string
           entity_name: string
+        }[]
+      }
+      detect_teaming_pairs: {
+        Args: { p_agency?: string; p_limit?: number; p_naics?: string }
+        Returns: {
+          co_occurrence_score: number
+          combined_value: number
+          entity_a: string
+          entity_b: string
+          shared_agencies: string[]
+          shared_agency_count: number
         }[]
       }
       discover_competitors: { Args: never; Returns: number }
@@ -7727,6 +7750,18 @@ export type Database = {
           total_value: number
         }[]
       }
+      get_competition_intelligence: {
+        Args: { p_agency?: string; p_naics?: string; p_state?: string }
+        Returns: {
+          avg_offers: number
+          competition_breakdown: Json
+          full_open_pct: number
+          offers_distribution: Json
+          sole_source_pct: number
+          total_awards: number
+          total_value: number
+        }[]
+      }
       get_entity_360: { Args: { p_entity_id: string }; Returns: Json }
       get_entity_network: {
         Args: { p_depth?: number; p_entity_id: string; p_min_strength?: number }
@@ -7777,6 +7812,17 @@ export type Database = {
           pop_state: string
           recipient_name: string
           urgency: string
+        }[]
+      }
+      get_sbir_landscape: {
+        Args: { p_agency?: string; p_state?: string }
+        Returns: {
+          agency_breakdown: Json
+          diversity_stats: Json
+          phase_breakdown: Json
+          top_firms: Json
+          total_awards: number
+          total_value: number
         }[]
       }
       get_set_aside_analysis: {

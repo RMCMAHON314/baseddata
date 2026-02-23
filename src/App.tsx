@@ -16,6 +16,7 @@ const MarketExplorer = lazy(() => import("./pages/MarketExplorer"));
 const OpportunityCommandCenter = lazy(() => import("./pages/OpportunityCommandCenter"));
 const AnalyticsCommandCenter = lazy(() => import("./pages/AnalyticsCommandCenter"));
 const IntelligenceDashboard = lazy(() => import("./pages/IntelligenceDashboard"));
+const SbirExplorer = lazy(() => import("./pages/SbirExplorer"));
 const EntitiesList = lazy(() => import("./pages/EntitiesList"));
 const SavedSearches = lazy(() => import("./pages/SavedSearches"));
 const AgencyDeepDive = lazy(() => import("./pages/AgencyDeepDive"));
@@ -72,6 +73,7 @@ const App = () => {
                 <Route path="/opportunities" element={<OpportunityCommandCenter />} />
                 <Route path="/analytics" element={<AnalyticsCommandCenter />} />
                 <Route path="/intelligence" element={<IntelligenceDashboard />} />
+                <Route path="/sbir" element={<SbirExplorer />} />
 
                 {/* New Routes */}
                 <Route path="/saved-searches" element={<SavedSearches />} />

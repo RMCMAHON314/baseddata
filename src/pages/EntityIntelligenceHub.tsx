@@ -241,6 +241,7 @@ export default function EntityIntelligenceHub() {
                     { value: 'relationships', icon: Target, label: 'Relationships' },
                     { value: 'timeline', icon: Clock, label: 'Timeline' },
                     { value: 'intelligence', icon: Brain, label: 'Intelligence' },
+                    { value: 'risk', icon: Shield, label: 'Risk' },
                   ].map(t => (
                     <TabsTrigger key={t.value} value={t.value} className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none gap-1.5">
                       <t.icon className="h-4 w-4" />{t.label}
@@ -254,6 +255,7 @@ export default function EntityIntelligenceHub() {
                 <TabsContent value="relationships" className="mt-6"><RelationshipsTab entityId={id!} /></TabsContent>
                 <TabsContent value="timeline" className="mt-6"><TimelineTab entityId={id!} /></TabsContent>
                 <TabsContent value="intelligence" className="mt-6"><IntelligenceTab entityName={entity.canonical_name} /></TabsContent>
+                <TabsContent value="risk" className="mt-6"><RiskTab entityName={entity.canonical_name} /></TabsContent>
               </Tabs>
             </div>
 
@@ -781,6 +783,68 @@ function IntelligenceTab({ entityName }: { entityName: string }) {
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+// ── RISK TAB ──
+function RiskTab({ entityName }: { entityName: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['entity-risk', entityName],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('compute_entity_risk', { p_entity_name: entityName });
+      if (error) throw error;
+      return (data as any)?.[0] || null;
+    },
+    enabled: !!entityName,
+  });
+
+  if (isLoading) return <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20" />)}</div>;
+  if (!data) return <EmptyState icon={Shield} title="No risk data" desc="Risk analysis requires SAM entity and exclusion data to be loaded." />;
+
+  const riskColors: Record<string, string> = {
+    LOW: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+    MEDIUM: 'bg-amber-100 text-amber-700 border-amber-200',
+    HIGH: 'bg-red-100 text-red-700 border-red-200',
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <Card className="p-4 text-center">
+          <p className="text-xs text-muted-foreground mb-2">Risk Level</p>
+          <Badge className={riskColors[data.risk_level] || ''} >{data.risk_level}</Badge>
+        </Card>
+        <Card className="p-4 text-center">
+          <p className="text-xs text-muted-foreground mb-2">Risk Score</p>
+          <p className="text-3xl font-bold">{data.risk_score}<span className="text-sm text-muted-foreground">/100</span></p>
+        </Card>
+        <Card className="p-4 text-center">
+          <p className="text-xs text-muted-foreground mb-2">Exclusion Status</p>
+          <Badge className={data.exclusion_status === 'EXCLUDED' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}>{data.exclusion_status}</Badge>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="p-4">
+          <p className="text-xs text-muted-foreground mb-1">SAM Registration</p>
+          <p className="font-semibold">{data.registration_status}</p>
+          {data.registration_status !== 'Active' && (
+            <p className="text-xs text-amber-600 mt-1">⚠️ Not actively registered — may not be eligible for new awards</p>
+          )}
+        </Card>
+        <Card className="p-4">
+          <p className="text-xs text-muted-foreground mb-1">Agency Concentration</p>
+          <p className="font-semibold">{Number(data.top_agency_pct).toFixed(1)}%</p>
+          {Number(data.top_agency_pct) > 60 && (
+            <p className="text-xs text-amber-600 mt-1">⚠️ High concentration — vulnerable to agency budget changes</p>
+          )}
+        </Card>
+        <Card className="p-4">
+          <p className="text-xs text-muted-foreground mb-1">Recompete Exposure (12mo)</p>
+          <p className="font-semibold">{fmt(Number(data.recompete_exposure))}</p>
+        </Card>
+      </div>
     </div>
   );
 }
