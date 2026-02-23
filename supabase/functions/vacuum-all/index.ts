@@ -8,6 +8,9 @@ const corsHeaders = {
 
 interface RunResult { source: string; loaded: number; errors: string[]; pages: number }
 
+const ALL_STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','DC','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY']
+const TOP5 = ['MD','VA','DC','CA','TX']
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
 
@@ -17,18 +20,17 @@ serve(async (req) => {
   )
   const SAM_KEY = Deno.env.get('SAM_API_KEY') || Deno.env.get('DATA_GOV_KEY') || ''
   const body = await req.json().catch(() => ({}))
-  const mode = body.mode || 'full' // 'full' | 'quick' | 'contracts-only' | 'sbir-only' | 'opportunities-only'
+  const mode = body.mode || 'full'
+  // Modes: 'full' | 'quick' | 'contracts-only' | 'grants-only' | 'sbir-only' | 'opportunities-only'
   const startTime = Date.now()
   const results: RunResult[] = []
   const allErrors: string[] = []
 
-  // Create run log entry
   const { data: run } = await supabase.from('vacuum_runs').insert({
     trigger: body.trigger || 'manual', status: 'running', results: { mode }
   }).select('id').single()
   const runId = run?.id
 
-  // Safe fetch with timeout
   async function safeFetch(url: string, options?: RequestInit, timeoutMs = 30000): Promise<Response | null> {
     try {
       const controller = new AbortController()
@@ -37,26 +39,25 @@ serve(async (req) => {
       clearTimeout(timeout)
       return res
     } catch (e: any) {
-      allErrors.push(`Fetch failed: ${url.substring(0, 100)}... — ${e.message}`)
+      allErrors.push(`Fetch: ${url.substring(0, 80)}... — ${e.message}`)
       return null
     }
   }
 
-  // ========== SOURCE 1: USASpending Contracts ==========
-  if (['full', 'quick', 'contracts-only'].includes(mode)) {
-    const states = mode === 'quick'
-      ? ['MD','VA','DC','CA','TX']
-      : ['MD','VA','DC','CA','TX','FL','NY','PA','OH','GA','NC','IL','MA','CO','WA','NJ','AZ','CT','MN','MO','TN','IN','WI','SC','AL','KY','OR','OK','LA','IA','MS','AR','KS','UT','NV','NE','NM','WV','ID','HI','NH','ME','MT','RI','DE','SD','ND','AK','VT','WY']
-    const pagesPerState = mode === 'quick' ? 2 : 3
+  const statesFor = (m: string) => m === 'quick' ? TOP5 : ALL_STATES
+
+  // ========== SOURCE 1A: USASpending CONTRACTS (A,B,C,D) — ALL 50 STATES ==========
+  if (['full','quick','contracts-only'].includes(mode)) {
+    const states = statesFor(mode)
+    const maxPages = mode === 'quick' ? 2 : 5
     let totalLoaded = 0
     const sourceErrors: string[] = []
 
     for (const st of states) {
-      for (let page = 1; page <= pagesPerState; page++) {
+      for (let page = 1; page <= maxPages; page++) {
         try {
           const res = await safeFetch('https://api.usaspending.gov/api/v2/search/spending_by_award/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               filters: {
                 time_period: [{ start_date: '2023-10-01', end_date: '2025-09-30' }],
@@ -67,7 +68,7 @@ serve(async (req) => {
               limit: 100, page, sort: 'Award Amount', order: 'desc', subawards: false
             })
           })
-          if (!res || !res.ok) { sourceErrors.push(`USASpending ${st} p${page}: HTTP ${res?.status || 'timeout'}`); continue }
+          if (!res || !res.ok) { sourceErrors.push(`Contracts ${st} p${page}: ${res?.status}`); continue }
           const data = await res.json()
           if (!data.results?.length) break
           for (const r of data.results) {
@@ -83,31 +84,130 @@ serve(async (req) => {
               pop_state: r['Place of Performance State Code'] || st,
               pop_city: r['Place of Performance City Name'],
               award_type: r['Contract Award Type'], set_aside_type: r['Type of Set Aside'],
-              source: 'usaspending_bulk', updated_at: new Date().toISOString()
+              contract_category: 'contract', source: 'usaspending_bulk', updated_at: new Date().toISOString()
             }, { onConflict: 'award_id', ignoreDuplicates: false })
             if (!error) totalLoaded++
           }
           if (data.results.length < 100) break
-          await new Promise(r => setTimeout(r, 200))
-        } catch (e: any) { sourceErrors.push(`USASpending ${st} p${page}: ${e.message}`) }
+          await new Promise(r => setTimeout(r, 150))
+        } catch (e: any) { sourceErrors.push(`Contracts ${st}: ${e.message}`) }
       }
-      await new Promise(r => setTimeout(r, 100))
+      await new Promise(r => setTimeout(r, 50))
     }
-    results.push({ source: 'usaspending_contracts', loaded: totalLoaded, errors: sourceErrors, pages: states.length * pagesPerState })
+    results.push({ source: 'contracts', loaded: totalLoaded, errors: sourceErrors, pages: states.length * maxPages })
   }
 
-  // ========== SOURCE 2: USASpending Subawards ==========
+  // ========== SOURCE 1B: USASpending IDVs (GWACs, BPAs, IDIQs, FSS) ==========
+  if (['full','contracts-only'].includes(mode)) {
+    const states = ALL_STATES
+    let totalLoaded = 0
+    const sourceErrors: string[] = []
+
+    for (const st of states) {
+      for (let page = 1; page <= 3; page++) {
+        try {
+          const res = await safeFetch('https://api.usaspending.gov/api/v2/search/spending_by_award/', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              filters: {
+                time_period: [{ start_date: '2023-10-01', end_date: '2025-09-30' }],
+                award_type_codes: ['IDV_A','IDV_B','IDV_B_A','IDV_B_B','IDV_B_C','IDV_C','IDV_D','IDV_E'],
+                place_of_performance_locations: [{ country: 'USA', state: st }]
+              },
+              fields: ['Award ID','Recipient Name','Award Amount','Total Obligation','Description','Start Date','End Date','Awarding Agency','Awarding Sub Agency','Funding Agency','NAICS Code','PSC Code','Place of Performance State Code','Place of Performance City Name','Contract Award Type','Type of Set Aside','Recipient UEI','generated_internal_id'],
+              limit: 100, page, sort: 'Award Amount', order: 'desc', subawards: false
+            })
+          })
+          if (!res || !res.ok) { sourceErrors.push(`IDVs ${st} p${page}: ${res?.status}`); continue }
+          const data = await res.json()
+          if (!data.results?.length) break
+          for (const r of data.results) {
+            const { error } = await supabase.from('contracts').upsert({
+              award_id: r['generated_internal_id'] || r['Award ID'],
+              recipient_name: r['Recipient Name'], recipient_uei: r['Recipient UEI'],
+              awarding_agency: r['Awarding Agency'], awarding_sub_agency: r['Awarding Sub Agency'],
+              funding_agency: r['Funding Agency'],
+              award_amount: parseFloat(r['Award Amount']) || 0,
+              total_obligation: parseFloat(r['Total Obligation']) || 0,
+              description: r['Description'], naics_code: r['NAICS Code'], psc_code: r['PSC Code'],
+              award_date: r['Start Date'], start_date: r['Start Date'], end_date: r['End Date'],
+              pop_state: r['Place of Performance State Code'] || st,
+              pop_city: r['Place of Performance City Name'],
+              award_type: r['Contract Award Type'], set_aside_type: r['Type of Set Aside'],
+              contract_category: 'idv', source: 'usaspending_bulk', updated_at: new Date().toISOString()
+            }, { onConflict: 'award_id', ignoreDuplicates: false })
+            if (!error) totalLoaded++
+          }
+          if (data.results.length < 100) break
+          await new Promise(r => setTimeout(r, 150))
+        } catch (e: any) { sourceErrors.push(`IDVs ${st}: ${e.message}`) }
+      }
+    }
+    results.push({ source: 'idvs', loaded: totalLoaded, errors: sourceErrors, pages: states.length * 3 })
+  }
+
+  // ========== SOURCE 1C: USASpending GRANTS (02,03,04,05) — ALL 50 STATES ==========
+  if (['full','quick','grants-only'].includes(mode)) {
+    const states = statesFor(mode)
+    const maxPages = mode === 'quick' ? 2 : 4
+    let totalLoaded = 0
+    const sourceErrors: string[] = []
+
+    for (const st of states) {
+      for (let page = 1; page <= maxPages; page++) {
+        try {
+          const res = await safeFetch('https://api.usaspending.gov/api/v2/search/spending_by_award/', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              filters: {
+                time_period: [{ start_date: '2023-10-01', end_date: '2025-09-30' }],
+                award_type_codes: ['02','03','04','05'],
+                place_of_performance_locations: [{ country: 'USA', state: st }]
+              },
+              fields: ['Award ID','Recipient Name','Award Amount','Description','Start Date','End Date','Awarding Agency','Awarding Sub Agency','Funding Agency','Place of Performance State Code','Place of Performance City Name','Award Type','Recipient UEI','generated_internal_id','CFDA Number'],
+              limit: 100, page, sort: 'Award Amount', order: 'desc', subawards: false
+            })
+          })
+          if (!res || !res.ok) { sourceErrors.push(`Grants ${st} p${page}: ${res?.status}`); continue }
+          const data = await res.json()
+          if (!data.results?.length) break
+          for (const r of data.results) {
+            const { error } = await supabase.from('grants').upsert({
+              award_id: r['generated_internal_id'] || r['Award ID'],
+              recipient_name: r['Recipient Name'], recipient_uei: r['Recipient UEI'],
+              awarding_agency: r['Awarding Agency'], awarding_sub_agency: r['Awarding Sub Agency'],
+              funding_agency: r['Funding Agency'],
+              award_amount: parseFloat(r['Award Amount']) || 0,
+              description: r['Description'],
+              award_date: r['Start Date'], start_date: r['Start Date'], end_date: r['End Date'],
+              recipient_state: r['Place of Performance State Code'] || st,
+              pop_state: r['Place of Performance State Code'] || st,
+              recipient_city: r['Place of Performance City Name'],
+              pop_city: r['Place of Performance City Name'],
+              grant_type: r['Award Type'], cfda_number: r['CFDA Number'],
+              grant_category: 'grant', source: 'usaspending_bulk', updated_at: new Date().toISOString()
+            }, { onConflict: 'award_id', ignoreDuplicates: false })
+            if (!error) totalLoaded++
+          }
+          if (data.results.length < 100) break
+          await new Promise(r => setTimeout(r, 150))
+        } catch (e: any) { sourceErrors.push(`Grants ${st}: ${e.message}`) }
+      }
+      await new Promise(r => setTimeout(r, 50))
+    }
+    results.push({ source: 'grants', loaded: totalLoaded, errors: sourceErrors, pages: states.length * maxPages })
+  }
+
+  // ========== SOURCE 2: USASpending SUBAWARDS — ALL 50 STATES ==========
   if (['full'].includes(mode)) {
     let totalLoaded = 0
     const sourceErrors: string[] = []
-    const subStates = ['MD','VA','DC','CA','TX','FL','NY','PA','OH','GA']
 
-    for (const st of subStates) {
+    for (const st of ALL_STATES) {
       for (let page = 1; page <= 2; page++) {
         try {
           const res = await safeFetch('https://api.usaspending.gov/api/v2/search/spending_by_award/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               filters: {
                 time_period: [{ start_date: '2023-10-01', end_date: '2025-09-30' }],
@@ -118,13 +218,12 @@ serve(async (req) => {
               limit: 100, page, sort: 'Sub-Award Amount', order: 'desc', subawards: true
             })
           })
-          if (!res || !res.ok) { sourceErrors.push(`Subawards ${st} p${page}: HTTP ${res?.status || 'timeout'}`); continue }
+          if (!res || !res.ok) { sourceErrors.push(`Subs ${st} p${page}: ${res?.status}`); continue }
           const data = await res.json()
           if (!data.results?.length) break
           for (const r of data.results) {
             const { error } = await supabase.from('subawards').upsert({
-              prime_award_id: r['Prime Award ID'],
-              subaward_number: r['Sub-Award ID'],
+              prime_award_id: r['Prime Award ID'], subaward_number: r['Sub-Award ID'],
               subaward_amount: parseFloat(r['Sub-Award Amount']) || 0,
               subaward_action_date: r['Sub-Award Date'],
               subaward_description: r['Sub-Award Description'],
@@ -142,26 +241,26 @@ serve(async (req) => {
             if (!error) totalLoaded++
           }
           if (data.results.length < 100) break
-          await new Promise(r => setTimeout(r, 200))
-        } catch (e: any) { sourceErrors.push(`Subawards ${st}: ${e.message}`) }
+          await new Promise(r => setTimeout(r, 150))
+        } catch (e: any) { sourceErrors.push(`Subs ${st}: ${e.message}`) }
       }
     }
-    results.push({ source: 'usaspending_subawards', loaded: totalLoaded, errors: sourceErrors, pages: subStates.length * 2 })
+    results.push({ source: 'subawards', loaded: totalLoaded, errors: sourceErrors, pages: ALL_STATES.length * 2 })
   }
 
-  // ========== SOURCE 3: SAM.gov Opportunities ==========
-  if (['full', 'quick', 'opportunities-only'].includes(mode) && SAM_KEY) {
+  // ========== SOURCE 3: SAM.gov Opportunities — last 90 days ==========
+  if (['full','quick','opportunities-only'].includes(mode) && SAM_KEY) {
     let totalLoaded = 0
     const sourceErrors: string[] = []
-    const ninetyDaysAgo = new Date(Date.now() - 90 * 86400000)
     const today = new Date()
+    const ago = new Date(Date.now() - 90 * 86400000)
     const fmt = (d: Date) => `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}/${d.getFullYear()}`
 
     for (let offset = 0; offset < 1000; offset += 100) {
       try {
-        const url = `https://api.sam.gov/opportunities/v2/search?api_key=${SAM_KEY}&limit=100&offset=${offset}&postedFrom=${fmt(ninetyDaysAgo)}&postedTo=${fmt(today)}`
+        const url = `https://api.sam.gov/opportunities/v2/search?api_key=${SAM_KEY}&limit=100&offset=${offset}&postedFrom=${fmt(ago)}&postedTo=${fmt(today)}`
         const res = await safeFetch(url)
-        if (!res || !res.ok) { sourceErrors.push(`SAM Opps offset ${offset}: HTTP ${res?.status || 'timeout'}`); break }
+        if (!res || !res.ok) { sourceErrors.push(`Opps offset ${offset}: ${res?.status}`); break }
         const data = await res.json()
         if (!data.opportunitiesData?.length) break
         for (const opp of data.opportunitiesData) {
@@ -172,8 +271,7 @@ serve(async (req) => {
             set_aside_type: opp.typeOfSetAsideDescription, set_aside_code: opp.typeOfSetAside,
             response_deadline: opp.responseDeadLine, naics_code: opp.naicsCode,
             classification_code: opp.classificationCode, active: opp.active === 'Yes',
-            award_date: opp.award?.date,
-            award_amount: opp.award?.amount ? parseFloat(opp.award.amount) : null,
+            award_date: opp.award?.date, award_amount: opp.award?.amount ? parseFloat(opp.award.amount) : null,
             awardee_name: opp.award?.awardee?.name, awardee_uei: opp.award?.awardee?.ueiSAM,
             raw_data: opp, updated_at: new Date().toISOString()
           }, { onConflict: 'notice_id', ignoreDuplicates: false })
@@ -181,13 +279,13 @@ serve(async (req) => {
         }
         if (data.opportunitiesData.length < 100) break
         await new Promise(r => setTimeout(r, 300))
-      } catch (e: any) { sourceErrors.push(`SAM Opps: ${e.message}`); break }
+      } catch (e: any) { sourceErrors.push(`Opps: ${e.message}`); break }
     }
-    results.push({ source: 'sam_opportunities', loaded: totalLoaded, errors: sourceErrors, pages: 10 })
+    results.push({ source: 'opportunities', loaded: totalLoaded, errors: sourceErrors, pages: 10 })
   }
 
-  // ========== SOURCE 4: SBIR/STTR Awards ==========
-  if (['full', 'quick', 'sbir-only'].includes(mode)) {
+  // ========== SOURCE 4: SBIR/STTR Awards — ALL agencies, 3 years ==========
+  if (['full','quick','sbir-only'].includes(mode)) {
     const agencies = ['DOD','HHS','NASA','NSF','DOE','USDA','EPA','DOT','DHS','ED','DOC']
     const years = mode === 'quick' ? [2024] : [2024, 2023, 2022]
     let totalLoaded = 0
@@ -197,7 +295,7 @@ serve(async (req) => {
       for (const year of years) {
         try {
           const res = await safeFetch(`https://api.www.sbir.gov/public/api/awards?agency=${agency}&year=${year}`, undefined, 60000)
-          if (!res || !res.ok) { sourceErrors.push(`SBIR ${agency} ${year}: HTTP ${res?.status || 'timeout'}`); continue }
+          if (!res || !res.ok) { sourceErrors.push(`SBIR ${agency} ${year}: ${res?.status}`); continue }
           const data = await res.json()
           for (const a of (Array.isArray(data) ? data : [])) {
             if (!a.firm || !a.contract) continue
@@ -223,18 +321,17 @@ serve(async (req) => {
     results.push({ source: 'sbir_awards', loaded: totalLoaded, errors: sourceErrors, pages: agencies.length * years.length })
   }
 
-  // ========== SOURCE 5: SAM.gov Entity Registrations ==========
+  // ========== SOURCE 5: SAM.gov Entities — ALL 50 STATES ==========
   if (['full'].includes(mode) && SAM_KEY) {
-    const states = ['MD','VA','DC','CA','TX','FL','NY','PA','OH','GA']
     let totalLoaded = 0
     const sourceErrors: string[] = []
 
-    for (const st of states) {
-      for (let page = 0; page < 5; page++) {
+    for (const st of ALL_STATES) {
+      for (let page = 0; page < 3; page++) {
         try {
           const url = `https://api.sam.gov/entity-information/v3/entities?api_key=${SAM_KEY}&registrationStatus=A&samRegistered=Yes&physicalAddressProvinceOrStateCode=${st}&includeSections=entityRegistration,coreData&page=${page}&size=100`
           const res = await safeFetch(url)
-          if (!res || !res.ok) { sourceErrors.push(`SAM Entity ${st} p${page}: HTTP ${res?.status || 'timeout'}`); break }
+          if (!res || !res.ok) { sourceErrors.push(`SAM ${st} p${page}: ${res?.status}`); break }
           const data = await res.json()
           if (!data.entityData?.length) break
           for (const e of data.entityData) {
@@ -259,13 +356,13 @@ serve(async (req) => {
           }
           if (data.entityData.length < 100) break
           await new Promise(r => setTimeout(r, 300))
-        } catch (e: any) { sourceErrors.push(`SAM Entity ${st}: ${e.message}`); break }
+        } catch (e: any) { sourceErrors.push(`SAM ${st}: ${e.message}`); break }
       }
     }
-    results.push({ source: 'sam_entities', loaded: totalLoaded, errors: sourceErrors, pages: states.length * 5 })
+    results.push({ source: 'sam_entities', loaded: totalLoaded, errors: sourceErrors, pages: ALL_STATES.length * 3 })
   }
 
-  // ========== SOURCE 6: SAM.gov Exclusions ==========
+  // ========== SOURCE 6: SAM.gov Exclusions — ALL active ==========
   if (['full'].includes(mode) && SAM_KEY) {
     let totalLoaded = 0
     const sourceErrors: string[] = []
@@ -274,7 +371,7 @@ serve(async (req) => {
       try {
         const url = `https://api.sam.gov/entity-information/v2/exclusions?api_key=${SAM_KEY}&isActive=true&page=${page}&size=100`
         const res = await safeFetch(url)
-        if (!res || !res.ok) { sourceErrors.push(`Exclusions p${page}: HTTP ${res?.status || 'timeout'}`); break }
+        if (!res || !res.ok) { sourceErrors.push(`Excl p${page}: ${res?.status}`); break }
         const data = await res.json()
         if (!data.results?.length) break
         for (const ex of data.results) {
@@ -290,12 +387,12 @@ serve(async (req) => {
         }
         if (data.results.length < 100) break
         await new Promise(r => setTimeout(r, 300))
-      } catch (e: any) { sourceErrors.push(`Exclusions: ${e.message}`); break }
+      } catch (e: any) { sourceErrors.push(`Excl: ${e.message}`); break }
     }
-    results.push({ source: 'sam_exclusions', loaded: totalLoaded, errors: sourceErrors, pages: 10 })
+    results.push({ source: 'exclusions', loaded: totalLoaded, errors: sourceErrors, pages: 10 })
   }
 
-  // ========== SOURCE 7: NSF Awards ==========
+  // ========== SOURCE 7: NSF Awards — 12 tech keywords ==========
   if (['full'].includes(mode)) {
     const keywords = ['cybersecurity','artificial intelligence','machine learning','data science','cloud computing','quantum computing','autonomous systems','robotics','climate','blockchain','5G','biotechnology']
     let totalLoaded = 0
@@ -306,7 +403,7 @@ serve(async (req) => {
         try {
           const url = `https://api.nsf.gov/services/v1/awards.json?keyword=${encodeURIComponent(kw)}&offset=${offset}&rpp=25&printFields=id,title,abstractText,amount,startDate,expDate,piFirstName,piLastName,awardeeName,awardeeCity,awardeeStateCode,awardeeZipCode,fundProgramName,fundAgencyCode`
           const res = await safeFetch(url)
-          if (!res || !res.ok) { sourceErrors.push(`NSF ${kw}: HTTP ${res?.status || 'timeout'}`); break }
+          if (!res || !res.ok) { sourceErrors.push(`NSF ${kw}: ${res?.status}`); break }
           const data = await res.json()
           const awards = data?.response?.award || []
           if (!awards.length) break
@@ -330,20 +427,64 @@ serve(async (req) => {
     results.push({ source: 'nsf_awards', loaded: totalLoaded, errors: sourceErrors, pages: keywords.length * 3 })
   }
 
-  // ========== ENRICHMENT: Auto-link entities ==========
-  if (['full', 'quick'].includes(mode)) {
+  // ========== SOURCE 8: FPDS Competition Data (NEW) ==========
+  if (['full'].includes(mode) && SAM_KEY) {
+    const deptCodes = ['9700','7000','3600','4700','8000','1400','1500','6900','8900','2000']
+    let totalLoaded = 0
+    const sourceErrors: string[] = []
+
+    for (const dept of deptCodes) {
+      for (let page = 0; page < 3; page++) {
+        try {
+          const url = `https://api.sam.gov/contract-awards/v1/search?api_key=${SAM_KEY}&lastModifiedDate=[01/01/2024,]&contractingDepartmentCode=${dept}&modificationNumber=0&limit=100&offset=${page * 100}`
+          const res = await safeFetch(url)
+          if (!res || !res.ok) { sourceErrors.push(`FPDS ${dept} p${page}: ${res?.status}`); break }
+          const data = await res.json()
+          const awards = data?.results || data?.data || []
+          if (!Array.isArray(awards) || !awards.length) break
+          for (const a of awards) {
+            const piid = a.piid || a.contractNumber
+            if (!piid) continue
+            const { error } = await supabase.from('fpds_awards').upsert({
+              piid, modification_number: a.modificationNumber || '0',
+              contracting_department: a.contractingDepartmentName,
+              contracting_subtier: a.contractingSubTierAgencyName,
+              contracting_office: a.contractingOfficeName,
+              vendor_name: a.vendorName, vendor_uei: a.vendorUEI,
+              vendor_city: a.vendorCity, vendor_state: a.vendorState,
+              dollars_obligated: parseFloat(a.dollarsObligated) || 0,
+              base_and_all_options: parseFloat(a.baseAndAllOptionsValue) || 0,
+              naics_code: a.naicsCode, psc_code: a.pscCode,
+              award_type: a.awardType, set_aside: a.typeOfSetAside,
+              extent_competed: a.extentCompeted,
+              number_of_offers: parseInt(a.numberOfOffersReceived) || null,
+              effective_date: a.effectiveDate, completion_date: a.completionDate,
+              description_of_requirement: a.descriptionOfRequirement?.substring(0, 2000),
+              pop_state: a.popStateCode, pop_city: a.popCity,
+            }, { onConflict: 'piid,modification_number', ignoreDuplicates: false })
+            if (!error) totalLoaded++
+          }
+          if (awards.length < 100) break
+          await new Promise(r => setTimeout(r, 300))
+        } catch (e: any) { sourceErrors.push(`FPDS ${dept}: ${e.message}`); break }
+      }
+    }
+    results.push({ source: 'fpds_awards', loaded: totalLoaded, errors: sourceErrors, pages: deptCodes.length * 3 })
+  }
+
+  // ========== ENRICHMENT: Cross-link entities + teaming ==========
+  if (['full','quick'].includes(mode)) {
     let linked = 0, created = 0
     try {
       const { data: unlinked } = await supabase.from('contracts')
         .select('recipient_name, recipient_uei, pop_state, naics_code')
-        .is('recipient_entity_id', null).not('recipient_name', 'is', null).limit(200)
+        .is('recipient_entity_id', null).not('recipient_name', 'is', null).limit(300)
 
       const seen = new Set<string>()
       for (const r of (unlinked || [])) {
         const key = r.recipient_name?.toUpperCase()
         if (!key || seen.has(key)) continue
         seen.add(key)
-
         let entityId: string | null = null
         if (r.recipient_uei) {
           const { data: byUei } = await supabase.from('core_entities').select('id').eq('uei', r.recipient_uei).limit(1)
@@ -368,10 +509,9 @@ serve(async (req) => {
         }
       }
 
-      // Create teaming relationships from subawards
       const { data: subs } = await supabase.from('subawards')
         .select('prime_recipient_name, sub_awardee_name, awarding_agency, subaward_amount')
-        .not('prime_recipient_name', 'is', null).not('sub_awardee_name', 'is', null).limit(200)
+        .not('prime_recipient_name', 'is', null).not('sub_awardee_name', 'is', null).limit(300)
 
       let teamingCreated = 0
       for (const s of (subs || [])) {
@@ -386,7 +526,6 @@ serve(async (req) => {
           teamingCreated++
         }
       }
-
       results.push({ source: 'enrichment', loaded: linked + created + teamingCreated, errors: [], pages: 0 })
     } catch (e: any) { allErrors.push(`Enrichment: ${e.message}`) }
   }
@@ -400,19 +539,15 @@ serve(async (req) => {
       completed_at: new Date().toISOString(),
       status: allErrors.length > 0 ? 'completed_with_errors' : 'completed',
       results: Object.fromEntries(results.map(r => [r.source, { loaded: r.loaded, errors: r.errors.length, pages: r.pages }])),
-      errors: allErrors,
-      total_loaded: totalLoaded,
-      total_errors: allErrors.length,
+      errors: allErrors, total_loaded: totalLoaded, total_errors: allErrors.length,
       duration_seconds: duration
     }).eq('id', runId)
   }
 
   return new Response(JSON.stringify({
-    success: true, mode,
-    total_loaded: totalLoaded,
+    success: true, mode, total_loaded: totalLoaded,
     duration_seconds: Math.round(duration),
     sources: results.map(r => ({ source: r.source, loaded: r.loaded, errors: r.errors.length })),
-    errors: allErrors.length > 0 ? allErrors : undefined,
-    run_id: runId
+    errors: allErrors.length > 0 ? allErrors : undefined, run_id: runId
   }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 })
