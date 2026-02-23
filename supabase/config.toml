@@ -56,3 +56,6 @@ verify_jwt = false
 
 [functions.data-flood]
 verify_jwt = false
+
+[functions.scheduled-refresh]
+verify_jwt = false

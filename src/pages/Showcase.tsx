@@ -10,6 +10,8 @@ import {
   Zap, BarChart3, Bell, ChevronRight, ExternalLink
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
+import { MarketIntelligenceSearch } from '@/components/search/MarketIntelligenceSearch';
+import { useLastRefresh, formatRefreshTime } from '@/hooks/useLastRefresh';
 
 /* ── animated counter ── */
 function useAnimatedCounter(target: number, duration = 2000) {
@@ -99,24 +101,27 @@ const FEATURES = [
 ];
 
 export default function Showcase() {
-  const [stats, setStats] = useState({ totalValue: 0, entities: 0, relationships: 0, agencies: 0, states: 0 });
+  const [stats, setStats] = useState({ totalValue: 0, entities: 0, relationships: 0, agencies: 0, states: 0, opportunities: 0 });
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showResults, setShowResults] = useState(false);
   const navigate = useNavigate();
   const searchTimeout = useRef<ReturnType<typeof setTimeout>>();
+  const { data: lastRefreshTime } = useLastRefresh();
+  const refreshLabel = formatRefreshTime(lastRefreshTime ?? null);
 
   useEffect(() => {
     loadStats();
   }, []);
 
   async function loadStats() {
-    const [entities, rels, valueRes, statesRes, agenciesRes] = await Promise.all([
+    const [entities, rels, valueRes, statesRes, agenciesRes, oppsRes] = await Promise.all([
       supabase.from('core_entities').select('*', { count: 'exact', head: true }),
       supabase.from('core_relationships').select('*', { count: 'exact', head: true }),
       supabase.from('contracts').select('award_amount').limit(1000),
       supabase.from('core_entities').select('state').not('state', 'is', null).limit(1000),
       supabase.from('contracts').select('awarding_agency').not('awarding_agency', 'is', null).limit(1000),
+      supabase.from('opportunities').select('*', { count: 'exact', head: true }).eq('is_active', true),
     ]);
     const totalValue = (valueRes.data || []).reduce((s, c) => s + (Number(c.award_amount) || 0), 0);
     const uniqueStates = new Set((statesRes.data || []).map(e => e.state)).size;
@@ -127,6 +132,7 @@ export default function Showcase() {
       relationships: rels.count || 0,
       agencies: uniqueAgencies,
       states: uniqueStates,
+      opportunities: oppsRes.count || 0,
     });
   }
 
@@ -188,7 +194,11 @@ export default function Showcase() {
             <Badge className="mb-6 px-4 py-1.5 bg-cyan-500/10 text-cyan-400 border-cyan-500/20 text-sm font-medium">
               <Zap className="w-3.5 h-3.5 mr-1.5" />
               Live Intelligence · {stats.agencies} Agencies · {stats.states} States
+              {stats.opportunities > 0 && ` · ${stats.opportunities} Opportunities`}
             </Badge>
+            {refreshLabel && (
+              <p className="text-xs text-white/40 mt-2">{refreshLabel}</p>
+            )}
           </motion.div>
 
           <motion.h1
@@ -215,32 +225,14 @@ export default function Showcase() {
             AI-powered federal intelligence.
           </motion.p>
 
-          {/* Search Bar */}
+          {/* Market Intelligence Search */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
-            className="relative w-full max-w-xl mx-auto mb-8"
+            className="relative w-full max-w-2xl mx-auto mb-8"
           >
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-white/30" />
-              <Input
-                value={searchQuery}
-                onChange={(e) => handleSearchInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearchSubmit()}
-                onBlur={() => setTimeout(() => setShowResults(false), 200)}
-                onFocus={() => searchResults.length > 0 && setShowResults(true)}
-                placeholder="Search organizations — try &quot;Lockheed Martin&quot;"
-                className="w-full pl-12 pr-28 py-4 h-14 bg-white/5 border-white/10 text-white placeholder:text-white/30 rounded-xl text-base focus:border-cyan-500/50 focus:ring-cyan-500/20"
-              />
-              <Button
-                onClick={handleSearchSubmit}
-                className="absolute right-2 top-1/2 -translate-y-1/2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 border-0 gap-1.5"
-              >
-                Search <ArrowRight className="w-4 h-4" />
-              </Button>
-            </div>
-            {showResults && <SearchDropdown results={searchResults} onSelect={handleSearchSelect} />}
+            <MarketIntelligenceSearch variant="hero" />
           </motion.div>
 
           {/* CTA */}
@@ -268,10 +260,11 @@ export default function Showcase() {
           <p className="text-center text-sm text-white/40 mb-10 uppercase tracking-widest">
             Tracking $574B+ in federal contracts across {stats.agencies} agencies and {stats.states} states
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
             <AnimatedStat value={stats.totalValue} label="Contract Value Indexed" prefix="$" />
             <AnimatedStat value={stats.entities} label="Organizations Tracked" />
             <AnimatedStat value={stats.relationships} label="Relationships Mapped" />
+            {stats.opportunities > 0 && <AnimatedStat value={stats.opportunities} label="Active Opportunities" />}
           </div>
         </div>
       </section>

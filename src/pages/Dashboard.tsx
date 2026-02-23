@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DataFloodPanel } from '@/components/admin/DataFloodPanel';
 import { supabase } from '@/integrations/supabase/client';
+import { useLastRefresh, formatRefreshTime } from '@/hooks/useLastRefresh';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -35,6 +36,8 @@ export default function Dashboard() {
   const [pipeline, setPipeline] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { data: lastRefreshTime } = useLastRefresh();
+  const refreshLabel = formatRefreshTime(lastRefreshTime ?? null);
 
   useEffect(() => {
     loadDashboard();
@@ -119,7 +122,10 @@ export default function Dashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Welcome back, {profile.full_name || 'User'}</h1>
-            <p className="text-muted-foreground">{profile.company || 'Based Data Intelligence'}</p>
+            <p className="text-muted-foreground">
+              {profile.company || 'Based Data Intelligence'}
+              {refreshLabel && <span className="ml-3 text-xs">{refreshLabel}</span>}
+            </p>
           </div>
           <div className="flex items-center gap-4">
             <Badge variant="outline" className={`

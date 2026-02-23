@@ -80,6 +80,13 @@ export const DataFloodPanel = () => {
               >
                 {loading === 'MD Grants' ? '⏳ Loading...' : '💰 Load MD Grants'}
               </Button>
+              <Button
+                onClick={() => invoke('scheduled-refresh', {}, 'Scheduled Refresh')}
+                disabled={!!loading} size="sm"
+                className="col-span-2 bg-cyan-600 hover:bg-cyan-700 text-white"
+              >
+                {loading === 'Scheduled Refresh' ? '⏳ Running full refresh...' : '🔄 Run Full Scheduled Refresh'}
+              </Button>
             </div>
 
             {results && (

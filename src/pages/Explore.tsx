@@ -6,6 +6,7 @@ import { ContractHeatmap } from '@/components/visualizations/ContractHeatmap';
 import { AgencySpendingChart } from '@/components/visualizations/AgencySpendingChart';
 import { ContractTimeline } from '@/components/visualizations/ContractTimeline';
 import { EntitySpotlight } from '@/components/visualizations/EntitySpotlight';
+import { MarketIntelligenceSearch } from '@/components/search/MarketIntelligenceSearch';
 
 export default function Explore() {
   return (
@@ -41,6 +42,11 @@ export default function Explore() {
               <Button>Ocean Dashboard</Button>
             </Link>
           </div>
+        </div>
+
+        {/* Market Intelligence Search */}
+        <div className="mb-8">
+          <MarketIntelligenceSearch variant="full" />
         </div>
 
         {/* Entity Spotlight */}
