@@ -2,6 +2,18 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
+export function usePlatformStats() {
+  return useQuery({
+    queryKey: ['platform-stats'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_platform_stats' as any);
+      if (error) throw error;
+      return (data as any)?.[0] || null;
+    },
+    staleTime: 30000,
+  });
+}
+
 export function useSbirAwards(filters?: { state?: string; agency?: string; phase?: string }) {
   return useQuery({
     queryKey: ['sbir-awards', filters],
@@ -97,36 +109,7 @@ export function useVacuumRuns() {
   });
 }
 
+// Legacy — kept for backward compat but prefer usePlatformStats
 export function useAllSourceCounts() {
-  return useQuery({
-    queryKey: ['all-source-counts'],
-    queryFn: async () => {
-      const [contracts, opps, sbir, samEnts, excl, nsf, fpds, grants, entities, subs] = await Promise.all([
-        supabase.from('contracts').select('*', { count: 'exact', head: true }),
-        supabase.from('opportunities').select('*', { count: 'exact', head: true }),
-        supabase.from('sbir_awards').select('*', { count: 'exact', head: true }),
-        supabase.from('sam_entities').select('*', { count: 'exact', head: true }),
-        supabase.from('sam_exclusions').select('*', { count: 'exact', head: true }),
-        supabase.from('nsf_awards').select('*', { count: 'exact', head: true }),
-        supabase.from('fpds_awards').select('*', { count: 'exact', head: true }),
-        supabase.from('grants').select('*', { count: 'exact', head: true }),
-        supabase.from('core_entities').select('*', { count: 'exact', head: true }),
-        supabase.from('subawards').select('*', { count: 'exact', head: true }),
-      ]);
-      return {
-        contracts: contracts.count || 0,
-        opportunities: opps.count || 0,
-        sbir: sbir.count || 0,
-        samEntities: samEnts.count || 0,
-        exclusions: excl.count || 0,
-        nsf: nsf.count || 0,
-        fpds: fpds.count || 0,
-        grants: grants.count || 0,
-        entities: entities.count || 0,
-        subawards: subs.count || 0,
-        totalRecords: (contracts.count || 0) + (opps.count || 0) + (sbir.count || 0) + (samEnts.count || 0) + (excl.count || 0) + (nsf.count || 0) + (fpds.count || 0) + (grants.count || 0) + (subs.count || 0),
-      };
-    },
-    staleTime: 30 * 1000,
-  });
+  return usePlatformStats();
 }

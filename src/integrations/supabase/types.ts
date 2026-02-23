@@ -7901,33 +7901,45 @@ export type Database = {
           total_value: number
         }[]
       }
-      get_cross_source_profile: {
-        Args: { p_name: string }
-        Returns: {
-          contract_count: number
-          disadvantaged: string
-          entity_name: string
-          exclusion_detail: string
-          hubzone: string
-          is_excluded: boolean
-          naics_codes: string[]
-          sam_cage: string
-          sam_expiration: string
-          sam_status: string
-          sbir_count: number
-          sbir_phases: string[]
-          sbir_value: number
-          states: string[]
-          sub_prime_count: number
-          sub_prime_value: number
-          sub_to_count: number
-          sub_to_value: number
-          top_agencies: Json
-          total_contract_value: number
-          women_owned: string
-        }[]
-      }
-      get_entity_360: { Args: { p_entity_id: string }; Returns: Json }
+      get_entity_360:
+        | { Args: { p_entity_id: string }; Returns: Json }
+        | {
+            Args: { p_name: string }
+            Returns: {
+              avg_offers: number
+              contract_count: number
+              contract_value: number
+              disadvantaged: string
+              entity_name: string
+              exclusion_detail: string
+              fpds_count: number
+              grant_count: number
+              grant_value: number
+              hubzone: string
+              idv_count: number
+              idv_value: number
+              is_excluded: boolean
+              naics_codes: string[]
+              primes_to_count: number
+              primes_to_value: number
+              sam_business_types: Json
+              sam_cage: string
+              sam_entity_structure: string
+              sam_expiration: string
+              sam_status: string
+              sam_uei: string
+              sbir_count: number
+              sbir_phases: string[]
+              sbir_value: number
+              sole_source_pct: number
+              states: string[]
+              subs_for_count: number
+              subs_for_value: number
+              top_agencies: Json
+              top_agency_pct: number
+              women_owned: string
+            }[]
+          }
       get_entity_network: {
         Args: { p_depth?: number; p_entity_id: string; p_min_strength?: number }
         Returns: Json
@@ -7958,6 +7970,30 @@ export type Database = {
           name: string
           priority: number
           slug: string
+        }[]
+      }
+      get_platform_stats: {
+        Args: never
+        Returns: {
+          data_sources: number
+          last_vacuum_at: string
+          last_vacuum_loaded: number
+          total_contract_value: number
+          total_contracts: number
+          total_entities: number
+          total_exclusions: number
+          total_fpds: number
+          total_grant_value: number
+          total_grants: number
+          total_idv_value: number
+          total_idvs: number
+          total_nsf: number
+          total_opportunities: number
+          total_records: number
+          total_relationships: number
+          total_sam_entities: number
+          total_sbir: number
+          total_subawards: number
         }[]
       }
       get_recompete_pipeline: {
