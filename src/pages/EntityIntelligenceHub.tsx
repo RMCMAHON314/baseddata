@@ -855,9 +855,9 @@ function RiskTab({ entityName }: { entityName: string }) {
 // ── CROSS-SOURCE 360° PROFILE ──
 function CrossSourceProfile({ entityName }: { entityName: string }) {
   const { data, isLoading } = useQuery({
-    queryKey: ['cross-source-profile', entityName],
+    queryKey: ['entity-360', entityName],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_cross_source_profile', { p_name: entityName });
+      const { data, error } = await supabase.rpc('get_entity_360' as any, { p_name: entityName });
       if (error) return null;
       return (data as any)?.[0] || null;
     },
@@ -866,49 +866,86 @@ function CrossSourceProfile({ entityName }: { entityName: string }) {
   });
 
   if (isLoading || !data) return null;
-  const hasCrossData = (data.sbir_count > 0) || data.sam_status || data.is_excluded || (data.sub_prime_count > 0);
+  const hasCrossData = (data.sbir_count > 0) || data.sam_status || data.is_excluded || (data.primes_to_count > 0) || (data.idv_count > 0) || (data.grant_count > 0) || (data.fpds_count > 0);
   if (!hasCrossData) return null;
+
+  const samExpiring = data.sam_expiration && new Date(data.sam_expiration) < new Date(Date.now() + 90 * 86400000);
 
   return (
     <Card className="mt-4 border-primary/20 bg-primary/5">
       <CardContent className="p-4">
-        <p className="text-xs font-semibold uppercase tracking-wider text-primary mb-3">Cross-Source Intelligence</p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-          {data.sbir_count > 0 && (
+        <p className="text-xs font-semibold uppercase tracking-wider text-primary mb-3">📊 Cross-Source 360° Profile</p>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-sm">
+          {/* Contracts + IDVs */}
+          <div>
+            <p className="text-xs text-muted-foreground">Contracts</p>
+            <p className="font-semibold">{Number(data.contract_count)} awards · {fmt(Number(data.contract_value))}</p>
+            {Number(data.idv_count) > 0 && <p className="text-xs text-muted-foreground">IDVs: {Number(data.idv_count)} · {fmt(Number(data.idv_value))}</p>}
+          </div>
+          {/* Grants */}
+          {Number(data.grant_count) > 0 && (
+            <div>
+              <p className="text-xs text-muted-foreground">Grants</p>
+              <p className="font-semibold">{Number(data.grant_count)} awards · {fmt(Number(data.grant_value))}</p>
+            </div>
+          )}
+          {/* SBIR */}
+          {Number(data.sbir_count) > 0 && (
             <div>
               <p className="text-xs text-muted-foreground">SBIR Innovation</p>
-              <p className="font-semibold">{data.sbir_count} awards · {fmt(Number(data.sbir_value))}</p>
+              <p className="font-semibold">{Number(data.sbir_count)} awards · {fmt(Number(data.sbir_value))}</p>
               {data.sbir_phases?.length > 0 && <p className="text-xs text-muted-foreground">Phases: {data.sbir_phases.join(', ')}</p>}
             </div>
           )}
+          {/* SAM */}
           <div>
             <p className="text-xs text-muted-foreground">SAM Registration</p>
-            <Badge className={data.sam_status === 'Active' ? 'bg-emerald-100 text-emerald-700' : data.sam_status ? 'bg-amber-100 text-amber-700' : 'bg-muted text-muted-foreground'}>
-              {data.sam_status || 'Not Found'}
+            <Badge className={data.sam_status === 'Active' ? (samExpiring ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700') : data.sam_status ? 'bg-amber-100 text-amber-700' : 'bg-muted text-muted-foreground'}>
+              {data.sam_status || 'Not Found'}{samExpiring ? ' ⚠️ Expiring' : ''}
             </Badge>
             {data.sam_cage && <p className="text-xs text-muted-foreground mt-0.5">CAGE: {data.sam_cage}</p>}
+            {data.sam_expiration && <p className="text-xs text-muted-foreground">Exp: {new Date(data.sam_expiration).toLocaleDateString()}</p>}
           </div>
+          {/* Risk */}
           <div>
             <p className="text-xs text-muted-foreground">Exclusion Status</p>
             <Badge className={data.is_excluded ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}>
-              {data.is_excluded ? '⚠️ EXCLUDED' : 'CLEAR'}
+              {data.is_excluded ? '⚠️ EXCLUDED' : '✅ CLEAR'}
             </Badge>
+            {data.exclusion_detail && <p className="text-xs text-red-600 mt-0.5">{String(data.exclusion_detail).slice(0, 60)}</p>}
           </div>
-          {(data.sub_prime_count > 0 || data.sub_to_count > 0) && (
+          {/* Teaming */}
+          {(Number(data.primes_to_count) > 0 || Number(data.subs_for_count) > 0) && (
             <div>
               <p className="text-xs text-muted-foreground">Teaming Network</p>
-              <p className="font-semibold">Prime→{data.sub_prime_count} subs · Sub→{data.sub_to_count} primes</p>
-              <p className="text-xs text-muted-foreground">{fmt(Number(data.sub_prime_value))} subcontracted</p>
+              <p className="font-semibold">Prime→{Number(data.primes_to_count)} subs ({fmt(Number(data.primes_to_value))})</p>
+              <p className="text-xs text-muted-foreground">Sub for {Number(data.subs_for_count)} primes ({fmt(Number(data.subs_for_value))})</p>
             </div>
           )}
+          {/* FPDS Competition */}
+          {Number(data.fpds_count) > 0 && (
+            <div>
+              <p className="text-xs text-muted-foreground">Competition (FPDS)</p>
+              <p className="font-semibold">Avg {Number(data.avg_offers) || '—'} bidders</p>
+              <p className="text-xs text-muted-foreground">{Number(data.sole_source_pct) || 0}% sole source</p>
+            </div>
+          )}
+          {/* Diversity */}
           {(data.women_owned === 'Y' || data.hubzone === 'Y' || data.disadvantaged === 'Y') && (
             <div>
               <p className="text-xs text-muted-foreground">Diversity</p>
               <div className="flex flex-wrap gap-1 mt-0.5">
-                {data.women_owned === 'Y' && <Badge variant="outline" className="text-xs">Woman-Owned</Badge>}
-                {data.hubzone === 'Y' && <Badge variant="outline" className="text-xs">HUBZone</Badge>}
+                {data.women_owned === 'Y' && <Badge variant="outline" className="text-xs">👩 Woman-Owned</Badge>}
+                {data.hubzone === 'Y' && <Badge variant="outline" className="text-xs">🏘️ HUBZone</Badge>}
                 {data.disadvantaged === 'Y' && <Badge variant="outline" className="text-xs">Disadvantaged</Badge>}
               </div>
+            </div>
+          )}
+          {/* Concentration */}
+          {Number(data.top_agency_pct) > 0 && (
+            <div>
+              <p className="text-xs text-muted-foreground">Concentration</p>
+              <p className="font-semibold">{Number(data.top_agency_pct)}% from top agency</p>
             </div>
           )}
         </div>

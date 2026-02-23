@@ -13,7 +13,7 @@ import {
 import { Logo } from '@/components/Logo';
 import { MarketIntelligenceSearch } from '@/components/search/MarketIntelligenceSearch';
 import { useLastRefresh, formatRefreshTime } from '@/hooks/useLastRefresh';
-import { useAllSourceCounts } from '@/hooks/useNewSources';
+import { usePlatformStats } from '@/hooks/useNewSources';
 
 /* ── animated counter ── */
 function useAnimatedCounter(target: number, duration = 2000) {
@@ -111,7 +111,7 @@ export default function Showcase() {
   const searchTimeout = useRef<ReturnType<typeof setTimeout>>();
   const { data: lastRefreshTime } = useLastRefresh();
   const refreshLabel = formatRefreshTime(lastRefreshTime ?? null);
-  const { data: sourceCounts } = useAllSourceCounts();
+  const { data: platformStats } = usePlatformStats();
 
   useEffect(() => {
     loadStats();
@@ -261,40 +261,41 @@ export default function Showcase() {
         <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/3 via-transparent to-transparent pointer-events-none" />
         <div className="relative max-w-5xl mx-auto">
           <p className="text-center text-sm text-white/40 mb-10 uppercase tracking-widest">
-            Tracking $574B+ in federal contracts across {stats.agencies} agencies and {stats.states} states
+            Tracking federal contracts, grants &amp; IDVs across {stats.agencies} agencies and {stats.states} states
           </p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-12">
-            <AnimatedStat value={stats.totalValue} label="Contract Value Indexed" prefix="$" />
-            <AnimatedStat value={stats.entities} label="Organizations Tracked" />
-            <AnimatedStat value={sourceCounts?.totalRecords || stats.relationships} label="Total Records" />
-            <AnimatedStat value={8} label="Data Sources" />
+            <AnimatedStat value={Number(platformStats?.total_contract_value || stats.totalValue)} label="Contract Value Indexed" prefix="$" />
+            <AnimatedStat value={Number(platformStats?.total_entities || stats.entities)} label="Organizations Tracked" />
+            <AnimatedStat value={Number(platformStats?.total_records || 0)} label="Total Federal Records" />
+            <AnimatedStat value={9} label="Data Sources" />
           </div>
         </div>
       </section>
 
       {/* ── DATA COVERAGE ── */}
-      {sourceCounts && (
+      {platformStats && (
         <section className="py-16 px-6">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-8">
               <h2 className="text-2xl font-bold text-white mb-2">Data Coverage</h2>
               <p className="text-white/40 text-sm">Live record counts across all integrated federal sources</p>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {[
-                { emoji: '📄', label: 'USASpending', count: sourceCounts.contracts, key: 'Free' },
-                { emoji: '📑', label: 'FPDS Awards', count: sourceCounts.fpds, key: 'SAM Key' },
-                { emoji: '📋', label: 'SAM Opps', count: sourceCounts.opportunities, key: 'SAM Key' },
-                { emoji: '🔬', label: 'SBIR Awards', count: sourceCounts.sbir, key: 'Free' },
-                { emoji: '🏢', label: 'SAM Entities', count: sourceCounts.samEntities, key: 'SAM Key' },
-                { emoji: '⚖️', label: 'Exclusions', count: sourceCounts.exclusions, key: 'SAM Key' },
-                { emoji: '🔭', label: 'NSF Awards', count: sourceCounts.nsf, key: 'Free' },
-                { emoji: '💰', label: 'Grants', count: sourceCounts.grants, key: 'Free' },
+                { emoji: '📄', label: 'Contracts', count: Number(platformStats.total_contracts), note: '✅ All 50 states' },
+                { emoji: '📋', label: 'IDVs', count: Number(platformStats.total_idvs), note: '✅ GWACs, BPAs, IDIQs' },
+                { emoji: '💰', label: 'Grants', count: Number(platformStats.total_grants), note: '✅ All 50 states' },
+                { emoji: '📋', label: 'Opportunities', count: Number(platformStats.total_opportunities), note: '✅ Last 90 days' },
+                { emoji: '🔬', label: 'SBIR/STTR', count: Number(platformStats.total_sbir), note: '✅ 11 agencies' },
+                { emoji: '🏢', label: 'SAM Entities', count: Number(platformStats.total_sam_entities), note: '✅ All 50 states' },
+                { emoji: '⚖️', label: 'Exclusions', count: Number(platformStats.total_exclusions), note: '⚖️ All active' },
+                { emoji: '🔭', label: 'NSF Awards', count: Number(platformStats.total_nsf), note: '✅ 12 tech sectors' },
+                { emoji: '📊', label: 'FPDS Detail', count: Number(platformStats.total_fpds), note: '✅ Competition data' },
               ].map(s => (
-                <Card key={s.label} className="bg-white/[0.03] border-white/5 p-4 hover:border-white/10 transition-colors">
+                <Card key={s.label} className={`bg-white/[0.03] p-4 hover:border-white/10 transition-colors ${s.count > 0 ? 'border-emerald-500/20' : 'border-white/5'}`}>
                   <p className="text-lg mb-1">{s.emoji} <span className="text-sm font-semibold text-white">{s.label}</span></p>
                   <p className="text-2xl font-bold text-white font-mono">{s.count.toLocaleString()}</p>
-                  <p className="text-xs text-white/30 mt-1">{s.key}</p>
+                  <p className="text-xs text-white/30 mt-1">{s.note}</p>
                 </Card>
               ))}
             </div>
