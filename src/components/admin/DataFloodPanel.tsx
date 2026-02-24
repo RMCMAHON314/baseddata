@@ -5,8 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
-import { ChevronDown, Waves, RefreshCw, Zap, Bomb, Clock } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
+import { ChevronDown, Waves, RefreshCw, Zap, Bomb, Clock, Link } from 'lucide-react';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { usePlatformStats, useVacuumRuns } from '@/hooks/useNewSources';
 
 function fmt(v: number | null) {
@@ -26,6 +26,21 @@ export const DataFloodPanel = () => {
   const queryClient = useQueryClient();
   const { data: ps, refetch: refetchStats } = usePlatformStats();
   const { data: runs, refetch: refetchRuns } = useVacuumRuns();
+  const { data: linkStats, refetch: refetchLinkStats } = useQuery({
+    queryKey: ['link-stats'],
+    queryFn: async () => {
+      const [contracts, grants, linked] = await Promise.all([
+        supabase.from('contracts').select('id', { count: 'exact', head: true }).is('recipient_entity_id', null),
+        supabase.from('grants').select('id', { count: 'exact', head: true }).is('recipient_entity_id', null),
+        supabase.from('core_entities').select('id', { count: 'exact', head: true }).gt('contract_count', 0),
+      ]);
+      return {
+        unlinked_contracts: contracts.count || 0,
+        unlinked_grants: grants.count || 0,
+        linked_entities: linked.count || 0,
+      };
+    }
+  });
 
   const invoke = async (mode: string, label: string) => {
     setLoading(label);
@@ -37,9 +52,30 @@ export const DataFloodPanel = () => {
       toast({ title: '✅ ' + label, description: `Loaded ${data?.total_loaded || 0} records` });
       refetchStats();
       refetchRuns();
+      refetchLinkStats();
       queryClient.invalidateQueries({ queryKey: ['platform-stats'] });
     } catch (e: any) {
       toast({ title: '❌ Error', description: e.message, variant: 'destructive' });
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const runLinker = async () => {
+    setLoading('linking');
+    try {
+      const { data, error } = await supabase.rpc('link_transactions_to_entities') as { data: any, error: any };
+      if (error) throw error;
+      setResults(data);
+      toast({
+        title: '🔗 Entity Linking Complete',
+        description: `${data?.contracts_linked || 0} contracts + ${data?.grants_linked || 0} grants linked. ${data?.entities_created || 0} new entities.`
+      });
+      refetchStats();
+      refetchLinkStats();
+      queryClient.invalidateQueries({ queryKey: ['platform-stats'] });
+    } catch (e: any) {
+      toast({ title: '❌ Linking Error', description: e.message, variant: 'destructive' });
     } finally {
       setLoading(null);
     }
@@ -104,9 +140,35 @@ export const DataFloodPanel = () => {
                     {loading === 'QUICK VACUUM' ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Zap className="h-4 w-4" />}
                     QUICK MODE
                   </Button>
+                  <Button onClick={runLinker} disabled={!!loading} variant="outline" className="gap-2 border-primary/50 text-primary">
+                    {loading === 'linking' ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Link className="h-4 w-4" />}
+                    LINK ENTITIES
+                  </Button>
                 </div>
               </CardContent>
             </Card>
+
+            {/* ENTITY HEALTH */}
+            {linkStats && (
+              <Card className={`p-4 border-l-4 ${
+                linkStats.unlinked_contracts + linkStats.unlinked_grants === 0 ? 'border-l-green-500 bg-green-500/5' :
+                (linkStats.unlinked_contracts + linkStats.unlinked_grants) < 500 ? 'border-l-yellow-500 bg-yellow-500/5' :
+                'border-l-destructive bg-destructive/5'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Link className="h-4 w-4" />
+                    <span className="text-sm font-semibold">Entity Health</span>
+                  </div>
+                  <Button variant="ghost" size="sm" className="h-6 px-1" onClick={() => refetchLinkStats()}><RefreshCw className="h-3 w-3" /></Button>
+                </div>
+                <div className="flex gap-6 mt-2 text-sm">
+                  <div><span className="font-mono font-bold text-primary">{n(linkStats.linked_entities)}</span> <span className="text-muted-foreground">linked entities</span></div>
+                  <div><span className="font-mono font-bold text-destructive">{n(linkStats.unlinked_contracts)}</span> <span className="text-muted-foreground">orphan contracts</span></div>
+                  <div><span className="font-mono font-bold text-destructive">{n(linkStats.unlinked_grants)}</span> <span className="text-muted-foreground">orphan grants</span></div>
+                </div>
+              </Card>
+            )}
 
             {/* LIVE INVENTORY */}
             <div>

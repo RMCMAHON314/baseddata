@@ -8207,6 +8207,7 @@ export type Database = {
         Returns: number
       }
       increment_search_count: { Args: { p_user_id: string }; Returns: boolean }
+      link_transactions_to_entities: { Args: never; Returns: Json }
       log_kraken_crawl: {
         Args: {
           p_crawler_type: string

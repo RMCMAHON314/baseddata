@@ -573,6 +573,20 @@ serve(async (req) => {
     } catch (e: any) { allErrors.push(`Enrichment: ${e.message}`) }
   }
 
+  // ========== ENTITY LINKING — The critical step ==========
+  console.log('[VACUUM] Running entity linker...')
+  let linkResult: any = null
+  try {
+    const { data, error } = await supabase.rpc('link_transactions_to_entities')
+    if (error) { console.error('[VACUUM] Entity linker error:', error); allErrors.push(`Linker: ${error.message}`) }
+    else { linkResult = data; console.log('[VACUUM] Entity linker result:', JSON.stringify(data)) }
+  } catch (e: any) { console.error('[VACUUM] Linker crash:', e.message); allErrors.push(`Linker crash: ${e.message}`) }
+
+  // Refresh intelligence
+  console.log('[VACUUM] Refreshing relationships & insights...')
+  await supabase.rpc('discover_relationships').catch((e: any) => console.error('discover_relationships:', e.message))
+  await supabase.rpc('generate_insights').catch((e: any) => console.error('generate_insights:', e.message))
+
   // ========== FINALIZE ==========
   const totalLoaded = results.reduce((sum, r) => sum + r.loaded, 0)
   const duration = (Date.now() - startTime) / 1000
@@ -581,7 +595,7 @@ serve(async (req) => {
     await supabase.from('vacuum_runs').update({
       completed_at: new Date().toISOString(),
       status: allErrors.length > 0 ? 'completed_with_errors' : 'completed',
-      results: Object.fromEntries(results.map(r => [r.source, { loaded: r.loaded, errors: r.errors.length, pages: r.pages }])),
+      results: { ...Object.fromEntries(results.map(r => [r.source, { loaded: r.loaded, errors: r.errors.length, pages: r.pages }])), entity_linking: linkResult || { error: 'linking failed' } },
       errors: allErrors, total_loaded: totalLoaded, total_errors: allErrors.length,
       duration_seconds: duration
     }).eq('id', runId)
@@ -591,6 +605,7 @@ serve(async (req) => {
     success: true, mode, total_loaded: totalLoaded,
     duration_seconds: Math.round(duration),
     sources: results.map(r => ({ source: r.source, loaded: r.loaded, errors: r.errors.length })),
+    entity_linking: linkResult,
     errors: allErrors.length > 0 ? allErrors : undefined, run_id: runId
   }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 })
