@@ -77,3 +77,6 @@ verify_jwt = false
 
 [functions.vacuum-all]
 verify_jwt = false
+
+[functions.load-state-contracts]
+verify_jwt = false

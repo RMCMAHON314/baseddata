@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
-import { ChevronDown, Waves, RefreshCw, Zap, Bomb, Clock, Link } from 'lucide-react';
+import { ChevronDown, Waves, RefreshCw, Zap, Bomb, Clock, Link, Globe } from 'lucide-react';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { usePlatformStats, useVacuumRuns } from '@/hooks/useNewSources';
+import { Progress } from '@/components/ui/progress';
 
 function fmt(v: number | null) {
   if (!v) return '$0';
@@ -17,11 +18,21 @@ function fmt(v: number | null) {
   return '$' + v.toFixed(0);
 }
 
+interface SweepProgress {
+  running: boolean;
+  currentChunk: number;
+  totalChunks: number;
+  statesLoaded: string[];
+  totalContracts: number;
+  log: string[];
+}
+
 export const DataFloodPanel = () => {
   const [loading, setLoading] = useState<string | null>(null);
   const [results, setResults] = useState<any>(null);
   const [open, setOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
+  const [sweepProgress, setSweepProgress] = useState<SweepProgress | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: ps, refetch: refetchStats } = usePlatformStats();
@@ -42,6 +53,13 @@ export const DataFloodPanel = () => {
     }
   });
 
+  const refreshAll = () => {
+    refetchStats();
+    refetchRuns();
+    refetchLinkStats();
+    queryClient.invalidateQueries({ queryKey: ['platform-stats'] });
+  };
+
   const invoke = async (mode: string, label: string) => {
     setLoading(label);
     setResults(null);
@@ -50,10 +68,7 @@ export const DataFloodPanel = () => {
       if (error) throw error;
       setResults(data);
       toast({ title: '✅ ' + label, description: `Loaded ${data?.total_loaded || 0} records` });
-      refetchStats();
-      refetchRuns();
-      refetchLinkStats();
-      queryClient.invalidateQueries({ queryKey: ['platform-stats'] });
+      refreshAll();
     } catch (e: any) {
       toast({ title: '❌ Error', description: e.message, variant: 'destructive' });
     } finally {
@@ -71,14 +86,72 @@ export const DataFloodPanel = () => {
         title: '🔗 Entity Linking Complete',
         description: `${data?.contracts_linked || 0} contracts + ${data?.grants_linked || 0} grants linked. ${data?.entities_created || 0} new entities.`
       });
-      refetchStats();
-      refetchLinkStats();
-      queryClient.invalidateQueries({ queryKey: ['platform-stats'] });
+      refreshAll();
     } catch (e: any) {
       toast({ title: '❌ Linking Error', description: e.message, variant: 'destructive' });
     } finally {
       setLoading(null);
     }
+  };
+
+  const run50StateSweep = async () => {
+    const totalChunks = Math.ceil(56 / 5);
+    const logLines: string[] = ['🇺🇸 Starting 50-state sweep...'];
+    const allStates: string[] = [];
+    let totalContracts = 0;
+    let chunk = 0;
+    let hasMore = true;
+
+    setSweepProgress({ running: true, currentChunk: 0, totalChunks, statesLoaded: [], totalContracts: 0, log: [...logLines] });
+
+    while (hasMore) {
+      try {
+        const { data, error } = await supabase.functions.invoke('load-state-contracts', {
+          body: { chunk, chunk_size: 5, fiscal_years: [2024, 2025] }
+        });
+
+        if (error) {
+          logLines.push(`❌ Chunk ${chunk} error: ${error.message}`);
+          break;
+        }
+
+        if (data.done) {
+          logLines.push('✅ All states processed!');
+          hasMore = false;
+        } else {
+          const states = data.states_loaded || [];
+          totalContracts += data.total_inserted || 0;
+          allStates.push(...states);
+          logLines.push(`✅ Chunk ${chunk}: ${states.join(', ')} — ${data.total_inserted} contracts, ${data.entities_created} entities`);
+          hasMore = data.has_more;
+          chunk = data.next_chunk ?? chunk + 1;
+        }
+
+        setSweepProgress({ running: hasMore, currentChunk: chunk, totalChunks, statesLoaded: [...allStates], totalContracts, log: [...logLines] });
+
+        if (hasMore) await new Promise(r => setTimeout(r, 2000));
+      } catch (e: any) {
+        logLines.push(`❌ Error: ${e.message}`);
+        hasMore = false;
+        setSweepProgress(prev => prev ? { ...prev, running: false, log: [...logLines] } : null);
+      }
+    }
+
+    // Run entity linker after sweep
+    logLines.push('🔗 Running entity linker...');
+    setSweepProgress(prev => prev ? { ...prev, log: [...logLines] } : null);
+
+    try {
+      const { data: linkResult } = await supabase.rpc('link_transactions_to_entities') as { data: any };
+      if (linkResult) {
+        logLines.push(`🔗 Linked ${linkResult.contracts_linked} contracts, created ${linkResult.entities_created} entities`);
+      }
+    } catch { logLines.push('⚠️ Linker timed out (will retry on next run)'); }
+
+    logLines.push('✅ 50-STATE SWEEP COMPLETE!');
+    setSweepProgress(prev => prev ? { ...prev, running: false, log: [...logLines] } : null);
+    toast({ title: '🇺🇸 Sweep Complete', description: `${totalContracts} contracts across ${allStates.length} states` });
+    refreshAll();
   };
 
   const n = (v: any) => Number(v || 0).toLocaleString();
@@ -132,19 +205,58 @@ export const DataFloodPanel = () => {
                   </p>
                 )}
                 <div className="flex gap-3 flex-wrap">
-                  <Button onClick={() => invoke('full', 'FULL VACUUM')} disabled={!!loading} variant="destructive" className="gap-2">
+                  <Button onClick={() => invoke('full', 'FULL VACUUM')} disabled={!!loading || !!sweepProgress?.running} variant="destructive" className="gap-2">
                     {loading === 'FULL VACUUM' ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Bomb className="h-4 w-4" />}
                     RUN FULL
                   </Button>
-                  <Button onClick={() => invoke('quick', 'QUICK VACUUM')} disabled={!!loading} variant="secondary" className="gap-2">
+                  <Button onClick={() => invoke('quick', 'QUICK VACUUM')} disabled={!!loading || !!sweepProgress?.running} variant="secondary" className="gap-2">
                     {loading === 'QUICK VACUUM' ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Zap className="h-4 w-4" />}
                     QUICK MODE
                   </Button>
-                  <Button onClick={runLinker} disabled={!!loading} variant="outline" className="gap-2 border-primary/50 text-primary">
+                  <Button onClick={runLinker} disabled={!!loading || !!sweepProgress?.running} variant="outline" className="gap-2 border-primary/50 text-primary">
                     {loading === 'linking' ? <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" /> : <Link className="h-4 w-4" />}
                     LINK ENTITIES
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* 50-STATE SWEEP */}
+            <Card className="border-primary/30 bg-primary/5">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <Globe className="h-6 w-6 text-primary" />
+                  <div>
+                    <h3 className="text-lg font-bold">🇺🇸 50-State Coverage Sweep</h3>
+                    <p className="text-sm text-muted-foreground">Loads contracts from ALL 56 states/territories in chunks. ~10-15 min.</p>
+                  </div>
+                </div>
+                <Button onClick={run50StateSweep} disabled={!!loading || !!sweepProgress?.running} variant="default" className="gap-2">
+                  {sweepProgress?.running
+                    ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    : <Globe className="h-4 w-4" />}
+                  {sweepProgress?.running
+                    ? `Loading... Chunk ${sweepProgress.currentChunk}/${sweepProgress.totalChunks} (${sweepProgress.statesLoaded.length} states)`
+                    : 'RUN 50-STATE SWEEP'}
+                </Button>
+
+                {sweepProgress && (
+                  <div className="mt-4 space-y-3">
+                    <Progress value={(sweepProgress.statesLoaded.length / 56) * 100} className="h-2" />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>{sweepProgress.statesLoaded.length}/56 states</span>
+                      <span>{sweepProgress.totalContracts.toLocaleString()} contracts loaded</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {sweepProgress.statesLoaded.map(s => (
+                        <Badge key={s} variant="default" className="text-xs px-1.5 py-0">{s} ✓</Badge>
+                      ))}
+                    </div>
+                    <pre className="bg-muted rounded p-3 text-xs text-foreground overflow-auto max-h-32">
+                      {sweepProgress.log.join('\n')}
+                    </pre>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
