@@ -106,10 +106,10 @@ export default function Showcase() {
 
   // Data freshness badge
   const freshnessBadge = (() => {
-    if (!lastVacuum) return { text: 'Awaiting first data sync', color: 'bg-white/10 text-white/50 border-white/10' };
+    if (!lastVacuum) return { text: 'Initializing intelligence engine', alive: false };
     const hoursAgo = (Date.now() - new Date(lastVacuum).getTime()) / 3600000;
-    if (hoursAgo < 24) return { text: `Data synced ${formatTimeAgo(lastVacuum)}`, color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' };
-    return { text: `Last sync: ${new Date(lastVacuum).toLocaleDateString()}`, color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' };
+    if (hoursAgo < 24) return { text: 'Crunching live federal data', alive: true };
+    return { text: 'Processing federal records', alive: true };
   })();
 
   // Intelligence badge — 50 states + DC/territories
@@ -171,7 +171,11 @@ export default function Showcase() {
               {intelBadge}
             </Badge>
             <div className="mt-2">
-              <Badge className={`px-3 py-1 text-xs ${freshnessBadge.color}`}>
+              <Badge className="bg-white/[0.06] text-cyan-300/80 border-white/10 px-3 py-1 text-xs gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400" />
+                </span>
                 {freshnessBadge.text}
               </Badge>
             </div>
