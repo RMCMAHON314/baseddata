@@ -34,6 +34,7 @@ const OceanDashboard = lazy(() => import("./pages/OceanDashboard"));
 const Healthcare = lazy(() => import("./pages/Healthcare"));
 const Education = lazy(() => import("./pages/Education"));
 const LaborRatesExplorer = lazy(() => import("./pages/LaborRatesExplorer"));
+const Install = lazy(() => import("./pages/Install"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -97,6 +98,7 @@ const App = () => {
                 <Route path="/onboarding" element={<Onboarding />} />
                 <Route path="/diagnostic" element={<Diagnostic />} />
                 <Route path="/search" element={<Search />} />
+                <Route path="/install" element={<Install />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
