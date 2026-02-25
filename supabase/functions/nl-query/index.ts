@@ -143,14 +143,14 @@ Deno.serve(async (req) => {
     // Use Lovable AI to generate SQL
     if (lovableApiKey) {
       try {
-        const response = await fetch('https://api.lovable.dev/api/v1/chat', {
+        const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${lovableApiKey}`
           },
           body: JSON.stringify({
-            model: 'openai/gpt-5-mini',
+            model: 'google/gemini-3-flash-preview',
             messages: [
               { role: 'system', content: SCHEMA_CONTEXT },
               { role: 'user', content: `Generate a PostgreSQL SELECT query for: "${nlQuery}"` }
