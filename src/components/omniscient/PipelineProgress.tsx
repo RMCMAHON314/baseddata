@@ -100,7 +100,7 @@ const PipelineProgressInner = forwardRef<HTMLDivElement, PipelineProgressProps>(
           transition={{ duration: 0.5 }}
           className="mb-8"
         >
-          <Logo variant="full" className="scale-110" />
+          <Logo size="lg" className="scale-110" />
         </motion.div>
 
         {/* Version Badge */}

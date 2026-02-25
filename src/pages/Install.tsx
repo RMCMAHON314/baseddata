@@ -47,7 +47,7 @@ export default function Install() {
     <div className="min-h-screen bg-[hsl(222,47%,5%)] text-white flex flex-col items-center justify-center p-6">
       <div className="max-w-lg w-full space-y-8 text-center">
         <Link to="/" className="inline-block">
-          <Logo variant="compact" className="text-3xl" />
+          <Logo size="lg" />
         </Link>
 
         {isInstalled ? (

@@ -63,7 +63,7 @@ export default function Onboarding() {
       {/* Progress header */}
       <header className="border-b border-white/5 bg-white/[0.02] backdrop-blur-sm">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Logo variant="compact" className="text-xl" />
+          <Logo size="md" />
           <div className="flex items-center gap-3">
             {STEPS.map((s, i) => (
               <div key={s.id} className="flex items-center gap-2">
