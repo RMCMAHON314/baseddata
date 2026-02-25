@@ -3308,6 +3308,123 @@ export type Database = {
         }
         Relationships: []
       }
+      federal_audits: {
+        Row: {
+          audit_type: string | null
+          audit_year: number
+          auditee_city: string | null
+          auditee_ein: string | null
+          auditee_name: string
+          auditee_state: string | null
+          auditee_uei: string | null
+          auditee_zip: string | null
+          auditor_name: string | null
+          cfda_numbers: string[] | null
+          cognizant_agency: string | null
+          created_at: string | null
+          dbkey: string | null
+          entity_id: string | null
+          findings_count: number | null
+          going_concern: boolean | null
+          id: string
+          material_weakness: boolean | null
+          questioned_costs: number | null
+          raw_data: Json | null
+          significant_deficiency: boolean | null
+          source: string | null
+          total_federal_expenditures: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          audit_type?: string | null
+          audit_year: number
+          auditee_city?: string | null
+          auditee_ein?: string | null
+          auditee_name: string
+          auditee_state?: string | null
+          auditee_uei?: string | null
+          auditee_zip?: string | null
+          auditor_name?: string | null
+          cfda_numbers?: string[] | null
+          cognizant_agency?: string | null
+          created_at?: string | null
+          dbkey?: string | null
+          entity_id?: string | null
+          findings_count?: number | null
+          going_concern?: boolean | null
+          id?: string
+          material_weakness?: boolean | null
+          questioned_costs?: number | null
+          raw_data?: Json | null
+          significant_deficiency?: boolean | null
+          source?: string | null
+          total_federal_expenditures?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          audit_type?: string | null
+          audit_year?: number
+          auditee_city?: string | null
+          auditee_ein?: string | null
+          auditee_name?: string
+          auditee_state?: string | null
+          auditee_uei?: string | null
+          auditee_zip?: string | null
+          auditor_name?: string | null
+          cfda_numbers?: string[] | null
+          cognizant_agency?: string | null
+          created_at?: string | null
+          dbkey?: string | null
+          entity_id?: string | null
+          findings_count?: number | null
+          going_concern?: boolean | null
+          id?: string
+          material_weakness?: boolean | null
+          questioned_costs?: number | null
+          raw_data?: Json | null
+          significant_deficiency?: boolean | null
+          source?: string | null
+          total_federal_expenditures?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "federal_audits_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "federal_audits_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "federal_audits_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "federal_audits_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "federal_audits_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       flywheel_collection_log: {
         Row: {
           collected_at: string | null
@@ -3963,6 +4080,111 @@ export type Database = {
           },
         ]
       }
+      gsa_contracts: {
+        Row: {
+          contract_end_date: string | null
+          contract_number: string | null
+          contract_start_date: string | null
+          contractor_city: string | null
+          contractor_duns: string | null
+          contractor_name: string
+          contractor_state: string | null
+          contractor_uei: string | null
+          created_at: string | null
+          entity_id: string | null
+          id: string
+          naics_codes: string[] | null
+          raw_data: Json | null
+          schedule_number: string | null
+          schedule_title: string | null
+          sin_codes: string[] | null
+          small_business: boolean | null
+          socioeconomic_categories: string[] | null
+          source: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          contract_end_date?: string | null
+          contract_number?: string | null
+          contract_start_date?: string | null
+          contractor_city?: string | null
+          contractor_duns?: string | null
+          contractor_name: string
+          contractor_state?: string | null
+          contractor_uei?: string | null
+          created_at?: string | null
+          entity_id?: string | null
+          id?: string
+          naics_codes?: string[] | null
+          raw_data?: Json | null
+          schedule_number?: string | null
+          schedule_title?: string | null
+          sin_codes?: string[] | null
+          small_business?: boolean | null
+          socioeconomic_categories?: string[] | null
+          source?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          contract_end_date?: string | null
+          contract_number?: string | null
+          contract_start_date?: string | null
+          contractor_city?: string | null
+          contractor_duns?: string | null
+          contractor_name?: string
+          contractor_state?: string | null
+          contractor_uei?: string | null
+          created_at?: string | null
+          entity_id?: string | null
+          id?: string
+          naics_codes?: string[] | null
+          raw_data?: Json | null
+          schedule_number?: string | null
+          schedule_title?: string | null
+          sin_codes?: string[] | null
+          small_business?: boolean | null
+          socioeconomic_categories?: string[] | null
+          source?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gsa_contracts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gsa_contracts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gsa_contracts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gsa_contracts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gsa_contracts_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gsa_labor_rates: {
         Row: {
           business_size: string | null
@@ -4320,6 +4542,105 @@ export type Database = {
           weight?: number | null
         }
         Relationships: []
+      }
+      lobbying_disclosures: {
+        Row: {
+          amount: number | null
+          client_name: string | null
+          created_at: string | null
+          entity_id: string | null
+          filing_id: string | null
+          filing_period: string | null
+          filing_type: string | null
+          filing_year: number | null
+          government_entities: string[] | null
+          id: string
+          issues: string[] | null
+          lobbyists: string[] | null
+          raw_data: Json | null
+          registrant_id: string | null
+          registrant_name: string
+          source: string | null
+          specific_issues: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount?: number | null
+          client_name?: string | null
+          created_at?: string | null
+          entity_id?: string | null
+          filing_id?: string | null
+          filing_period?: string | null
+          filing_type?: string | null
+          filing_year?: number | null
+          government_entities?: string[] | null
+          id?: string
+          issues?: string[] | null
+          lobbyists?: string[] | null
+          raw_data?: Json | null
+          registrant_id?: string | null
+          registrant_name: string
+          source?: string | null
+          specific_issues?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number | null
+          client_name?: string | null
+          created_at?: string | null
+          entity_id?: string | null
+          filing_id?: string | null
+          filing_period?: string | null
+          filing_type?: string | null
+          filing_year?: number | null
+          government_entities?: string[] | null
+          id?: string
+          issues?: string[] | null
+          lobbyists?: string[] | null
+          raw_data?: Json | null
+          registrant_id?: string | null
+          registrant_name?: string
+          source?: string | null
+          specific_issues?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lobbying_disclosures_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lobbying_disclosures_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lobbying_disclosures_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lobbying_disclosures_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lobbying_disclosures_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       location_cache: {
         Row: {
@@ -6433,6 +6754,114 @@ export type Database = {
         }
         Relationships: []
       }
+      sec_filings: {
+        Row: {
+          accession_number: string | null
+          business_address_state: string | null
+          cik: string
+          company_name: string
+          created_at: string | null
+          description: string | null
+          employees: number | null
+          entity_id: string | null
+          filing_date: string | null
+          filing_type: string
+          filing_url: string | null
+          id: string
+          net_income: number | null
+          primary_document: string | null
+          raw_data: Json | null
+          revenue: number | null
+          sic_code: string | null
+          source: string | null
+          state_of_incorporation: string | null
+          total_assets: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          accession_number?: string | null
+          business_address_state?: string | null
+          cik: string
+          company_name: string
+          created_at?: string | null
+          description?: string | null
+          employees?: number | null
+          entity_id?: string | null
+          filing_date?: string | null
+          filing_type: string
+          filing_url?: string | null
+          id?: string
+          net_income?: number | null
+          primary_document?: string | null
+          raw_data?: Json | null
+          revenue?: number | null
+          sic_code?: string | null
+          source?: string | null
+          state_of_incorporation?: string | null
+          total_assets?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          accession_number?: string | null
+          business_address_state?: string | null
+          cik?: string
+          company_name?: string
+          created_at?: string | null
+          description?: string | null
+          employees?: number | null
+          entity_id?: string | null
+          filing_date?: string | null
+          filing_type?: string
+          filing_url?: string | null
+          id?: string
+          net_income?: number | null
+          primary_document?: string | null
+          raw_data?: Json | null
+          revenue?: number | null
+          sic_code?: string | null
+          source?: string | null
+          state_of_incorporation?: string | null
+          total_assets?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sec_filings_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sec_filings_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sec_filings_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sec_filings_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sec_filings_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shared_links: {
         Row: {
           created_at: string | null
@@ -7233,6 +7662,111 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      uspto_patents: {
+        Row: {
+          abstract: string | null
+          application_number: string | null
+          assignee_country: string | null
+          assignee_name: string | null
+          assignee_state: string | null
+          citation_count: number | null
+          cpc_codes: string[] | null
+          created_at: string | null
+          entity_id: string | null
+          filing_date: string | null
+          grant_date: string | null
+          id: string
+          inventors: string[] | null
+          patent_number: string | null
+          patent_type: string | null
+          raw_data: Json | null
+          source: string | null
+          title: string
+          updated_at: string | null
+          uspc_codes: string[] | null
+        }
+        Insert: {
+          abstract?: string | null
+          application_number?: string | null
+          assignee_country?: string | null
+          assignee_name?: string | null
+          assignee_state?: string | null
+          citation_count?: number | null
+          cpc_codes?: string[] | null
+          created_at?: string | null
+          entity_id?: string | null
+          filing_date?: string | null
+          grant_date?: string | null
+          id?: string
+          inventors?: string[] | null
+          patent_number?: string | null
+          patent_type?: string | null
+          raw_data?: Json | null
+          source?: string | null
+          title: string
+          updated_at?: string | null
+          uspc_codes?: string[] | null
+        }
+        Update: {
+          abstract?: string | null
+          application_number?: string | null
+          assignee_country?: string | null
+          assignee_name?: string | null
+          assignee_state?: string | null
+          citation_count?: number | null
+          cpc_codes?: string[] | null
+          created_at?: string | null
+          entity_id?: string | null
+          filing_date?: string | null
+          grant_date?: string | null
+          id?: string
+          inventors?: string[] | null
+          patent_number?: string | null
+          patent_type?: string | null
+          raw_data?: Json | null
+          source?: string | null
+          title?: string
+          updated_at?: string | null
+          uspc_codes?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "uspto_patents_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "uspto_patents_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "uspto_patents_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "uspto_patents_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "uspto_patents_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vacuum_runs: {
         Row: {
