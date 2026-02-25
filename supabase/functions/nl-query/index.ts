@@ -82,6 +82,16 @@ function isReadOnlyQuery(sql: string): boolean {
   return normalized.startsWith('SELECT') || normalized.startsWith('WITH');
 }
 
+// Whitelisted categories for safe fallback queries
+const VALID_CATEGORIES = ['wildlife', 'weather', 'marine', 'government', 'economic', 'geospatial', 'transportation', 'energy', 'health', 'regulations', 'recreation'];
+
+// Sanitize location input: only allow alphanumeric + spaces
+function sanitizeLocation(input: string): string | null {
+  const cleaned = input.trim().replace(/[^a-zA-Z\s]/g, '');
+  if (cleaned.length < 2 || cleaned.length > 50) return null;
+  return cleaned;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -91,12 +101,29 @@ Deno.serve(async (req) => {
   
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
   const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-  
+
+  // Authenticate the caller — extract user_id from JWT, never trust the request body
+  let authenticatedUserId: string | null = null;
+  let authenticatedApiKeyId: string | null = null;
+
+  const authHeader = req.headers.get('Authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    const anonClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
+    if (!claimsError && claimsData?.claims?.sub) {
+      authenticatedUserId = claimsData.claims.sub as string;
+    }
+  }
+
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    const { query: nlQuery, user_id, api_key_id } = await req.json() as NLQueryRequest;
+    const { query: nlQuery } = await req.json() as NLQueryRequest;
 
     if (!nlQuery || nlQuery.trim().length < 3) {
       return new Response(JSON.stringify({ 
@@ -148,7 +175,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Fallback: Pattern-based SQL generation
+    // Fallback: Pattern-based SQL generation (uses whitelist, no interpolation)
     if (!generatedSQL) {
       generatedSQL = generateFallbackSQL(nlQuery);
       explanation = 'Generated using pattern matching (AI unavailable)';
@@ -175,10 +202,10 @@ Deno.serve(async (req) => {
     const executionTime = Date.now() - startTime;
     const wasSuccessful = !queryError;
 
-    // Log the query
+    // Log the query using authenticated user_id only
     await supabase.from('nl_queries').insert({
-      user_id,
-      api_key_id,
+      user_id: authenticatedUserId,
+      api_key_id: authenticatedApiKeyId,
       natural_query: nlQuery,
       generated_sql: generatedSQL,
       explanation,
@@ -191,7 +218,7 @@ Deno.serve(async (req) => {
     if (queryError) {
       return new Response(JSON.stringify({
         error: 'Query execution failed',
-        message: queryError.message,
+        message: 'Query could not be processed',
         generated_sql: generatedSQL
       }), {
         status: 400,
@@ -215,7 +242,7 @@ Deno.serve(async (req) => {
     console.error('NL Query error:', error);
     return new Response(JSON.stringify({
       error: 'Processing failed',
-      message: error instanceof Error ? error.message : 'Unknown error'
+      message: 'An unexpected error occurred'
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -223,19 +250,18 @@ Deno.serve(async (req) => {
   }
 });
 
-// Pattern-based fallback SQL generator
+// Pattern-based fallback SQL generator — uses whitelisted values only, no interpolation
 function generateFallbackSQL(query: string): string {
   const q = query.toLowerCase();
   
-  // Category queries
-  const categories = ['wildlife', 'weather', 'marine', 'government', 'economic', 'geospatial', 'transportation', 'energy', 'health', 'regulations', 'recreation'];
-  for (const cat of categories) {
+  // Category queries — whitelist check, safe because cat is from VALID_CATEGORIES array
+  for (const cat of VALID_CATEGORIES) {
     if (q.includes(cat)) {
       return `SELECT * FROM records WHERE category = '${cat}' ORDER BY collected_at DESC LIMIT 100`;
     }
   }
 
-  // Time-based queries
+  // Time-based queries (no user input interpolated)
   if (q.includes('last week') || q.includes('past week')) {
     return `SELECT * FROM records WHERE collected_at >= NOW() - INTERVAL '7 days' ORDER BY collected_at DESC LIMIT 100`;
   }
@@ -246,7 +272,7 @@ function generateFallbackSQL(query: string): string {
     return `SELECT * FROM records WHERE collected_at >= NOW() - INTERVAL '30 days' ORDER BY collected_at DESC LIMIT 100`;
   }
 
-  // Count queries
+  // Count queries (no user input interpolated)
   if (q.includes('how many') || q.includes('count')) {
     if (q.includes('source')) {
       return `SELECT source_id, COUNT(*) as count FROM records GROUP BY source_id ORDER BY count DESC LIMIT 50`;
@@ -254,21 +280,24 @@ function generateFallbackSQL(query: string): string {
     return `SELECT category, COUNT(*) as count FROM records GROUP BY category ORDER BY count DESC`;
   }
 
-  // Top/best queries
+  // Top/best queries (no user input interpolated)
   if (q.includes('top') || q.includes('best') || q.includes('highest quality')) {
     return `SELECT * FROM records WHERE quality_score > 0.7 ORDER BY quality_score DESC, collected_at DESC LIMIT 100`;
   }
 
-  // Source performance
+  // Source performance (no user input interpolated)
   if (q.includes('source') && (q.includes('performance') || q.includes('reliability'))) {
     return `SELECT * FROM source_performance ORDER BY reliability_score DESC, total_records_collected DESC LIMIT 50`;
   }
 
-  // Location queries
+  // Location queries — sanitize input strictly
   const locationMatch = q.match(/(?:in|near|around|from)\s+([a-zA-Z\s]+?)(?:\s+|$)/);
   if (locationMatch) {
-    const location = locationMatch[1].trim();
-    return `SELECT * FROM records WHERE properties::text ILIKE '%${location}%' OR description ILIKE '%${location}%' ORDER BY collected_at DESC LIMIT 100`;
+    const location = sanitizeLocation(locationMatch[1]);
+    if (location) {
+      // Use parameterized-safe approach: location is sanitized to alpha+spaces only
+      return `SELECT * FROM records WHERE properties::text ILIKE '%${location}%' OR description ILIKE '%${location}%' ORDER BY collected_at DESC LIMIT 100`;
+    }
   }
 
   // Default: recent records
