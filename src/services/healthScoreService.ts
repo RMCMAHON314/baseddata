@@ -136,8 +136,8 @@ export async function getEntityHealthScore(entityId: string): Promise<HealthScor
     .maybeSingle();
   
   if (!data) {
-    // Calculate fresh if not cached
-    return calculateAndStoreHealthScore(entityId);
+    // Return null — health scores are calculated server-side by the flywheel
+    return null;
   }
   
   return {
