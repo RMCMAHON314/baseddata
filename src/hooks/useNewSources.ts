@@ -8,10 +8,21 @@ export function usePlatformStats() {
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_platform_stats' as any);
       if (error) throw error;
-      // RPC returns jsonb directly (single object), or array with one element
-      const result = data as any;
-      if (Array.isArray(result)) return result[0] || null;
-      return result || null;
+      const raw = data as any;
+      // Handle all possible return shapes from the RPC
+      if (!raw) return null;
+      // If it's an array (e.g. [{get_platform_stats: {...}}] or [{...}])
+      if (Array.isArray(raw)) {
+        const first = raw[0];
+        if (!first) return null;
+        // Nested under function name key
+        if (first.get_platform_stats) return first.get_platform_stats;
+        return first;
+      }
+      // Direct object with function name key
+      if (raw.get_platform_stats) return raw.get_platform_stats;
+      // Direct object with stats keys
+      return raw;
     },
     staleTime: 30000,
   });
