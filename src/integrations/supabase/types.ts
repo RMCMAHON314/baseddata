@@ -5289,26 +5289,38 @@ export type Database = {
           awardee_state: string | null
           awardee_uei: string | null
           base_type: string | null
+          capability_tags: string[] | null
           classification_code: string | null
+          competition_level: string | null
           created_at: string | null
           department: string | null
           description: string | null
+          enriched_at: string | null
+          enrichment_version: number | null
           id: string
+          incumbent_entity_id: string | null
+          incumbent_name: string | null
           is_active: boolean | null
+          market_size: number | null
           naics_code: string | null
           notice_id: string | null
           notice_type: string | null
           office: string | null
+          opportunity_score: number | null
           point_of_contact: Json | null
           pop_city: string | null
           pop_state: string | null
           pop_zip: string | null
           posted_date: string | null
+          predicted_award_amount: number | null
+          predicted_bidder_count: number | null
           primary_contact_email: string | null
           primary_contact_name: string | null
           primary_contact_phone: string | null
           psc_code: string | null
           raw_data: Json | null
+          related_contract_ids: string[] | null
+          related_entity_ids: string[] | null
           resource_links: Json | null
           response_deadline: string | null
           search_text: string | null
@@ -5322,6 +5334,7 @@ export type Database = {
           title: string
           ui_link: string | null
           updated_at: string | null
+          urgency_score: number | null
         }
         Insert: {
           archive_date?: string | null
@@ -5335,26 +5348,38 @@ export type Database = {
           awardee_state?: string | null
           awardee_uei?: string | null
           base_type?: string | null
+          capability_tags?: string[] | null
           classification_code?: string | null
+          competition_level?: string | null
           created_at?: string | null
           department?: string | null
           description?: string | null
+          enriched_at?: string | null
+          enrichment_version?: number | null
           id?: string
+          incumbent_entity_id?: string | null
+          incumbent_name?: string | null
           is_active?: boolean | null
+          market_size?: number | null
           naics_code?: string | null
           notice_id?: string | null
           notice_type?: string | null
           office?: string | null
+          opportunity_score?: number | null
           point_of_contact?: Json | null
           pop_city?: string | null
           pop_state?: string | null
           pop_zip?: string | null
           posted_date?: string | null
+          predicted_award_amount?: number | null
+          predicted_bidder_count?: number | null
           primary_contact_email?: string | null
           primary_contact_name?: string | null
           primary_contact_phone?: string | null
           psc_code?: string | null
           raw_data?: Json | null
+          related_contract_ids?: string[] | null
+          related_entity_ids?: string[] | null
           resource_links?: Json | null
           response_deadline?: string | null
           search_text?: string | null
@@ -5368,6 +5393,7 @@ export type Database = {
           title: string
           ui_link?: string | null
           updated_at?: string | null
+          urgency_score?: number | null
         }
         Update: {
           archive_date?: string | null
@@ -5381,26 +5407,38 @@ export type Database = {
           awardee_state?: string | null
           awardee_uei?: string | null
           base_type?: string | null
+          capability_tags?: string[] | null
           classification_code?: string | null
+          competition_level?: string | null
           created_at?: string | null
           department?: string | null
           description?: string | null
+          enriched_at?: string | null
+          enrichment_version?: number | null
           id?: string
+          incumbent_entity_id?: string | null
+          incumbent_name?: string | null
           is_active?: boolean | null
+          market_size?: number | null
           naics_code?: string | null
           notice_id?: string | null
           notice_type?: string | null
           office?: string | null
+          opportunity_score?: number | null
           point_of_contact?: Json | null
           pop_city?: string | null
           pop_state?: string | null
           pop_zip?: string | null
           posted_date?: string | null
+          predicted_award_amount?: number | null
+          predicted_bidder_count?: number | null
           primary_contact_email?: string | null
           primary_contact_name?: string | null
           primary_contact_phone?: string | null
           psc_code?: string | null
           raw_data?: Json | null
+          related_contract_ids?: string[] | null
+          related_entity_ids?: string[] | null
           resource_links?: Json | null
           response_deadline?: string | null
           search_text?: string | null
@@ -5414,8 +5452,178 @@ export type Database = {
           title?: string
           ui_link?: string | null
           updated_at?: string | null
+          urgency_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunities_incumbent_entity_id_fkey"
+            columns: ["incumbent_entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_incumbent_entity_id_fkey"
+            columns: ["incumbent_entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_incumbent_entity_id_fkey"
+            columns: ["incumbent_entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_incumbent_entity_id_fkey"
+            columns: ["incumbent_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunities_incumbent_entity_id_fkey"
+            columns: ["incumbent_entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      opportunity_intelligence_log: {
+        Row: {
+          created_at: string | null
+          details: Json | null
+          duration_ms: number | null
+          id: string
+          insights_generated: number | null
+          matches_created: number | null
+          opportunities_processed: number | null
+          run_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          details?: Json | null
+          duration_ms?: number | null
+          id?: string
+          insights_generated?: number | null
+          matches_created?: number | null
+          opportunities_processed?: number | null
+          run_type: string
+        }
+        Update: {
+          created_at?: string | null
+          details?: Json | null
+          duration_ms?: number | null
+          id?: string
+          insights_generated?: number | null
+          matches_created?: number | null
+          opportunities_processed?: number | null
+          run_type?: string
         }
         Relationships: []
+      }
+      opportunity_matches: {
+        Row: {
+          capability_match: boolean | null
+          competitive_advantage: string | null
+          created_at: string | null
+          entity_id: string
+          geographic_match: boolean | null
+          id: string
+          match_reasons: Json | null
+          match_score: number
+          naics_match: boolean | null
+          opportunity_id: string
+          past_performance_match: boolean | null
+          price_to_win: number | null
+          recommended_teaming: string[] | null
+          set_aside_match: boolean | null
+          updated_at: string | null
+          win_probability: number | null
+        }
+        Insert: {
+          capability_match?: boolean | null
+          competitive_advantage?: string | null
+          created_at?: string | null
+          entity_id: string
+          geographic_match?: boolean | null
+          id?: string
+          match_reasons?: Json | null
+          match_score?: number
+          naics_match?: boolean | null
+          opportunity_id: string
+          past_performance_match?: boolean | null
+          price_to_win?: number | null
+          recommended_teaming?: string[] | null
+          set_aside_match?: boolean | null
+          updated_at?: string | null
+          win_probability?: number | null
+        }
+        Update: {
+          capability_match?: boolean | null
+          competitive_advantage?: string | null
+          created_at?: string | null
+          entity_id?: string
+          geographic_match?: boolean | null
+          id?: string
+          match_reasons?: Json | null
+          match_score?: number
+          naics_match?: boolean | null
+          opportunity_id?: string
+          past_performance_match?: boolean | null
+          price_to_win?: number | null
+          recommended_teaming?: string[] | null
+          set_aside_match?: boolean | null
+          updated_at?: string | null
+          win_probability?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_matches_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_matches_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_matches_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_matches_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_matches_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opportunity_matches_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "opportunities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       opportunity_pipeline: {
         Row: {
@@ -8326,6 +8534,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      derive_recompete_opportunities: { Args: never; Returns: Json }
       derive_relationships: { Args: never; Returns: number }
       detect_anomalies: {
         Args: { lookback_days?: number; threshold_multiplier?: number }
@@ -8363,6 +8572,7 @@ export type Database = {
           via_type: string
         }[]
       }
+      enrich_opportunities: { Args: never; Returns: Json }
       execute_nl_query: { Args: { p_sql: string }; Returns: Json }
       find_competitors: {
         Args: { p_entity_id: string; p_limit?: number }
@@ -8470,6 +8680,7 @@ export type Database = {
           market_state: string
         }[]
       }
+      generate_opportunity_insights: { Args: never; Returns: Json }
       get_admin_stats: { Args: never; Returns: Json }
       get_agency_buying_patterns: {
         Args: { p_agency?: string; p_naics?: string }
@@ -8833,6 +9044,7 @@ export type Database = {
       reset_monthly_search_counts: { Args: never; Returns: undefined }
       run_all_discovery: { Args: never; Returns: Json }
       run_full_ocean_cycle: { Args: never; Returns: Json }
+      run_opportunity_intelligence: { Args: never; Returns: Json }
       score_all_entities: { Args: never; Returns: number }
       semantx_search: {
         Args: {
