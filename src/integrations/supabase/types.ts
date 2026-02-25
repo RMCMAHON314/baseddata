@@ -8060,34 +8060,7 @@ export type Database = {
           slug: string
         }[]
       }
-      get_platform_stats: {
-        Args: never
-        Returns: {
-          data_sources: number
-          distinct_agencies: number
-          distinct_states: number
-          last_vacuum_at: string
-          last_vacuum_loaded: number
-          last_vacuum_status: string
-          total_contract_value: number
-          total_contracts: number
-          total_entities: number
-          total_exclusions: number
-          total_fpds: number
-          total_grant_value: number
-          total_grants: number
-          total_idv_value: number
-          total_idvs: number
-          total_labor_rates: number
-          total_nsf: number
-          total_opportunities: number
-          total_records: number
-          total_relationships: number
-          total_sam_entities: number
-          total_sbir: number
-          total_subawards: number
-        }[]
-      }
+      get_platform_stats: { Args: never; Returns: Json }
       get_recompete_pipeline: {
         Args: {
           p_min_value?: number
