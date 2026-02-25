@@ -112,10 +112,14 @@ export default function Showcase() {
     return { text: `Last sync: ${new Date(lastVacuum).toLocaleDateString()}`, color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' };
   })();
 
-  // Intelligence badge
+  // Intelligence badge — 50 states + DC/territories
+  const territoryCount = Math.max(0, states - 50);
+  const stateLabel = states > 50
+    ? `50 States · ${territoryCount} Territor${territoryCount === 1 ? 'y' : 'ies'}`
+    : `${states} States`;
   const intelBadge = agencies > 0
-    ? `Live Intelligence · ${agencies} Agencies · ${states} States`
-    : 'Ready to Deploy · 10 Data Sources · All 50 States';
+    ? `Live Intelligence · ${agencies} Agencies · ${stateLabel}`
+    : 'Ready to Deploy · 10 Data Sources · 50 States & Territories';
 
   const DATA_SOURCES = [
     { emoji: '📄', label: 'Federal Contracts', count: Number(ps?.contract_count || 0), source: 'USASpending', note: 'All 50 states · FY24-25' },
