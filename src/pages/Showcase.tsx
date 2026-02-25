@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import idsLogo from '@/assets/IDS-Mark-Orange.png';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -347,10 +348,12 @@ export default function Showcase() {
             </div>
 
             {/* Attribution column */}
-            <div className="flex flex-col gap-2 md:items-end md:text-right">
+            <div className="flex flex-col gap-3 md:items-end md:text-right">
+              <a href="https://infinitedatasolutions.com" target="_blank" rel="noopener noreferrer" className="inline-block hover:opacity-80 transition-opacity">
+                <img src={idsLogo} alt="Infinite Data Solutions" className="h-10 w-auto" />
+              </a>
               <p className="text-sm text-muted-foreground font-medium">Built in Baltimore 🦀</p>
-              <p className="text-sm text-muted-foreground">by Infinite Data Solutions</p>
-              <div className="h-px w-12 bg-border my-2 md:ml-auto" />
+              <div className="h-px w-12 bg-border md:ml-auto" />
               <p className="text-xs text-muted-foreground/60 leading-relaxed">
                 Powered by USASpending.gov, SAM.gov,
                 <br />NIH, NSF & GSA data
