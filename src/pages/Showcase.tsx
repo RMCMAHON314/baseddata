@@ -46,10 +46,10 @@ const AnimatedStat = React.forwardRef<HTMLDivElement, { value: number; label: st
     };
     return (
       <div ref={ref} className="text-center">
-        <p className="text-4xl md:text-5xl font-black font-mono tracking-tight text-white">
+        <p className="text-4xl md:text-5xl font-black font-mono tracking-tight text-foreground">
           {prefix}{fmt(count)}
         </p>
-        <p className="text-sm text-cyan-300/70 mt-2 font-medium uppercase tracking-wider">{label}</p>
+        <p className="text-sm text-cyan-600/70 mt-2 font-medium uppercase tracking-wider">{label}</p>
       </div>
     );
   }
@@ -135,22 +135,22 @@ export default function Showcase() {
   ];
 
   return (
-    <div className="min-h-screen bg-[hsl(222,47%,5%)] text-white overflow-x-hidden">
+    <div className="min-h-screen bg-white text-foreground overflow-x-hidden">
       {/* ── NAV ── */}
       <nav className="relative z-20 flex items-center justify-between px-6 md:px-12 py-5 max-w-7xl mx-auto">
         <Link to="/" className="flex items-center gap-3">
           <Logo size="lg" />
         </Link>
         <div className="flex items-center gap-1 md:gap-2 flex-wrap">
-          <Link to="/explore"><Button variant="ghost" size="sm" className="text-white/60 hover:text-white hover:bg-white/5">Explore</Button></Link>
-          <Link to="/entities"><Button variant="ghost" size="sm" className="text-white/60 hover:text-white hover:bg-white/5">Entities</Button></Link>
-          <Link to="/opportunities"><Button variant="ghost" size="sm" className="text-white/60 hover:text-white hover:bg-white/5 hidden md:inline-flex">Opportunities</Button></Link>
-          <Link to="/intelligence"><Button variant="ghost" size="sm" className="text-white/60 hover:text-white hover:bg-white/5 hidden md:inline-flex">Intelligence</Button></Link>
-          <Link to="/sbir"><Button variant="ghost" size="sm" className="text-white/60 hover:text-white hover:bg-white/5 hidden lg:inline-flex">SBIR</Button></Link>
-          <Link to="/labor-rates"><Button variant="ghost" size="sm" className="text-white/60 hover:text-white hover:bg-white/5 hidden lg:inline-flex">Labor Rates</Button></Link>
-          <Link to="/analytics"><Button variant="ghost" size="sm" className="text-white/60 hover:text-white hover:bg-white/5 hidden lg:inline-flex">Analytics</Button></Link>
+          <Link to="/explore"><Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-muted">Explore</Button></Link>
+          <Link to="/entities"><Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-muted">Entities</Button></Link>
+          <Link to="/opportunities"><Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-muted hidden md:inline-flex">Opportunities</Button></Link>
+          <Link to="/intelligence"><Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-muted hidden md:inline-flex">Intelligence</Button></Link>
+          <Link to="/sbir"><Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-muted hidden lg:inline-flex">SBIR</Button></Link>
+          <Link to="/labor-rates"><Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-muted hidden lg:inline-flex">Labor Rates</Button></Link>
+          <Link to="/analytics"><Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-muted hidden lg:inline-flex">Analytics</Button></Link>
           <Link to="/onboarding">
-            <Button size="sm" className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white border-0">
+            <Button size="sm" className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white border-0">
               Get Started
             </Button>
           </Link>
@@ -160,21 +160,21 @@ export default function Showcase() {
       {/* ── HERO ── */}
       <section className="relative pt-16 pb-32 px-6">
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-cyan-500/8 rounded-full blur-[120px]" />
-          <div className="absolute top-40 right-0 w-[400px] h-[400px] bg-blue-600/10 rounded-full blur-[100px]" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-cyan-100/50 rounded-full blur-[120px]" />
+          <div className="absolute top-40 right-0 w-[400px] h-[400px] bg-blue-100/60 rounded-full blur-[100px]" />
         </div>
 
         <div className="relative z-10 max-w-4xl mx-auto text-center">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-            <Badge className={`mb-3 px-4 py-1.5 text-sm font-medium ${agencies > 0 ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' : 'bg-white/10 text-white/60 border-white/10'}`}>
+            <Badge className={`mb-3 px-4 py-1.5 text-sm font-medium ${agencies > 0 ? 'bg-cyan-50 text-cyan-700 border-cyan-200' : 'bg-muted text-muted-foreground border-border'}`}>
               <Zap className="w-3.5 h-3.5 mr-1.5" />
               {intelBadge}
             </Badge>
             <div className="mt-2">
-              <Badge className="bg-white/[0.06] text-cyan-300/80 border-white/10 px-3 py-1 text-xs gap-2">
+              <Badge className="bg-muted text-cyan-600 border-border px-3 py-1 text-xs gap-2">
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400" />
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-500 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500" />
                 </span>
                 {freshnessBadge.text}
               </Badge>
@@ -182,14 +182,14 @@ export default function Showcase() {
           </motion.div>
 
           <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }}
-            className="text-5xl md:text-7xl font-black leading-[1.05] mb-6 mt-6 tracking-tight">
+            className="text-5xl md:text-7xl font-black leading-[1.05] mb-6 mt-6 tracking-tight text-foreground">
             Government Contract
             <br />Intelligence.{' '}
-            <span className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">Automated.</span>
+            <span className="bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">Automated.</span>
           </motion.h1>
 
           <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-lg md:text-xl text-white/50 max-w-2xl mx-auto mb-10">
+            className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
             Track competitors, discover opportunities, and win more contracts with AI-powered federal intelligence.
           </motion.p>
 
@@ -200,20 +200,20 @@ export default function Showcase() {
 
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="flex flex-col items-center gap-3">
             <Link to="/onboarding">
-              <Button size="lg" className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white border-0 text-base px-8 h-12 gap-2">
+              <Button size="lg" className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white border-0 text-base px-8 h-12 gap-2">
                 Start Free — No credit card required <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>
-            <p className="text-xs text-white/30">Join government contractors using real-time intelligence</p>
+            <p className="text-xs text-muted-foreground/60">Join government contractors using real-time intelligence</p>
           </motion.div>
         </div>
       </section>
 
       {/* ── STATS ── */}
-      <section className="relative py-20 px-6 border-y border-white/5">
-        <div className="absolute inset-0 bg-gradient-to-b from-cyan-500/3 via-transparent to-transparent pointer-events-none" />
+      <section className="relative py-20 px-6 border-y border-border">
+        <div className="absolute inset-0 bg-gradient-to-b from-cyan-50/50 via-transparent to-transparent pointer-events-none" />
         <div className="relative max-w-5xl mx-auto">
-          <p className="text-center text-sm text-white/40 mb-10 uppercase tracking-widest">
+          <p className="text-center text-sm text-muted-foreground mb-10 uppercase tracking-widest">
             {agencies > 0
               ? `Tracking federal contracts, grants & IDVs across ${agencies} agencies and ${states} states`
               : 'Ready to track federal contracts, grants & IDVs across all 50 states'}
@@ -231,22 +231,22 @@ export default function Showcase() {
       <section className="py-16 px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-white mb-2">Data Coverage</h2>
-            <p className="text-white/40 text-sm">Live record counts across all integrated federal sources</p>
+            <h2 className="text-2xl font-bold text-foreground mb-2">Data Coverage</h2>
+            <p className="text-muted-foreground text-sm">Live record counts across all integrated federal sources</p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
             {DATA_SOURCES.map(s => {
               const hasData = s.count > 0;
               return (
-                <Card key={s.label} className={`bg-white/[0.03] p-4 hover:border-white/10 transition-colors ${hasData ? 'border-emerald-500/20' : 'border-white/5 opacity-60'}`}>
-                  <p className="text-lg mb-1">{s.emoji} <span className="text-sm font-semibold text-white">{s.label}</span></p>
+                <Card key={s.label} className={`bg-muted/30 p-4 hover:border-border transition-colors ${hasData ? 'border-cyan-200' : 'border-border opacity-60'}`}>
+                  <p className="text-lg mb-1">{s.emoji} <span className="text-sm font-semibold text-foreground">{s.label}</span></p>
                   {hasData ? (
-                    <p className="text-2xl font-bold text-cyan-400 font-mono">{s.count.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-cyan-600 font-mono">{s.count.toLocaleString()}</p>
                   ) : (
-                    <Badge className="bg-white/5 text-white/40 border-white/10 text-xs mt-1">Coming Soon</Badge>
+                    <Badge className="bg-muted text-muted-foreground border-border text-xs mt-1">Coming Soon</Badge>
                   )}
-                  <p className="text-xs text-white/40 mt-1">{s.source}</p>
-                  <p className="text-xs text-white/25">{s.note}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{s.source}</p>
+                  <p className="text-xs text-muted-foreground/50">{s.note}</p>
                 </Card>
               );
             })}
@@ -258,22 +258,22 @@ export default function Showcase() {
       <section className="py-24 px-6">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-black mb-4">
+            <h2 className="text-3xl md:text-4xl font-black mb-4 text-foreground">
               Everything you need to{' '}
-              <span className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">win more contracts</span>
+              <span className="bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">win more contracts</span>
             </h2>
-            <p className="text-white/40 text-lg max-w-xl mx-auto">Real-time intelligence that turns public data into a competitive advantage.</p>
+            <p className="text-muted-foreground text-lg max-w-xl mx-auto">Real-time intelligence that turns public data into a competitive advantage.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {FEATURES.map((f, i) => (
               <motion.div key={f.title} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
                 transition={{ delay: i * 0.1, duration: 0.5 }}
-                className="group rounded-2xl border border-white/5 bg-white/[0.02] p-8 hover:border-white/10 hover:bg-white/[0.04] transition-all duration-300">
+                className="group rounded-2xl border border-border bg-muted/20 p-8 hover:border-cyan-200 hover:bg-muted/40 transition-all duration-300">
                 <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${f.color} flex items-center justify-center mb-5`}>
                   <f.icon className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-xl font-bold mb-3 text-white">{f.title}</h3>
-                <p className="text-white/40 leading-relaxed">{f.desc}</p>
+                <h3 className="text-xl font-bold mb-3 text-foreground">{f.title}</h3>
+                <p className="text-muted-foreground leading-relaxed">{f.desc}</p>
               </motion.div>
             ))}
           </div>
@@ -281,11 +281,11 @@ export default function Showcase() {
       </section>
 
       {/* ── HOW IT WORKS ── */}
-      <section className="py-24 px-6 border-t border-white/5">
+      <section className="py-24 px-6 border-t border-border">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-black mb-16">
+          <h2 className="text-3xl md:text-4xl font-black mb-16 text-foreground">
             From search to strategy in{' '}
-            <span className="bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">seconds</span>
+            <span className="bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">seconds</span>
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {[
@@ -295,9 +295,9 @@ export default function Showcase() {
             ].map((s, i) => (
               <motion.div key={s.step} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
                 transition={{ delay: i * 0.15 }} className="text-center">
-                <div className="text-5xl font-black text-white/5 mb-4 font-mono">{s.step}</div>
-                <h3 className="text-xl font-bold text-white mb-2">{s.title}</h3>
-                <p className="text-white/40">{s.desc}</p>
+                <div className="text-5xl font-black text-muted/60 mb-4 font-mono">{s.step}</div>
+                <h3 className="text-xl font-bold text-foreground mb-2">{s.title}</h3>
+                <p className="text-muted-foreground">{s.desc}</p>
               </motion.div>
             ))}
           </div>
@@ -307,13 +307,13 @@ export default function Showcase() {
       {/* ── FINAL CTA ── */}
       <section className="py-24 px-6">
         <div className="max-w-3xl mx-auto text-center">
-          <div className="rounded-2xl border border-white/10 bg-gradient-to-b from-cyan-500/5 to-transparent p-12 md:p-16">
-            <h2 className="text-3xl md:text-4xl font-black mb-4">Ready to see your competitive landscape?</h2>
-            <p className="text-white/40 mb-8 text-lg">
+          <div className="rounded-2xl border border-cyan-200 bg-gradient-to-b from-cyan-50/50 to-transparent p-12 md:p-16">
+            <h2 className="text-3xl md:text-4xl font-black mb-4 text-foreground">Ready to see your competitive landscape?</h2>
+            <p className="text-muted-foreground mb-8 text-lg">
               Search any organization and get instant intelligence — contract history, competitors, win rates, and market position.
             </p>
             <Link to="/onboarding">
-              <Button size="lg" className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white border-0 text-base px-10 h-12 gap-2">
+              <Button size="lg" className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white border-0 text-base px-10 h-12 gap-2">
                 Start Free — No credit card required <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>
@@ -322,23 +322,23 @@ export default function Showcase() {
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="border-t border-white/5 py-12 px-6">
+      <footer className="border-t border-border py-12 px-6">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
             <Logo size="sm" />
-            <span className="text-white/30 text-sm">Government Contract Intelligence</span>
+            <span className="text-muted-foreground text-sm">Government Contract Intelligence</span>
           </div>
-          <div className="flex items-center gap-6 text-sm text-white/30">
-            <Link to="/explore" className="hover:text-white/60 transition-colors">Explore</Link>
-            <Link to="/entities" className="hover:text-white/60 transition-colors">Entities</Link>
-            <Link to="/opportunities" className="hover:text-white/60 transition-colors">Opportunities</Link>
-            <Link to="/intelligence" className="hover:text-white/60 transition-colors">Intelligence</Link>
-            <Link to="/labor-rates" className="hover:text-white/60 transition-colors">Labor Rates</Link>
-            <Link to="/api-docs" className="hover:text-white/60 transition-colors">API</Link>
+          <div className="flex items-center gap-6 text-sm text-muted-foreground">
+            <Link to="/explore" className="hover:text-foreground transition-colors">Explore</Link>
+            <Link to="/entities" className="hover:text-foreground transition-colors">Entities</Link>
+            <Link to="/opportunities" className="hover:text-foreground transition-colors">Opportunities</Link>
+            <Link to="/intelligence" className="hover:text-foreground transition-colors">Intelligence</Link>
+            <Link to="/labor-rates" className="hover:text-foreground transition-colors">Labor Rates</Link>
+            <Link to="/api-docs" className="hover:text-foreground transition-colors">API</Link>
           </div>
           <div className="text-right">
-            <p className="text-white/20 text-sm">Built in Baltimore 🦀 by Infinite Data Solutions</p>
-            <p className="text-white/15 text-xs mt-1">Powered by USASpending.gov, SAM.gov, NIH, NSF, GSA data</p>
+            <p className="text-muted-foreground/70 text-sm">Built in Baltimore 🦀 by Infinite Data Solutions</p>
+            <p className="text-muted-foreground/50 text-xs mt-1">Powered by USASpending.gov, SAM.gov, NIH, NSF, GSA data</p>
           </div>
         </div>
       </footer>
