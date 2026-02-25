@@ -74,9 +74,8 @@ export function GlobalLayout({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
         <div className="container flex h-14 items-center justify-between px-4 gap-4">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 shrink-0">
-            <Logo className="h-7 w-7" />
-            <span className="font-bold text-lg hidden sm:block text-gradient-omni">BASED DATA</span>
+          <Link to="/" className="flex items-center shrink-0">
+            <Logo />
           </Link>
 
           {/* Primary Nav */}
