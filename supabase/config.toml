@@ -80,3 +80,90 @@ verify_jwt = false
 
 [functions.load-state-contracts]
 verify_jwt = false
+
+[functions.ai-chat]
+verify_jwt = false
+
+[functions.mega-search]
+verify_jwt = false
+
+[functions.health-check]
+verify_jwt = false
+
+[functions.alert-engine]
+verify_jwt = false
+
+[functions.gap-fixer]
+verify_jwt = false
+
+[functions.ocean-controller]
+verify_jwt = false
+
+[functions.mega-ingest]
+verify_jwt = false
+
+[functions.data-filler-v2]
+verify_jwt = false
+
+[functions.flywheel-ultimate]
+verify_jwt = false
+
+[functions.core-extract-facts]
+verify_jwt = false
+
+[functions.core-generate-insights]
+verify_jwt = false
+
+[functions.core-learning]
+verify_jwt = false
+
+[functions.core-scorer]
+verify_jwt = false
+
+[functions.entity-resolver]
+verify_jwt = false
+
+[functions.backfill-entity-resolution]
+verify_jwt = false
+
+[functions.kraken]
+verify_jwt = false
+
+[functions.kraken-crawlers]
+verify_jwt = false
+
+[functions.kraken-hunters]
+verify_jwt = false
+
+[functions.kraken-ingest]
+verify_jwt = false
+
+[functions.kraken-rage]
+verify_jwt = false
+
+[functions.execute-query]
+verify_jwt = false
+
+[functions.execute-sources]
+verify_jwt = false
+
+[functions.ingest-data]
+verify_jwt = false
+
+[functions.data-filler]
+verify_jwt = false
+
+[functions.public-api]
+verify_jwt = false
+
+[functions.webhook-dispatcher]
+verify_jwt = false
+
+[functions.zapier-trigger]
+verify_jwt = false
+
+[functions.slack-integration]
+verify_jwt = false
+
+[functions.test-pipeline]
+verify_jwt = false
