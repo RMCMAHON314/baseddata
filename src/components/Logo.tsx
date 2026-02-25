@@ -1,63 +1,30 @@
-// BASED DATA Logo
-// Stacked right-aligned branding with chevron
-
+// BASED DATA Logo — single horizontal format with chevron
 import { forwardRef } from 'react';
 import { ChevronRight } from 'lucide-react';
 
 interface LogoProps {
   className?: string;
-  variant?: 'full' | 'icon' | 'compact';
+  size?: 'sm' | 'md' | 'lg';
 }
 
 export const Logo = forwardRef<HTMLDivElement, LogoProps>(
-  ({ className = "", variant = 'full' }, ref) => {
-    // Icon only variant
-    if (variant === 'icon') {
-      return (
-        <div ref={ref} className={`flex items-center justify-center ${className}`}>
-          <div className="flex items-center justify-center w-8 h-8 bg-primary rounded-lg">
-            <ChevronRight className="w-5 h-5 text-primary-foreground" strokeWidth={3} />
-          </div>
-        </div>
-      );
-    }
+  ({ className = "", size = 'md' }, ref) => {
+    const sizeMap = {
+      sm: { icon: 'w-4 h-4', text: 'text-base' },
+      md: { icon: 'w-5 h-5', text: 'text-lg' },
+      lg: { icon: 'w-7 h-7', text: 'text-2xl' },
+    };
+    const s = sizeMap[size];
 
-    // Compact horizontal variant
-    if (variant === 'compact') {
-      return (
-        <div ref={ref} className={`flex items-center gap-1.5 ${className}`}>
-          <ChevronRight className="w-5 h-5 text-primary" strokeWidth={3} />
-          <span 
-            className="text-lg font-bold text-primary lowercase tracking-tight"
-            style={{ letterSpacing: '-0.02em' }}
-          >
-            based data
-          </span>
-        </div>
-      );
-    }
-
-    // Full stacked variant (default)
     return (
-      <div 
-        ref={ref}
-        className={`flex flex-col items-end ${className}`}
-      >
-        <span 
-          className="text-lg font-bold text-primary lowercase leading-none"
+      <div ref={ref} className={`flex items-center gap-1.5 ${className}`}>
+        <ChevronRight className={`${s.icon} text-primary`} strokeWidth={3} />
+        <span
+          className={`${s.text} font-bold text-primary lowercase tracking-tight`}
           style={{ letterSpacing: '-0.02em' }}
         >
-          based
+          based data
         </span>
-        <div className="flex items-center">
-          <ChevronRight className="w-4 h-4 text-primary -mr-0.5" strokeWidth={3} />
-          <span 
-            className="text-lg font-bold text-primary lowercase leading-none"
-            style={{ letterSpacing: '-0.02em' }}
-          >
-            data
-          </span>
-        </div>
       </div>
     );
   }

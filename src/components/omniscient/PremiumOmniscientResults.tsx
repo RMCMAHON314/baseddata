@@ -230,7 +230,7 @@ export function PremiumOmniscientResults({
         </Button>
 
         <div className="flex items-center gap-3">
-          <Logo variant="compact" />
+          <Logo />
           <div className="h-6 w-px bg-slate-200" />
           <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">Results</span>
         </div>

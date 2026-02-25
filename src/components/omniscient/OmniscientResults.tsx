@@ -191,7 +191,7 @@ export function OmniscientResults({
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <Logo variant="compact" />
+            <Logo />
             <div className="hidden md:block h-6 w-px bg-border" />
             <span className="hidden md:inline text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Results

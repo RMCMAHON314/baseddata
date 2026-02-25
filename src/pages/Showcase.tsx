@@ -135,7 +135,7 @@ export default function Showcase() {
       {/* ── NAV ── */}
       <nav className="relative z-20 flex items-center justify-between px-6 md:px-12 py-5 max-w-7xl mx-auto">
         <Link to="/" className="flex items-center gap-3">
-          <Logo variant="compact" className="text-2xl" />
+          <Logo size="lg" />
         </Link>
         <div className="flex items-center gap-1 md:gap-2 flex-wrap">
           <Link to="/explore"><Button variant="ghost" size="sm" className="text-white/60 hover:text-white hover:bg-white/5">Explore</Button></Link>
@@ -317,7 +317,7 @@ export default function Showcase() {
       <footer className="border-t border-white/5 py-12 px-6">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
-            <Logo variant="compact" className="text-lg" />
+            <Logo size="sm" />
             <span className="text-white/30 text-sm">Government Contract Intelligence</span>
           </div>
           <div className="flex items-center gap-6 text-sm text-white/30">
