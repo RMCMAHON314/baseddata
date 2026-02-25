@@ -150,7 +150,7 @@ export function GlobalLayout({ children }: { children: React.ReactNode }) {
                 <DropdownMenuItem onClick={() => navigate('/saved-searches')}><Bookmark className="mr-2 h-4 w-4" />Saved Searches</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate('/api-docs')}><FileText className="mr-2 h-4 w-4" />API Docs</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive"><LogOut className="mr-2 h-4 w-4" />Sign Out</DropdownMenuItem>
+                <DropdownMenuItem className="text-destructive" onClick={async () => { await supabase.auth.signOut(); navigate('/'); }}><LogOut className="mr-2 h-4 w-4" />Sign Out</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 

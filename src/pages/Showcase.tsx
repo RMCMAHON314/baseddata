@@ -56,24 +56,7 @@ const AnimatedStat = React.forwardRef<HTMLDivElement, { value: number; label: st
 );
 AnimatedStat.displayName = 'AnimatedStat';
 
-/* ── search results dropdown ── */
-function SearchDropdown({ results, onSelect }: { results: any[]; onSelect: (id: string) => void }) {
-  if (!results.length) return null;
-  return (
-    <div className="absolute top-full left-0 right-0 mt-2 bg-[hsl(220,30%,12%)] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50">
-      {results.map((e) => (
-        <button key={e.id} onClick={() => onSelect(e.id)} className="w-full px-4 py-3 flex items-center gap-3 hover:bg-white/5 transition-colors text-left">
-          <Building2 className="h-4 w-4 text-cyan-400" />
-          <div className="flex-1 min-w-0">
-            <p className="font-medium text-white truncate">{e.canonical_name}</p>
-            <p className="text-xs text-white/50">{e.entity_type} · {e.state || 'US'} · {e.contract_count || 0} contracts</p>
-          </div>
-          <ChevronRight className="h-4 w-4 text-white/30" />
-        </button>
-      ))}
-    </div>
-  );
-}
+/* ── (SearchDropdown removed — MarketIntelligenceSearch handles this) ── */
 
 const FEATURES = [
   { icon: Shield, title: 'Competitive Intelligence', desc: 'See who wins contracts in your space, which agencies they serve, and how they team.', color: 'from-cyan-500 to-blue-600' },
@@ -244,14 +227,21 @@ export default function Showcase() {
             <p className="text-white/40 text-sm">Live record counts across all integrated federal sources</p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-            {DATA_SOURCES.map(s => (
-              <Card key={s.label} className={`bg-white/[0.03] p-4 hover:border-white/10 transition-colors ${s.count > 0 ? 'border-emerald-500/20' : 'border-white/5'}`}>
-                <p className="text-lg mb-1">{s.emoji} <span className="text-sm font-semibold text-white">{s.label}</span></p>
-                <p className="text-2xl font-bold text-cyan-400 font-mono">{s.count.toLocaleString()}</p>
-                <p className="text-xs text-white/40 mt-1">{s.source}</p>
-                <p className="text-xs text-white/25">{s.note}</p>
-              </Card>
-            ))}
+            {DATA_SOURCES.map(s => {
+              const hasData = s.count > 0;
+              return (
+                <Card key={s.label} className={`bg-white/[0.03] p-4 hover:border-white/10 transition-colors ${hasData ? 'border-emerald-500/20' : 'border-white/5 opacity-60'}`}>
+                  <p className="text-lg mb-1">{s.emoji} <span className="text-sm font-semibold text-white">{s.label}</span></p>
+                  {hasData ? (
+                    <p className="text-2xl font-bold text-cyan-400 font-mono">{s.count.toLocaleString()}</p>
+                  ) : (
+                    <Badge className="bg-white/5 text-white/40 border-white/10 text-xs mt-1">Coming Soon</Badge>
+                  )}
+                  <p className="text-xs text-white/40 mt-1">{s.source}</p>
+                  <p className="text-xs text-white/25">{s.note}</p>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </section>
