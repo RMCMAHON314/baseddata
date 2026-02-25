@@ -8,7 +8,10 @@ export function usePlatformStats() {
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_platform_stats' as any);
       if (error) throw error;
-      return (data as any)?.[0] || null;
+      // RPC returns jsonb directly (single object), or array with one element
+      const result = data as any;
+      if (Array.isArray(result)) return result[0] || null;
+      return result || null;
     },
     staleTime: 30000,
   });

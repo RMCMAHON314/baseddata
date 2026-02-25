@@ -100,8 +100,8 @@ export default function Showcase() {
 
   const agencies = Number(ps?.distinct_agencies) || 0;
   const states = Number(ps?.distinct_states) || 0;
-  const totalValue = Number(ps?.total_contract_value || 0) + Number(ps?.total_idv_value || 0) + Number(ps?.total_grant_value || 0);
-  const totalEntities = Number(ps?.total_entities) || 0;
+  const totalValue = Number(ps?.contract_value || 0) + Number(ps?.idv_value || 0) + Number(ps?.grant_value || 0);
+  const totalEntities = Number(ps?.entity_count) || 0;
   const totalRecords = Number(ps?.total_records) || 0;
   const dataSources = Number(ps?.data_sources) || 10;
   const lastVacuum = ps?.last_vacuum_at as string | null;
@@ -135,16 +135,16 @@ export default function Showcase() {
     : 'Ready to Deploy · 10 Data Sources · All 50 States';
 
   const DATA_SOURCES = [
-    { emoji: '📄', label: 'Federal Contracts', count: Number(ps?.total_contracts || 0), source: 'USASpending', note: 'All 50 states · FY24-25' },
-    { emoji: '📋', label: 'IDVs & Vehicles', count: Number(ps?.total_idvs || 0), source: 'USASpending', note: 'GWACs, BPAs, IDIQs' },
-    { emoji: '💰', label: 'Federal Grants', count: Number(ps?.total_grants || 0), source: 'USASpending', note: 'All 50 states · FY24-25' },
-    { emoji: '📋', label: 'Opportunities', count: Number(ps?.total_opportunities || 0), source: 'SAM.gov', note: 'Last 90 days' },
-    { emoji: '🔬', label: 'SBIR/STTR Awards', count: Number(ps?.total_sbir || 0), source: 'SBIR.gov', note: '11 agencies · 3 years' },
-    { emoji: '🏢', label: 'Entity Registry', count: Number(ps?.total_sam_entities || 0), source: 'SAM.gov', note: 'All 50 states' },
-    { emoji: '⚖️', label: 'Exclusions', count: Number(ps?.total_exclusions || 0), source: 'SAM.gov', note: 'All active' },
-    { emoji: '🔭', label: 'Research Grants', count: Number(ps?.total_nsf || 0), source: 'NSF API', note: '12 tech sectors' },
-    { emoji: '🤝', label: 'Subawards', count: Number(ps?.total_subawards || 0), source: 'USASpending', note: 'Teaming intelligence' },
-    { emoji: '💵', label: 'Labor Rates', count: Number(ps?.total_labor_rates || 0), source: 'GSA CALC+', note: '15 labor categories' },
+    { emoji: '📄', label: 'Federal Contracts', count: Number(ps?.contract_count || 0), source: 'USASpending', note: 'All 50 states · FY24-25' },
+    { emoji: '📋', label: 'IDVs & Vehicles', count: Number(ps?.idv_count || 0), source: 'USASpending', note: 'GWACs, BPAs, IDIQs' },
+    { emoji: '💰', label: 'Federal Grants', count: Number(ps?.grant_count || 0), source: 'USASpending', note: 'All 50 states · FY24-25' },
+    { emoji: '📋', label: 'Opportunities', count: Number(ps?.opportunity_count || 0), source: 'SAM.gov', note: 'Last 90 days' },
+    { emoji: '🔬', label: 'SBIR/STTR Awards', count: Number(ps?.sbir_count || 0), source: 'SBIR.gov', note: '11 agencies · 3 years' },
+    { emoji: '🏢', label: 'Entity Registry', count: Number(ps?.sam_entity_count || 0), source: 'SAM.gov', note: 'All 50 states' },
+    { emoji: '⚖️', label: 'Exclusions', count: Number(ps?.exclusion_count || 0), source: 'SAM.gov', note: 'All active' },
+    { emoji: '🔭', label: 'Research Grants', count: Number(ps?.nsf_count || 0), source: 'NSF API', note: '12 tech sectors' },
+    { emoji: '🤝', label: 'Subawards', count: Number(ps?.subaward_count || 0), source: 'USASpending', note: 'Teaming intelligence' },
+    { emoji: '💵', label: 'Labor Rates', count: Number(ps?.labor_rate_count || 0), source: 'GSA CALC+', note: '15 labor categories' },
   ];
 
   return (
