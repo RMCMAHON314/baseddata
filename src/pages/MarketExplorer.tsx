@@ -227,10 +227,10 @@ export default function MarketExplorer() {
       {/* State */}
       <div>
         <Label className="text-sm font-medium mb-1.5 block">State</Label>
-        <Select value={filters.state || ''} onValueChange={v => setFilters(f => ({ ...f, state: v || undefined }))}>
+        <Select value={filters.state || '__all__'} onValueChange={v => setFilters(f => ({ ...f, state: v === '__all__' ? undefined : v }))}>
           <SelectTrigger><SelectValue placeholder="All states" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All states</SelectItem>
+            <SelectItem value="__all__">All states</SelectItem>
             {(filterOptions?.states || []).map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
           </SelectContent>
         </Select>
@@ -239,10 +239,10 @@ export default function MarketExplorer() {
       {/* Agency */}
       <div>
         <Label className="text-sm font-medium mb-1.5 block">Agency</Label>
-        <Select value={filters.agency || ''} onValueChange={v => setFilters(f => ({ ...f, agency: v || undefined }))}>
+        <Select value={filters.agency || '__all__'} onValueChange={v => setFilters(f => ({ ...f, agency: v === '__all__' ? undefined : v }))}>
           <SelectTrigger><SelectValue placeholder="All agencies" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All agencies</SelectItem>
+            <SelectItem value="__all__">All agencies</SelectItem>
             {(filterOptions?.agencies || []).map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
           </SelectContent>
         </Select>
@@ -257,10 +257,10 @@ export default function MarketExplorer() {
       {/* Set-Aside */}
       <div>
         <Label className="text-sm font-medium mb-1.5 block">Set-Aside</Label>
-        <Select value={filters.setAside || ''} onValueChange={v => setFilters(f => ({ ...f, setAside: v || undefined }))}>
+        <Select value={filters.setAside || '__all__'} onValueChange={v => setFilters(f => ({ ...f, setAside: v === '__all__' ? undefined : v }))}>
           <SelectTrigger><SelectValue placeholder="All types" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All types</SelectItem>
+            <SelectItem value="__all__">All types</SelectItem>
             {(filterOptions?.setAsides || []).map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
           </SelectContent>
         </Select>
