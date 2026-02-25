@@ -195,7 +195,7 @@ export function MarketIntelligenceSearch({ variant = 'full' }: { variant?: 'full
             onChange={e => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder='Try: cybersecurity Maryland, IT services 8a, construction DC...'
-            className="pl-12 pr-32 h-14 bg-background border-border text-foreground placeholder:text-muted-foreground/50 rounded-xl text-base focus:border-primary/50 shadow-sm"
+            className="pl-12 pr-32 h-14 bg-background border border-input ring-1 ring-border text-foreground placeholder:text-muted-foreground/50 rounded-xl text-base focus-visible:ring-primary shadow-md"
           />
           <Button
             onClick={executeSearch}
