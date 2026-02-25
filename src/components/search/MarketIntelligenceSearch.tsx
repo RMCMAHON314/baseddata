@@ -189,36 +189,36 @@ export function MarketIntelligenceSearch({ variant = 'full' }: { variant?: 'full
     return (
       <div className="w-full max-w-2xl mx-auto">
         <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <Input
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder='Try: cybersecurity Maryland, IT services 8a, construction DC...'
-            className="pl-12 pr-32 h-14 bg-white/5 border-white/10 text-white placeholder:text-white/30 rounded-xl text-base focus:border-cyan-500/50"
+            className="pl-12 pr-32 h-14 bg-background border-border text-foreground placeholder:text-muted-foreground/50 rounded-xl text-base focus:border-primary/50 shadow-sm"
           />
           <Button
             onClick={executeSearch}
             disabled={loading || !query.trim()}
-            className="absolute right-2 top-1/2 -translate-y-1/2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 border-0 gap-1.5"
+            className="absolute right-2 top-1/2 -translate-y-1/2 btn-omni gap-1.5 h-10 px-5"
           >
             {loading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <>Search <ArrowRight className="w-4 h-4" /></>}
           </Button>
         </div>
         {data && (
           <div className="mt-4 flex flex-wrap gap-2 justify-center">
-            <Badge className="bg-cyan-500/20 text-cyan-300 border-cyan-500/30">
+            <Badge className="bg-primary/10 text-primary border-primary/20">
               {formatCurrency(data.totalValue)} total value
             </Badge>
-            <Badge className="bg-violet-500/20 text-violet-300 border-violet-500/30">
+            <Badge className="bg-violet-500/10 text-violet-600 border-violet-500/20">
               {data.activeContractors} contractors
             </Badge>
             {data.hhi !== null && (
-              <Badge className={`${data.hhiLevel === 'Competitive' ? 'bg-emerald-500/20 text-emerald-300' : data.hhiLevel === 'Moderately Concentrated' ? 'bg-amber-500/20 text-amber-300' : 'bg-red-500/20 text-red-300'}`}>
+              <Badge className={`${data.hhiLevel === 'Competitive' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : data.hhiLevel === 'Moderately Concentrated' ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
                 {data.hhiLevel}
               </Badge>
             )}
-            <Button variant="link" className="text-cyan-400 text-sm" onClick={() => navigate(`/explore?q=${encodeURIComponent(query)}`)}>
+            <Button variant="link" className="text-primary text-sm" onClick={() => navigate(`/explore?q=${encodeURIComponent(query)}`)}>
               View full results →
             </Button>
           </div>
