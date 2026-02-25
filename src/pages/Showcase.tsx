@@ -6,8 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { motion, useInView } from 'framer-motion';
 import {
-  Search, ArrowRight, Building2, Shield, Target,
-  Zap, BarChart3, ChevronRight, Database, Brain, Beaker, DollarSign
+  Search, ArrowRight, Building2, Shield,
+  Zap, ChevronRight,
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { MarketIntelligenceSearch } from '@/components/search/MarketIntelligenceSearch';
@@ -34,29 +34,25 @@ function useAnimatedCounter(target: number, duration = 2000) {
   return { count, ref };
 }
 
-const AnimatedStat = React.forwardRef<HTMLDivElement, { value: number; label: string; prefix?: string }>(
-  ({ value, label, prefix = '' }, _forwardedRef) => {
-    const { count, ref } = useAnimatedCounter(value);
-    const fmt = (n: number) => {
-      if (n >= 1e12) return `${(n / 1e12).toFixed(1)}T`;
-      if (n >= 1e9) return `${(n / 1e9).toFixed(1)}B`;
-      if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
-      if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`;
-      return n.toLocaleString();
-    };
-    return (
-      <div ref={ref} className="text-center">
-        <p className="text-4xl md:text-5xl font-black font-mono tracking-tight text-foreground">
-          {prefix}{fmt(count)}
-        </p>
-        <p className="text-sm text-cyan-600/70 mt-2 font-medium uppercase tracking-wider">{label}</p>
-      </div>
-    );
-  }
-);
-AnimatedStat.displayName = 'AnimatedStat';
+const fmt = (n: number) => {
+  if (n >= 1e12) return `${(n / 1e12).toFixed(1)}T`;
+  if (n >= 1e9) return `${(n / 1e9).toFixed(1)}B`;
+  if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
+  if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`;
+  return n.toLocaleString();
+};
 
-/* ── (SearchDropdown removed — MarketIntelligenceSearch handles this) ── */
+const AnimatedStat = ({ value, label, prefix = '' }: { value: number; label: string; prefix?: string }) => {
+  const { count, ref } = useAnimatedCounter(value);
+  return (
+    <div ref={ref} className="text-center">
+      <p className="text-4xl md:text-5xl font-black font-mono tracking-tight text-foreground">
+        {prefix}{fmt(count)}
+      </p>
+      <p className="text-xs text-muted-foreground mt-2 font-semibold uppercase tracking-[0.15em]">{label}</p>
+    </div>
+  );
+};
 
 const FEATURES = [
   { icon: Shield, title: 'Competitive Intelligence', desc: 'See who wins contracts in your space, which agencies they serve, and how they team.', color: 'from-cyan-500 to-blue-600' },
@@ -64,21 +60,33 @@ const FEATURES = [
   { icon: Building2, title: 'Entity Deep Dives', desc: 'Full contract history, competitor analysis, and relationship mapping for any contractor.', color: 'from-emerald-500 to-teal-600' },
 ];
 
-function formatTimeAgo(date: string) {
-  const diff = Date.now() - new Date(date).getTime();
-  const hours = Math.floor(diff / 3600000);
-  if (hours < 1) return 'just now';
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
+const STEPS = [
+  { step: '01', title: 'Search', desc: 'Find any contractor, agency, or market segment instantly.' },
+  { step: '02', title: 'Analyze', desc: 'See contract history, competitors, relationships, and AI insights.' },
+  { step: '03', title: 'Win', desc: 'Track opportunities, compare competitors, and position your bid to win.' },
+];
+
+const NAV_LINKS: { to: string; label: string; hideBelow?: 'md' | 'lg' }[] = [
+  { to: '/explore', label: 'Explore' },
+  { to: '/entities', label: 'Entities' },
+  { to: '/opportunities', label: 'Opportunities', hideBelow: 'md' },
+  { to: '/intelligence', label: 'Intelligence', hideBelow: 'md' },
+  { to: '/sbir', label: 'SBIR', hideBelow: 'lg' },
+  { to: '/labor-rates', label: 'Labor Rates', hideBelow: 'lg' },
+  { to: '/analytics', label: 'Analytics', hideBelow: 'lg' },
+];
+
+const FOOTER_LINKS = [
+  { to: '/explore', label: 'Explore' },
+  { to: '/entities', label: 'Entities' },
+  { to: '/opportunities', label: 'Opportunities' },
+  { to: '/intelligence', label: 'Intelligence' },
+  { to: '/labor-rates', label: 'Labor Rates' },
+  { to: '/api-docs', label: 'API' },
+];
 
 export default function Showcase() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [showResults, setShowResults] = useState(false);
   const navigate = useNavigate();
-  const searchTimeout = useRef<ReturnType<typeof setTimeout>>();
   const { data: ps } = usePlatformStats();
 
   const agencies = Number(ps?.distinct_agencies) || 0;
@@ -89,30 +97,15 @@ export default function Showcase() {
   const dataSources = Number(ps?.data_sources) || 10;
   const lastVacuum = ps?.last_vacuum_at as string | null;
 
-  function handleSearchInput(q: string) {
-    setSearchQuery(q);
-    if (searchTimeout.current) clearTimeout(searchTimeout.current);
-    if (q.length < 2) { setSearchResults([]); setShowResults(false); return; }
-    searchTimeout.current = setTimeout(async () => {
-      const { data } = await supabase.from('core_entities').select('id, canonical_name, entity_type, state, contract_count')
-        .ilike('canonical_name', `%${q}%`).order('total_contract_value', { ascending: false }).limit(5);
-      setSearchResults(data || []);
-      setShowResults(true);
-    }, 300);
-  }
-
-  function handleSearchSelect(id: string) { setShowResults(false); setSearchQuery(''); navigate(`/entity/${id}`); }
-  function handleSearchSubmit() { if (searchQuery) navigate(`/explore?q=${encodeURIComponent(searchQuery)}`); }
-
-  // Data freshness badge
+  // Freshness
   const freshnessBadge = (() => {
-    if (!lastVacuum) return { text: 'Initializing intelligence engine', alive: false };
+    if (!lastVacuum) return 'Initializing intelligence engine';
     const hoursAgo = (Date.now() - new Date(lastVacuum).getTime()) / 3600000;
-    if (hoursAgo < 24) return { text: 'Crunching live federal data', alive: true };
-    return { text: 'Processing federal records', alive: true };
+    if (hoursAgo < 24) return 'Crunching live federal data';
+    return 'Processing federal records';
   })();
 
-  // Intelligence badge — 50 states + DC/territories
+  // Intelligence badge
   const territoryCount = Math.max(0, states - 50);
   const stateLabel = states > 50
     ? `50 States · ${territoryCount} Territor${territoryCount === 1 ? 'y' : 'ies'}`
@@ -135,90 +128,90 @@ export default function Showcase() {
   ];
 
   return (
-    <div className="min-h-screen bg-white text-foreground overflow-x-hidden">
+    <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       {/* ── NAV ── */}
-      <nav className="relative z-20 flex items-center justify-between px-6 md:px-12 py-5 max-w-7xl mx-auto">
-        <Link to="/" className="flex items-center gap-3">
-          <Logo size="lg" />
-        </Link>
-        <div className="flex items-center gap-1 md:gap-2 flex-wrap">
-          <Link to="/explore"><Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-muted">Explore</Button></Link>
-          <Link to="/entities"><Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-muted">Entities</Button></Link>
-          <Link to="/opportunities"><Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-muted hidden md:inline-flex">Opportunities</Button></Link>
-          <Link to="/intelligence"><Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-muted hidden md:inline-flex">Intelligence</Button></Link>
-          <Link to="/sbir"><Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-muted hidden lg:inline-flex">SBIR</Button></Link>
-          <Link to="/labor-rates"><Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-muted hidden lg:inline-flex">Labor Rates</Button></Link>
-          <Link to="/analytics"><Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground hover:bg-muted hidden lg:inline-flex">Analytics</Button></Link>
-          <Link to="/onboarding">
-            <Button size="sm" className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white border-0">
-              Get Started
-            </Button>
+      <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50">
+        <div className="flex items-center justify-between px-6 md:px-12 py-4 max-w-7xl mx-auto">
+          <Link to="/" className="flex items-center gap-3">
+            <Logo size="lg" />
           </Link>
+          <div className="flex items-center gap-1 md:gap-1.5 flex-wrap">
+            {NAV_LINKS.map(l => (
+              <Link key={l.to} to={l.to}>
+                <Button variant="ghost" size="sm" className={`text-muted-foreground hover:text-foreground hover:bg-muted/60 text-[13px] font-medium ${l.hideBelow === 'md' ? 'hidden md:inline-flex' : l.hideBelow === 'lg' ? 'hidden lg:inline-flex' : ''}`}>
+                  {l.label}
+                </Button>
+              </Link>
+            ))}
+            <Link to="/onboarding" className="ml-1">
+              <Button size="sm" className="btn-omni text-sm h-8 px-4">
+                Get Started
+              </Button>
+            </Link>
+          </div>
         </div>
       </nav>
 
       {/* ── HERO ── */}
-      <section className="relative pt-16 pb-32 px-6">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-cyan-100/50 rounded-full blur-[120px]" />
-          <div className="absolute top-40 right-0 w-[400px] h-[400px] bg-blue-100/60 rounded-full blur-[100px]" />
-        </div>
+      <section className="relative pt-20 pb-28 px-6">
+        {/* Soft radial glow */}
+        <div className="absolute inset-0 radial-overlay pointer-events-none" />
+        <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-br from-primary/[0.06] to-accent/[0.04] rounded-full blur-[100px] pointer-events-none" />
 
         <div className="relative z-10 max-w-4xl mx-auto text-center">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-            <Badge className={`mb-3 px-4 py-1.5 text-sm font-medium ${agencies > 0 ? 'bg-cyan-50 text-cyan-700 border-cyan-200' : 'bg-muted text-muted-foreground border-border'}`}>
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+            <Badge className={`mb-3 px-4 py-1.5 text-[13px] font-medium ${agencies > 0 ? 'bg-primary/[0.06] text-primary border-primary/20' : 'bg-muted text-muted-foreground border-border'}`}>
               <Zap className="w-3.5 h-3.5 mr-1.5" />
               {intelBadge}
             </Badge>
-            <div className="mt-2">
-              <Badge className="bg-muted text-cyan-600 border-border px-3 py-1 text-xs gap-2">
+            <div className="mt-2.5">
+              <Badge className="bg-muted/60 text-primary border-border/60 px-3 py-1 text-xs gap-2 font-medium">
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-500 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500" />
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
                 </span>
-                {freshnessBadge.text}
+                {freshnessBadge}
               </Badge>
             </div>
           </motion.div>
 
-          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.1 }}
-            className="text-5xl md:text-7xl font-black leading-[1.05] mb-6 mt-6 tracking-tight text-foreground">
+          <motion.h1 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.08 }}
+            className="text-5xl md:text-7xl font-black leading-[1.05] mb-6 mt-8 tracking-tight text-foreground">
             Government Contract
             <br />Intelligence.{' '}
-            <span className="bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">Automated.</span>
+            <span className="text-gradient-omni">Automated.</span>
           </motion.h1>
 
-          <motion.p initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
+          <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.16 }}
+            className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
             Track competitors, discover opportunities, and win more contracts with AI-powered federal intelligence.
           </motion.p>
 
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, delay: 0.3 }}
-            className="relative w-full max-w-2xl mx-auto mb-8">
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.24 }}
+            className="relative w-full max-w-2xl mx-auto mb-10">
             <MarketIntelligenceSearch variant="hero" />
           </motion.div>
 
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="flex flex-col items-center gap-3">
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="flex flex-col items-center gap-3">
             <Link to="/onboarding">
-              <Button size="lg" className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white border-0 text-base px-8 h-12 gap-2">
+              <Button size="lg" className="btn-omni text-base px-8 h-12 gap-2 rounded-xl">
                 Start Free — No credit card required <ArrowRight className="w-4 h-4" />
               </Button>
             </Link>
-            <p className="text-xs text-muted-foreground/60">Join government contractors using real-time intelligence</p>
+            <p className="text-xs text-muted-foreground/70">Join government contractors using real-time intelligence</p>
           </motion.div>
         </div>
       </section>
 
       {/* ── STATS ── */}
-      <section className="relative py-20 px-6 border-y border-border">
-        <div className="absolute inset-0 bg-gradient-to-b from-cyan-50/50 via-transparent to-transparent pointer-events-none" />
+      <section className="relative py-20 px-6 border-y border-border/50 bg-muted/30">
         <div className="relative max-w-5xl mx-auto">
-          <p className="text-center text-sm text-muted-foreground mb-10 uppercase tracking-widest">
+          <p className="text-center text-xs text-muted-foreground mb-10 uppercase tracking-[0.2em] font-medium">
             {agencies > 0
               ? `Tracking federal contracts, grants & IDVs across ${agencies} agencies and ${states} states`
               : 'Ready to track federal contracts, grants & IDVs across all 50 states'}
           </p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-12">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
             <AnimatedStat value={totalValue} label="Contract + Grant Value" prefix="$" />
             <AnimatedStat value={totalEntities} label="Organizations Tracked" />
             <AnimatedStat value={totalRecords} label="Total Federal Records" />
@@ -228,25 +221,25 @@ export default function Showcase() {
       </section>
 
       {/* ── DATA COVERAGE ── */}
-      <section className="py-16 px-6">
+      <section className="py-20 px-6">
         <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-foreground mb-2">Data Coverage</h2>
+          <div className="text-center mb-10">
+            <h2 className="text-2xl md:text-3xl font-black text-foreground mb-2">Data Coverage</h2>
             <p className="text-muted-foreground text-sm">Live record counts across all integrated federal sources</p>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
             {DATA_SOURCES.map(s => {
               const hasData = s.count > 0;
               return (
-                <Card key={s.label} className={`bg-muted/30 p-4 hover:border-border transition-colors ${hasData ? 'border-cyan-200' : 'border-border opacity-60'}`}>
-                  <p className="text-lg mb-1">{s.emoji} <span className="text-sm font-semibold text-foreground">{s.label}</span></p>
+                <Card key={s.label} className={`card-premium p-4 ${hasData ? 'border-primary/10' : 'opacity-50'}`}>
+                  <p className="text-base mb-1">{s.emoji} <span className="text-sm font-semibold text-foreground">{s.label}</span></p>
                   {hasData ? (
-                    <p className="text-2xl font-bold text-cyan-600 font-mono">{s.count.toLocaleString()}</p>
+                    <p className="text-xl font-bold font-mono text-gradient-omni">{s.count.toLocaleString()}</p>
                   ) : (
-                    <Badge className="bg-muted text-muted-foreground border-border text-xs mt-1">Coming Soon</Badge>
+                    <Badge variant="secondary" className="text-xs mt-1">Coming Soon</Badge>
                   )}
-                  <p className="text-xs text-muted-foreground mt-1">{s.source}</p>
-                  <p className="text-xs text-muted-foreground/50">{s.note}</p>
+                  <p className="text-[11px] text-muted-foreground mt-1.5 font-medium">{s.source}</p>
+                  <p className="text-[11px] text-muted-foreground/60">{s.note}</p>
                 </Card>
               );
             })}
@@ -255,25 +248,26 @@ export default function Showcase() {
       </section>
 
       {/* ── FEATURES ── */}
-      <section className="py-24 px-6">
+      <section className="py-24 px-6 bg-muted/20">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-black mb-4 text-foreground">
               Everything you need to{' '}
-              <span className="bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">win more contracts</span>
+              <span className="text-gradient-omni">win more contracts</span>
             </h2>
             <p className="text-muted-foreground text-lg max-w-xl mx-auto">Real-time intelligence that turns public data into a competitive advantage.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {FEATURES.map((f, i) => (
-              <motion.div key={f.title} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-                transition={{ delay: i * 0.1, duration: 0.5 }}
-                className="group rounded-2xl border border-border bg-muted/20 p-8 hover:border-cyan-200 hover:bg-muted/40 transition-all duration-300">
-                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${f.color} flex items-center justify-center mb-5`}>
-                  <f.icon className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-xl font-bold mb-3 text-foreground">{f.title}</h3>
-                <p className="text-muted-foreground leading-relaxed">{f.desc}</p>
+              <motion.div key={f.title} initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+                transition={{ delay: i * 0.1, duration: 0.45 }}>
+                <Card className="card-premium p-8 h-full group hover:shadow-[var(--shadow-card-hover)]">
+                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${f.color} flex items-center justify-center mb-5 group-hover:scale-105 transition-transform duration-300`}>
+                    <f.icon className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-3 text-foreground">{f.title}</h3>
+                  <p className="text-muted-foreground leading-relaxed text-[15px]">{f.desc}</p>
+                </Card>
               </motion.div>
             ))}
           </div>
@@ -281,23 +275,19 @@ export default function Showcase() {
       </section>
 
       {/* ── HOW IT WORKS ── */}
-      <section className="py-24 px-6 border-t border-border">
+      <section className="py-24 px-6">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl md:text-4xl font-black mb-16 text-foreground">
             From search to strategy in{' '}
-            <span className="bg-gradient-to-r from-cyan-600 to-blue-600 bg-clip-text text-transparent">seconds</span>
+            <span className="text-gradient-omni">seconds</span>
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              { step: '01', title: 'Search', desc: 'Find any contractor, agency, or market segment instantly.' },
-              { step: '02', title: 'Analyze', desc: 'See contract history, competitors, relationships, and AI insights.' },
-              { step: '03', title: 'Win', desc: 'Track opportunities, compare competitors, and position your bid to win.' },
-            ].map((s, i) => (
-              <motion.div key={s.step} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-                transition={{ delay: i * 0.15 }} className="text-center">
-                <div className="text-5xl font-black text-muted/60 mb-4 font-mono">{s.step}</div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+            {STEPS.map((s, i) => (
+              <motion.div key={s.step} initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+                transition={{ delay: i * 0.12 }} className="text-center">
+                <div className="text-6xl font-black text-border mb-4 font-mono select-none">{s.step}</div>
                 <h3 className="text-xl font-bold text-foreground mb-2">{s.title}</h3>
-                <p className="text-muted-foreground">{s.desc}</p>
+                <p className="text-muted-foreground leading-relaxed">{s.desc}</p>
               </motion.div>
             ))}
           </div>
@@ -307,38 +297,71 @@ export default function Showcase() {
       {/* ── FINAL CTA ── */}
       <section className="py-24 px-6">
         <div className="max-w-3xl mx-auto text-center">
-          <div className="rounded-2xl border border-cyan-200 bg-gradient-to-b from-cyan-50/50 to-transparent p-12 md:p-16">
-            <h2 className="text-3xl md:text-4xl font-black mb-4 text-foreground">Ready to see your competitive landscape?</h2>
-            <p className="text-muted-foreground mb-8 text-lg">
-              Search any organization and get instant intelligence — contract history, competitors, win rates, and market position.
-            </p>
-            <Link to="/onboarding">
-              <Button size="lg" className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white border-0 text-base px-10 h-12 gap-2">
-                Start Free — No credit card required <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
-          </div>
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
+            className="card-premium rounded-3xl p-12 md:p-16 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.04] to-accent/[0.02] pointer-events-none" />
+            <div className="relative z-10">
+              <h2 className="text-3xl md:text-4xl font-black mb-4 text-foreground">Ready to see your competitive landscape?</h2>
+              <p className="text-muted-foreground mb-8 text-lg leading-relaxed max-w-lg mx-auto">
+                Search any organization and get instant intelligence — contract history, competitors, win rates, and market position.
+              </p>
+              <Link to="/onboarding">
+                <Button size="lg" className="btn-omni text-base px-10 h-12 gap-2 rounded-xl">
+                  Start Free — No credit card required <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+            </div>
+          </motion.div>
         </div>
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="border-t border-border py-12 px-6">
-        <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <Logo size="sm" />
-            <span className="text-muted-foreground text-sm">Government Contract Intelligence</span>
+      <footer className="border-t border-border/50 bg-muted/30">
+        <div className="max-w-6xl mx-auto px-6 py-14">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 items-start">
+            {/* Brand column */}
+            <div className="flex flex-col gap-3">
+              <Logo size="md" />
+              <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
+                AI-powered government contract intelligence. Track competitors, discover opportunities, win more.
+              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                </span>
+                <span className="text-xs text-muted-foreground font-medium">{freshnessBadge}</span>
+              </div>
+            </div>
+
+            {/* Links column */}
+            <div>
+              <p className="text-xs font-semibold text-foreground uppercase tracking-[0.15em] mb-4">Platform</p>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-2.5">
+                {FOOTER_LINKS.map(l => (
+                  <Link key={l.to} to={l.to} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    {l.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* Attribution column */}
+            <div className="flex flex-col gap-2 md:items-end md:text-right">
+              <p className="text-sm text-muted-foreground font-medium">Built in Baltimore 🦀</p>
+              <p className="text-sm text-muted-foreground">by Infinite Data Solutions</p>
+              <div className="h-px w-12 bg-border my-2 md:ml-auto" />
+              <p className="text-xs text-muted-foreground/60 leading-relaxed">
+                Powered by USASpending.gov, SAM.gov,
+                <br />NIH, NSF & GSA data
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-6 text-sm text-muted-foreground">
-            <Link to="/explore" className="hover:text-foreground transition-colors">Explore</Link>
-            <Link to="/entities" className="hover:text-foreground transition-colors">Entities</Link>
-            <Link to="/opportunities" className="hover:text-foreground transition-colors">Opportunities</Link>
-            <Link to="/intelligence" className="hover:text-foreground transition-colors">Intelligence</Link>
-            <Link to="/labor-rates" className="hover:text-foreground transition-colors">Labor Rates</Link>
-            <Link to="/api-docs" className="hover:text-foreground transition-colors">API</Link>
-          </div>
-          <div className="text-right">
-            <p className="text-muted-foreground/70 text-sm">Built in Baltimore 🦀 by Infinite Data Solutions</p>
-            <p className="text-muted-foreground/50 text-xs mt-1">Powered by USASpending.gov, SAM.gov, NIH, NSF, GSA data</p>
+
+          {/* Bottom bar */}
+          <div className="mt-10 pt-6 border-t border-border/50 flex flex-col md:flex-row items-center justify-between gap-3">
+            <p className="text-xs text-muted-foreground/50">© {new Date().getFullYear()} Based Data. All rights reserved.</p>
+            <p className="text-xs text-muted-foreground/50">Government contract intelligence, automated.</p>
           </div>
         </div>
       </footer>
