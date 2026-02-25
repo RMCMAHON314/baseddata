@@ -33,17 +33,17 @@ serve(async (req) => {
   const delay = (ms: number) => new Promise(r => setTimeout(r, ms))
 
   try {
-    // ─── SBIR/STTR Awards (with heavy rate limit respect) ───
+    // ─── SBIR/STTR Awards ───
     if (source === 'sbir') {
       const agencies = body.agencies || ['DOD','HHS','NASA','NSF','DOE','USDA','EPA','DOT','DHS','ED','DOC']
       const years = body.years || [2024, 2023, 2022]
       for (const agency of agencies) {
         for (const year of years) {
           try {
-            await delay(2000) // SBIR API needs 2s between requests
+            await delay(3000)
             const res = await safeFetch(`https://api.www.sbir.gov/public/api/awards?agency=${agency}&year=${year}`)
             if (!res) continue
-            if (res.status === 429) { errors.push(`SBIR ${agency} ${year}: rate limited`); await delay(5000); continue }
+            if (res.status === 429) { errors.push(`SBIR ${agency} ${year}: rate limited`); await delay(10000); continue }
             if (!res.ok) { errors.push(`SBIR ${agency} ${year}: ${res.status}`); continue }
             const data = await res.json()
             const items = Array.isArray(data) ? data : []
@@ -70,7 +70,7 @@ serve(async (req) => {
       }
     }
 
-    // ─── NSF Awards (smaller batch) ───
+    // ─── NSF Awards ───
     if (source === 'nsf') {
       const keywords = body.keywords || ['cybersecurity','artificial intelligence','machine learning','data science','cloud computing','quantum computing']
       for (const kw of keywords) {
@@ -95,69 +95,59 @@ serve(async (req) => {
               }, { onConflict: 'award_number', ignoreDuplicates: true })
               if (!error) loaded++
             }
-            console.log(`[fill-source] NSF ${kw} offset=${offset}: ${awards.length} awards`)
+            console.log(`[fill-source] NSF ${kw} offset=${offset}: ${awards.length}`)
             if (awards.length < 25) break
           } catch (e: any) { errors.push(`NSF ${kw}: ${e.message}`); break }
         }
       }
     }
 
-    // ─── GSA Labor Rates (CALC+ API v2 endpoint) ───
+    // ─── GSA CALC+ Labor Rates (v3 with correct response parsing) ───
     if (source === 'labor-rates') {
-      // Try both v2 and v3 endpoints
       const keywords = body.keywords || ['software engineer','project manager','cybersecurity','data scientist','systems administrator','business analyst','cloud architect','program manager','help desk','network engineer','security analyst','devops','database administrator','technical writer','quality assurance']
       for (const kw of keywords) {
-        try {
-          await delay(300)
-          // Try CALC+ v2 first (more reliable)
-          const url = `https://api.gsa.gov/acquisition/calc/v2/prices/?search=${encodeURIComponent(kw)}&limit=100`
-          const res = await safeFetch(url)
-          if (!res) continue
-          
-          let rates: any[] = []
-          if (res.ok) {
+        for (let page = 1; page <= 3; page++) {
+          try {
+            await delay(400)
+            // CALC+ v3 API - correct endpoint
+            const url = `https://api.gsa.gov/acquisition/calc/v3/api/ceilingrates/?keyword=${encodeURIComponent(kw)}&page=${page}&page_size=50&ordering=current_price&sort=desc`
+            const res = await safeFetch(url)
+            if (!res) continue
+            if (!res.ok) { errors.push(`CALC ${kw} p${page}: ${res.status}`); break }
             const data = await res.json()
-            rates = data?.results || data?.hits || data || []
-          } else {
-            // Fallback: try v3
-            const url3 = `https://api.gsa.gov/acquisition/calc/v3/api/ceilingrates/?keyword=${encodeURIComponent(kw)}&page=1&page_size=100`
-            const res3 = await safeFetch(url3)
-            if (res3 && res3.ok) {
-              const data3 = await res3.json()
-              rates = data3?.hits || data3?.results || []
-            } else {
-              errors.push(`CALC ${kw}: v2=${res.status} v3=${res3?.status}`)
-              continue
+            // v3 response: { hits: { hits: [ { _source: {...} } ] } }
+            const hitsContainer = data?.hits?.hits || []
+            if (!Array.isArray(hitsContainer) || !hitsContainer.length) break
+            for (const hit of hitsContainer) {
+              const r = hit._source || hit
+              if (!r.labor_category || !r.vendor_name) continue
+              const { error } = await supabase.from('gsa_labor_rates').upsert({
+                labor_category: r.labor_category, vendor_name: r.vendor_name,
+                idv_piid: r.idv_piid || 'unknown',
+                current_price: parseFloat(r.current_price) || null,
+                second_year_price: parseFloat(r.second_year_price) || null,
+                next_year_price: parseFloat(r.next_year_price) || null,
+                min_years_experience: parseInt(r.min_years_experience) || null,
+                education_level: r.education_level, business_size: r.business_size,
+                security_clearance: r.security_clearance, site: r.worksite || r.site,
+                schedule: r.schedule, sin: r.sin, updated_at: new Date().toISOString()
+              }, { onConflict: 'vendor_name,idv_piid,labor_category', ignoreDuplicates: true })
+              if (!error) loaded++
             }
-          }
-          
-          if (!Array.isArray(rates)) continue
-          for (const r of rates) {
-            if (!r.labor_category || !r.vendor_name) continue
-            const { error } = await supabase.from('gsa_labor_rates').upsert({
-              labor_category: r.labor_category, vendor_name: r.vendor_name,
-              idv_piid: r.idv_piid || r.contract_number || 'unknown',
-              current_price: parseFloat(r.current_price || r.price) || null,
-              second_year_price: parseFloat(r.second_year_price) || null,
-              next_year_price: parseFloat(r.next_year_price) || null,
-              min_years_experience: parseInt(r.min_years_experience) || null,
-              education_level: r.education_level, business_size: r.business_size,
-              security_clearance: r.security_clearance, site: r.site,
-              schedule: r.schedule, sin: r.sin, updated_at: new Date().toISOString()
-            }, { onConflict: 'vendor_name,idv_piid,labor_category', ignoreDuplicates: true })
-            if (!error) loaded++
-          }
-          console.log(`[fill-source] CALC ${kw}: ${rates.length} rates`)
-        } catch (e: any) { errors.push(`CALC ${kw}: ${e.message}`) }
+            console.log(`[fill-source] CALC ${kw} p${page}: ${hitsContainer.length} rates`)
+            if (hitsContainer.length < 50) break
+          } catch (e: any) { errors.push(`CALC ${kw}: ${e.message}`); break }
+        }
       }
     }
 
     // ─── IDVs (chunked by state) ───
     if (source === 'idvs') {
-      const states = stateChunk || ALL_STATES.slice(0, 10)
+      const states = stateChunk || ALL_STATES.slice(0, 5)
       for (const st of states) {
         for (let page = 1; page <= 3; page++) {
           try {
+            await delay(300)
             const res = await safeFetch('https://api.usaspending.gov/api/v2/search/spending_by_award/', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -192,7 +182,6 @@ serve(async (req) => {
             }
             console.log(`[fill-source] IDVs ${st} p${page}: ${data.results.length}`)
             if (data.results.length < 100) break
-            await delay(200)
           } catch (e: any) { errors.push(`IDVs ${st}: ${e.message}`) }
         }
       }
@@ -200,10 +189,11 @@ serve(async (req) => {
 
     // ─── Subawards (chunked by state) ───
     if (source === 'subawards') {
-      const states = stateChunk || ALL_STATES.slice(0, 10)
+      const states = stateChunk || ALL_STATES.slice(0, 5)
       for (const st of states) {
         for (let page = 1; page <= 2; page++) {
           try {
+            await delay(300)
             const res = await safeFetch('https://api.usaspending.gov/api/v2/search/spending_by_award/', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -240,7 +230,6 @@ serve(async (req) => {
             }
             console.log(`[fill-source] Subs ${st} p${page}: ${data.results.length}`)
             if (data.results.length < 100) break
-            await delay(200)
           } catch (e: any) { errors.push(`Subs ${st}: ${e.message}`) }
         }
       }
@@ -248,11 +237,11 @@ serve(async (req) => {
 
     // ─── SAM Entities (chunked by state) ───
     if (source === 'sam-entities' && SAM_KEY) {
-      const states = stateChunk || ALL_STATES.slice(0, 8)
+      const states = stateChunk || ALL_STATES.slice(0, 5)
       for (const st of states) {
         for (let page = 0; page < 3; page++) {
           try {
-            await delay(500)
+            await delay(1000)
             const url = `https://api.sam.gov/entity-information/v3/entities?api_key=${SAM_KEY}&registrationStatus=A&samRegistered=Yes&physicalAddressProvinceOrStateCode=${st}&includeSections=entityRegistration,coreData&page=${page}&size=100`
             const res = await safeFetch(url)
             if (!res || !res.ok) { errors.push(`SAM ${st} p${page}: ${res?.status}`); break }
@@ -285,39 +274,18 @@ serve(async (req) => {
       }
     }
 
-    // ─── SAM Exclusions ───
+    // ─── SAM Exclusions (v4 endpoint) ───
     if (source === 'exclusions' && SAM_KEY) {
-      // Use v3 endpoint
-      for (let page = 0; page < 10; page++) {
+      for (let page = 0; page < 20; page++) {
         try {
-          await delay(500)
-          const url = `https://api.sam.gov/entity-information/v3/exclusions?api_key=${SAM_KEY}&isActive=Yes&page=${page}&size=100`
+          await delay(1000)
+          // v4 is the current endpoint
+          const url = `https://api.sam.gov/entity-information/v4/exclusions?api_key=${SAM_KEY}&isActive=Yes&page=${page}&size=10`
           const res = await safeFetch(url)
-          if (!res || !res.ok) {
-            // Try v2 fallback
-            const url2 = `https://api.sam.gov/entity-information/v2/exclusions?api_key=${SAM_KEY}&isActive=Yes&page=${page}&size=100`
-            const res2 = await safeFetch(url2)
-            if (!res2 || !res2.ok) { errors.push(`Excl p${page}: v3=${res?.status} v2=${res2?.status}`); break }
-            const data2 = await res2.json()
-            const results2 = data2?.results || data2?.exclusionData || []
-            if (!results2.length) break
-            for (const ex of results2) {
-              const { error } = await supabase.from('sam_exclusions').upsert({
-                classification: ex.classificationType, exclusion_name: ex.name,
-                exclusion_type: ex.exclusionType, exclusion_program: ex.exclusionProgram,
-                excluding_agency: ex.excludingAgencyCode, uei: ex.ueiSAM, cage_code: ex.cageCode,
-                active_date: ex.activateDate, termination_date: ex.terminationDate,
-                record_status: ex.recordStatus, city: ex.city, state: ex.stateProvince,
-                country: ex.country, description: ex.description,
-              }, { onConflict: 'exclusion_name,active_date,excluding_agency', ignoreDuplicates: true })
-              if (!error) loaded++
-            }
-            if (results2.length < 100) break
-            continue
-          }
+          if (!res || !res.ok) { errors.push(`Excl p${page}: ${res?.status}`); break }
           const data = await res.json()
-          const excls = data?.exclusionData || data?.results || []
-          if (!excls.length) break
+          const excls = data?.results || data?.exclusionData || []
+          if (!Array.isArray(excls) || !excls.length) break
           for (const ex of excls) {
             const { error } = await supabase.from('sam_exclusions').upsert({
               classification: ex.classificationType, exclusion_name: ex.name,
@@ -330,19 +298,19 @@ serve(async (req) => {
             if (!error) loaded++
           }
           console.log(`[fill-source] Excl p${page}: ${excls.length}`)
-          if (excls.length < 100) break
+          if (excls.length < 10) break
         } catch (e: any) { errors.push(`Excl: ${e.message}`); break }
       }
     }
 
-    // ─── More Opportunities (expand coverage) ───
+    // ─── More Opportunities (expand to 6 months) ───
     if (source === 'opportunities' && SAM_KEY) {
       const today = new Date()
-      const ago = new Date(Date.now() - 180 * 86400000) // 6 months
+      const ago = new Date(Date.now() - 180 * 86400000)
       const fmt = (d: Date) => `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}/${d.getFullYear()}`
       for (let offset = 0; offset < 2000; offset += 100) {
         try {
-          await delay(500)
+          await delay(1000)
           const url = `https://api.sam.gov/opportunities/v2/search?api_key=${SAM_KEY}&limit=100&offset=${offset}&postedFrom=${fmt(ago)}&postedTo=${fmt(today)}`
           const res = await safeFetch(url)
           if (!res || !res.ok) { errors.push(`Opps offset ${offset}: ${res?.status}`); break }
@@ -366,6 +334,51 @@ serve(async (req) => {
           if (data.opportunitiesData.length < 100) break
         } catch (e: any) { errors.push(`Opps: ${e.message}`); break }
       }
+    }
+
+    // ─── CRON AUTO-ROTATE: picks the next batch automatically ───
+    if (source === 'auto') {
+      // Determine what needs filling and rotate through sources
+      const counts: Record<string, number> = {}
+      for (const tbl of ['sbir_awards','nsf_awards','gsa_labor_rates','sam_exclusions','sam_entities']) {
+        const { count } = await supabase.from(tbl).select('*', { count: 'exact', head: true })
+        counts[tbl] = count || 0
+      }
+      const { count: idvCount } = await supabase.from('contracts').select('*', { count: 'exact', head: true }).eq('contract_category', 'idv')
+      counts['idvs'] = idvCount || 0
+      const { count: subCount } = await supabase.from('subawards').select('*', { count: 'exact', head: true })
+      counts['subawards'] = subCount || 0
+
+      // Pick the source with the fewest records that we can fill
+      const hour = new Date().getHours()
+      const minute = new Date().getMinutes()
+      const rotation = Math.floor((hour * 60 + minute) / 10) % 7 // rotate every 10 min
+
+      const rotationMap = [
+        { source: 'labor-rates', key: 'gsa_labor_rates' },
+        { source: 'nsf', key: 'nsf_awards' },
+        { source: 'subawards', key: 'subawards' },
+        { source: 'idvs', key: 'idvs' },
+        { source: 'exclusions', key: 'sam_exclusions' },
+        { source: 'sam-entities', key: 'sam_entities' },
+        { source: 'sbir', key: 'sbir_awards' },
+      ]
+
+      const target = rotationMap[rotation]
+      console.log(`[fill-source] AUTO mode: rotation=${rotation}, target=${target.source}, current count=${counts[target.key]}`)
+
+      // Delegate to self with the specific source
+      const { data, error } = await supabase.functions.invoke('fill-source', {
+        body: { source: target.source, states: ALL_STATES.slice(0, 3) }
+      })
+      if (error) errors.push(`Auto delegate: ${error.message}`)
+      else loaded = data?.loaded || 0
+
+      return new Response(JSON.stringify({
+        success: true, source: 'auto', delegated_to: target.source,
+        counts, loaded, duration_seconds: parseFloat(((Date.now() - startTime) / 1000).toFixed(1)),
+        errors: errors.length > 0 ? errors : undefined
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
   } catch (e: any) {
