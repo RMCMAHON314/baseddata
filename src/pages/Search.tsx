@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams, Link, useNavigate } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from 'sonner';
 import {
   Search, Building2, FileText, Award, Briefcase, MapPin,
   Loader2, ChevronRight, ArrowRight, DollarSign, Calendar, Zap
@@ -60,10 +61,9 @@ const TYPE_COLORS: Record<string, string> = {
 
 export default function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const initialQuery = searchParams.get('q') || '';
+  const urlQuery = (searchParams.get('q') || '').trim();
 
-  const [query, setQuery] = useState(initialQuery);
+  const [query, setQuery] = useState(urlQuery);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [aggregations, setAggregations] = useState<Aggregations | null>(null);
   const [loading, setLoading] = useState(false);
@@ -73,44 +73,67 @@ export default function SearchPage() {
   const [filterType, setFilterType] = useState<string | null>(null);
 
   const doSearch = useCallback(async (q: string) => {
-    if (!q.trim()) { setResults([]); setAggregations(null); setSearched(false); return; }
+    const clean = q.trim();
+    if (!clean) {
+      setResults([]);
+      setAggregations(null);
+      setResponseTime(0);
+      setTotalCount(0);
+      setSearched(false);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setSearched(true);
+
     try {
       const { data, error } = await supabase.functions.invoke('mega-search', {
-        body: { query: q, limit: 100 }
+        body: { query: clean, limit: 100 }
       });
+
       if (error) throw error;
-      setResults(data.results || []);
-      setAggregations(data.aggregations || null);
-      setResponseTime(data.response_time_ms || 0);
-      setTotalCount(data.total || 0);
+
+      setResults(data?.results || []);
+      setAggregations(data?.aggregations || null);
+      setResponseTime(data?.response_time_ms || 0);
+      setTotalCount(data?.total || 0);
     } catch (err) {
       console.error('Search error:', err);
+      toast.error('Search failed. Please try again.');
+      setResults([]);
+      setAggregations(null);
+      setResponseTime(0);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Search on mount if query param exists
   useEffect(() => {
-    if (initialQuery) {
-      setQuery(initialQuery);
-      doSearch(initialQuery);
+    setQuery(urlQuery);
+    if (urlQuery) {
+      setFilterType(null);
+      doSearch(urlQuery);
+    } else {
+      setResults([]);
+      setAggregations(null);
+      setResponseTime(0);
+      setTotalCount(0);
+      setSearched(false);
+      setLoading(false);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [urlQuery, doSearch]);
 
-  const handleSubmit = (e?: React.FormEvent) => {
+  const handleSubmit = (e?: { preventDefault: () => void }) => {
     e?.preventDefault();
-    if (!query.trim()) return;
-    setSearchParams({ q: query.trim() }, { replace: true });
+    const clean = query.trim();
+    if (!clean) return;
     setFilterType(null);
-    doSearch(query.trim());
+    setSearchParams({ q: clean }, { replace: true });
   };
 
-  const filteredResults = filterType
-    ? results.filter(r => r.result_type === filterType)
-    : results;
+  const filteredResults = filterType ? results.filter(r => r.result_type === filterType) : results;
 
   const getLink = (r: SearchResult) => {
     if (r.result_type === 'entity') return `/entity/${r.id}`;
@@ -123,7 +146,6 @@ export default function SearchPage() {
   return (
     <GlobalLayout>
       <div className="min-h-screen bg-background">
-        {/* Search bar - sticky */}
         <div className="sticky top-14 z-40 bg-background/95 backdrop-blur border-b border-border">
           <div className="container max-w-4xl py-4">
             <form onSubmit={handleSubmit} className="relative">
@@ -144,35 +166,36 @@ export default function SearchPage() {
               )}
             </form>
 
-            {/* Type filter tabs */}
             {aggregations && results.length > 0 && (
               <div className="flex items-center gap-2 mt-3 overflow-x-auto">
                 <button
+                  type="button"
                   onClick={() => setFilterType(null)}
                   className={`text-sm px-3 py-1 rounded-full transition-colors whitespace-nowrap ${!filterType ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}
                 >
                   All ({totalCount})
                 </button>
+
                 {aggregations.entity_count > 0 && (
-                  <button onClick={() => setFilterType('entity')}
+                  <button type="button" onClick={() => setFilterType('entity')}
                     className={`text-sm px-3 py-1 rounded-full transition-colors whitespace-nowrap flex items-center gap-1 ${filterType === 'entity' ? 'bg-violet-500/20 text-violet-600' : 'text-muted-foreground hover:bg-muted'}`}>
                     <Building2 className="w-3.5 h-3.5" /> Entities ({aggregations.entity_count})
                   </button>
                 )}
                 {aggregations.contract_count > 0 && (
-                  <button onClick={() => setFilterType('contract')}
+                  <button type="button" onClick={() => setFilterType('contract')}
                     className={`text-sm px-3 py-1 rounded-full transition-colors whitespace-nowrap flex items-center gap-1 ${filterType === 'contract' ? 'bg-emerald-500/20 text-emerald-600' : 'text-muted-foreground hover:bg-muted'}`}>
                     <FileText className="w-3.5 h-3.5" /> Contracts ({aggregations.contract_count})
                   </button>
                 )}
                 {aggregations.grant_count > 0 && (
-                  <button onClick={() => setFilterType('grant')}
+                  <button type="button" onClick={() => setFilterType('grant')}
                     className={`text-sm px-3 py-1 rounded-full transition-colors whitespace-nowrap flex items-center gap-1 ${filterType === 'grant' ? 'bg-amber-500/20 text-amber-600' : 'text-muted-foreground hover:bg-muted'}`}>
                     <Award className="w-3.5 h-3.5" /> Grants ({aggregations.grant_count})
                   </button>
                 )}
                 {aggregations.opportunity_count > 0 && (
-                  <button onClick={() => setFilterType('opportunity')}
+                  <button type="button" onClick={() => setFilterType('opportunity')}
                     className={`text-sm px-3 py-1 rounded-full transition-colors whitespace-nowrap flex items-center gap-1 ${filterType === 'opportunity' ? 'bg-blue-500/20 text-blue-600' : 'text-muted-foreground hover:bg-muted'}`}>
                     <Briefcase className="w-3.5 h-3.5" /> Opportunities ({aggregations.opportunity_count})
                   </button>
@@ -188,29 +211,29 @@ export default function SearchPage() {
         </div>
 
         <div className="container max-w-4xl py-6">
-          {/* Loading */}
           {loading && (
             <div className="space-y-3">
               {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)}
             </div>
           )}
 
-          {/* Results */}
           {!loading && searched && filteredResults.length > 0 && (
             <div className="space-y-2">
               {filteredResults.map(r => {
                 const Icon = RESULT_ICONS[r.result_type] || FileText;
+                const tone = TYPE_COLORS[r.result_type] || '';
+                const toneParts = tone.split(' ');
                 return (
                   <Link key={`${r.result_type}-${r.id}`} to={getLink(r)}>
                     <Card className="hover:bg-muted/40 transition-colors cursor-pointer border-border/60">
                       <CardContent className="p-4 flex items-start gap-3">
-                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${TYPE_COLORS[r.result_type]?.split(' ')[0] || 'bg-muted'}`}>
-                          <Icon className={`w-4.5 h-4.5 ${TYPE_COLORS[r.result_type]?.split(' ')[1] || 'text-muted-foreground'}`} />
+                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${toneParts[0] || 'bg-muted'}`}>
+                          <Icon className={`w-4 h-4 ${toneParts[1] || 'text-muted-foreground'}`} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="font-semibold text-sm truncate">{r.name}</h3>
-                            <Badge variant="outline" className={`text-[10px] capitalize px-1.5 py-0 ${TYPE_COLORS[r.result_type] || ''}`}>
+                            <Badge variant="outline" className={`text-[10px] capitalize px-1.5 py-0 ${tone}`}>
                               {r.result_type}
                             </Badge>
                             {r.set_aside && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{r.set_aside}</Badge>}
@@ -237,7 +260,6 @@ export default function SearchPage() {
             </div>
           )}
 
-          {/* No results */}
           {!loading && searched && filteredResults.length === 0 && (
             <div className="text-center py-20">
               <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -246,7 +268,6 @@ export default function SearchPage() {
             </div>
           )}
 
-          {/* Empty state */}
           {!loading && !searched && (
             <div className="text-center py-20">
               <Search className="w-16 h-16 text-muted-foreground/30 mx-auto mb-6" />
@@ -257,7 +278,7 @@ export default function SearchPage() {
               <div className="flex flex-wrap justify-center gap-2">
                 {suggestions.map(s => (
                   <Badge key={s} variant="outline" className="cursor-pointer hover:bg-primary/10 transition-colors"
-                    onClick={() => { setQuery(s); setSearchParams({ q: s }); doSearch(s); }}>
+                    onClick={() => setSearchParams({ q: s }, { replace: true })}>
                     <Search className="w-3 h-3 mr-1" /> {s}
                   </Badge>
                 ))}
