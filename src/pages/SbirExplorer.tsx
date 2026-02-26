@@ -11,8 +11,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
-const AGENCIES = ['', 'DOD', 'HHS', 'NASA', 'NSF', 'DOE', 'USDA', 'EPA', 'DOT', 'DHS', 'ED'];
-const PHASES = ['', 'Phase I', 'Phase II', 'Phase III'];
+const AGENCIES = ['__all__', 'DOD', 'HHS', 'NASA', 'NSF', 'DOE', 'USDA', 'EPA', 'DOT', 'DHS', 'ED'];
+const PHASES = ['__all__', 'Phase I', 'Phase II', 'Phase III'];
 const COLORS = ['hsl(var(--primary))', '#06b6d4', '#8b5cf6', '#f59e0b', '#ef4444', '#10b981', '#f97316', '#ec4899'];
 
 function fmt(v: number | null) {
@@ -23,20 +23,20 @@ function fmt(v: number | null) {
   return `$${v.toFixed(0)}`;
 }
 
-const STATES = ['','AL','AK','AZ','AR','CA','CO','CT','DE','DC','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'];
+const STATES = ['__all__','AL','AK','AZ','AR','CA','CO','CT','DE','DC','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'];
 
 export default function SbirExplorer() {
-  const [agency, setAgency] = useState('');
-  const [state, setState] = useState('');
-  const [phase, setPhase] = useState('');
+  const [agency, setAgency] = useState('__all__');
+  const [state, setState] = useState('__all__');
+  const [phase, setPhase] = useState('__all__');
 
   const { data: awards, isLoading } = useQuery({
     queryKey: ['sbir-explorer', agency, state, phase],
     queryFn: async () => {
       let query = supabase.from('sbir_awards').select('*').order('award_amount', { ascending: false }).limit(200);
-      if (agency) query = query.ilike('agency', `%${agency}%`);
-      if (state) query = query.eq('state', state);
-      if (phase) query = query.eq('phase', phase);
+      if (agency !== '__all__') query = query.ilike('agency', `%${agency}%`);
+      if (state !== '__all__') query = query.eq('state', state);
+      if (phase !== '__all__') query = query.eq('phase', phase);
       const { data, error } = await query;
       if (error) throw error;
       return data || [];
@@ -47,8 +47,8 @@ export default function SbirExplorer() {
     queryKey: ['sbir-landscape', state, agency],
     queryFn: async () => {
       const { data, error } = await supabase.rpc('get_sbir_landscape', {
-        p_state: state || null,
-        p_agency: agency || null,
+        p_state: state !== '__all__' ? state : null,
+        p_agency: agency !== '__all__' ? agency : null,
       });
       if (error) throw error;
       return (data as any)?.[0] || null;
@@ -110,15 +110,15 @@ export default function SbirExplorer() {
           <div className="flex flex-wrap gap-3">
             <Select value={agency} onValueChange={setAgency}>
               <SelectTrigger className="w-40"><SelectValue placeholder="All Agencies" /></SelectTrigger>
-              <SelectContent>{AGENCIES.map(a => <SelectItem key={a || 'all'} value={a}>{a || 'All Agencies'}</SelectItem>)}</SelectContent>
+              <SelectContent>{AGENCIES.map(a => <SelectItem key={a} value={a}>{a === '__all__' ? 'All Agencies' : a}</SelectItem>)}</SelectContent>
             </Select>
             <Select value={state} onValueChange={setState}>
               <SelectTrigger className="w-32"><SelectValue placeholder="All States" /></SelectTrigger>
-              <SelectContent>{STATES.map(s => <SelectItem key={s || 'all'} value={s}>{s || 'All States'}</SelectItem>)}</SelectContent>
+              <SelectContent>{STATES.map(s => <SelectItem key={s} value={s}>{s === '__all__' ? 'All States' : s}</SelectItem>)}</SelectContent>
             </Select>
             <Select value={phase} onValueChange={setPhase}>
               <SelectTrigger className="w-36"><SelectValue placeholder="All Phases" /></SelectTrigger>
-              <SelectContent>{PHASES.map(p => <SelectItem key={p || 'all'} value={p}>{p || 'All Phases'}</SelectItem>)}</SelectContent>
+              <SelectContent>{PHASES.map(p => <SelectItem key={p} value={p}>{p === '__all__' ? 'All Phases' : p}</SelectItem>)}</SelectContent>
             </Select>
           </div>
 
