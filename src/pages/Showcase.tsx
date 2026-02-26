@@ -5,13 +5,13 @@ import idsLogo from '@/assets/IDS-Logo_VertSolidColor.png';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { motion, useInView } from 'framer-motion';
 import {
   Search, ArrowRight, Building2, Shield,
   Zap, ChevronRight,
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
-import { MarketIntelligenceSearch } from '@/components/search/MarketIntelligenceSearch';
 import { usePlatformStats } from '@/hooks/useNewSources';
 
 /* ── animated counter ── */
@@ -85,6 +85,38 @@ const FOOTER_LINKS = [
   { to: '/labor-rates', label: 'Labor Rates' },
   { to: '/api-docs', label: 'API' },
 ];
+
+function HeroSearchBar() {
+  const [q, setQ] = useState('');
+  const nav = useNavigate();
+  const go = () => { if (q.trim()) nav(`/search?q=${encodeURIComponent(q.trim())}`); };
+  const suggestions = ['cybersecurity Maryland', 'Lockheed Martin', 'IT services 8a', 'healthcare grants', 'DoD Virginia'];
+  return (
+    <div className="w-full max-w-2xl mx-auto">
+      <div className="relative">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+        <Input
+          value={q}
+          onChange={e => setQ(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && go()}
+          placeholder="Search contracts, entities, grants, opportunities..."
+          className="pl-12 pr-32 h-14 bg-background border border-input ring-1 ring-border text-foreground placeholder:text-muted-foreground/50 rounded-xl text-base focus-visible:ring-primary shadow-md"
+        />
+        <Button onClick={go} disabled={!q.trim()} className="absolute right-2 top-1/2 -translate-y-1/2 btn-omni gap-1.5 h-10 px-5">
+          Search <ArrowRight className="w-4 h-4" />
+        </Button>
+      </div>
+      <div className="mt-4 flex flex-wrap justify-center gap-2">
+        {suggestions.map(s => (
+          <Badge key={s} variant="outline" className="cursor-pointer hover:bg-primary/10 transition-colors text-xs"
+            onClick={() => { setQ(s); nav(`/search?q=${encodeURIComponent(s)}`); }}>
+            {s}
+          </Badge>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function Showcase() {
   const navigate = useNavigate();
@@ -190,7 +222,7 @@ export default function Showcase() {
 
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.24 }}
             className="relative w-full max-w-2xl mx-auto mb-10">
-            <MarketIntelligenceSearch variant="hero" />
+            <HeroSearchBar />
           </motion.div>
 
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="flex flex-col items-center gap-3">

@@ -113,7 +113,7 @@ export function GlobalLayout({ children }: { children: React.ReactNode }) {
               className="pl-9 h-9 bg-secondary/50 border-0 focus:ring-2 ring-primary/30 text-sm"
               onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
               onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
-              onKeyDown={e => e.key === 'Enter' && searchQuery && navigate(`/explore?q=${encodeURIComponent(searchQuery)}`)}
+              onKeyDown={e => e.key === 'Enter' && searchQuery && navigate(`/search?q=${encodeURIComponent(searchQuery)}`)}
             />
             <AnimatePresence>
               {showSearchResults && searchResults.length > 0 && (
