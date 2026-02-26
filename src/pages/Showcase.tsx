@@ -241,7 +241,7 @@ export default function Showcase() {
         <div className="relative max-w-5xl mx-auto">
           <p className="text-center text-xs text-muted-foreground mb-10 uppercase tracking-[0.2em] font-medium">
             {agencies > 0
-              ? `Tracking federal contracts, grants & IDVs across ${agencies} agencies and ${states} states`
+              ? `Tracking federal contracts, grants & IDVs across ${agencies} agencies and ${states > 50 ? '50 states & territories' : `${states} states`}`
               : 'Ready to track federal contracts, grants & IDVs across all 50 states'}
           </p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
