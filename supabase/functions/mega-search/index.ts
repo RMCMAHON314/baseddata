@@ -35,39 +35,41 @@ serve(async (req) => {
 
     console.log(`🔍 MEGA SEARCH: "${query}"`)
     const startTime = Date.now()
+    const searchTerms = buildSearchTerms(query)
+    console.log('search_terms', searchTerms)
 
     // Parallel searches
     const searches = []
 
     // 1. Search entities (always)
-    searches.push(searchEntities(supabase, query, filters, limit))
+    searches.push(searchEntities(supabase, searchTerms, filters, limit))
 
     // 2. Search contracts
     if (include_contracts) {
-      searches.push(searchContracts(supabase, query, filters, limit))
+      searches.push(searchContracts(supabase, searchTerms, filters, limit))
     }
 
     // 3. Search grants
     if (include_grants) {
-      searches.push(searchGrants(supabase, query, filters, limit))
+      searches.push(searchGrants(supabase, searchTerms, filters, limit))
     }
 
     // 4. Search opportunities
     if (include_opportunities) {
-      searches.push(searchOpportunities(supabase, query, filters, limit))
+      searches.push(searchOpportunities(supabase, searchTerms, filters, limit))
     }
 
     const results = await Promise.all(searches)
 
-    // Flatten and dedupe
-    const allResults = results.flat()
+    // Flatten and score for relevance
+    const allResults = results.flat().map((result: any) => ({
+      ...result,
+      relevance: computeRelevance(result, searchTerms)
+    }))
 
-    // Sort by value/relevance
+    // Sort by relevance, then value
     allResults.sort((a, b) => {
-      // Prioritize by score, then value
-      const scoreA = a.opportunity_score || 50
-      const scoreB = b.opportunity_score || 50
-      if (scoreA !== scoreB) return scoreB - scoreA
+      if ((b.relevance || 0) !== (a.relevance || 0)) return (b.relevance || 0) - (a.relevance || 0)
       return (b.value || 0) - (a.value || 0)
     })
 
@@ -88,6 +90,7 @@ serve(async (req) => {
 
     const response = {
       query,
+      search_terms: searchTerms,
       results: allResults.slice(0, limit),
       total: allResults.length,
       aggregations,
@@ -117,11 +120,11 @@ serve(async (req) => {
   }
 })
 
-async function searchEntities(supabase: any, query: string, filters: any, limit: number) {
+async function searchEntities(supabase: any, searchTerms: string[], filters: any, limit: number) {
   let q = supabase
     .from('core_entities')
     .select('id, canonical_name, entity_type, state, city, total_contract_value, total_grant_value, opportunity_score, description')
-    .or(`canonical_name.ilike.%${query}%,description.ilike.%${query}%`)
+    .or(buildOrFilter(searchTerms, ['canonical_name', 'description', 'entity_type']))
     .order('total_contract_value', { ascending: false, nullsFirst: false })
     .limit(limit)
 
@@ -147,11 +150,11 @@ async function searchEntities(supabase: any, query: string, filters: any, limit:
   }))
 }
 
-async function searchContracts(supabase: any, query: string, filters: any, limit: number) {
+async function searchContracts(supabase: any, searchTerms: string[], filters: any, limit: number) {
   let q = supabase
     .from('contracts')
     .select('id, recipient_name, recipient_entity_id, awarding_agency, description, award_amount, pop_state, pop_city, start_date, end_date, naics_code, set_aside_type')
-    .or(`recipient_name.ilike.%${query}%,description.ilike.%${query}%,awarding_agency.ilike.%${query}%`)
+    .or(buildOrFilter(searchTerms, ['recipient_name', 'description', 'awarding_agency', 'set_aside_type', 'naics_code']))
     .order('award_amount', { ascending: false, nullsFirst: false })
     .limit(limit)
 
@@ -180,11 +183,11 @@ async function searchContracts(supabase: any, query: string, filters: any, limit
   }))
 }
 
-async function searchGrants(supabase: any, query: string, filters: any, limit: number) {
+async function searchGrants(supabase: any, searchTerms: string[], filters: any, limit: number) {
   let q = supabase
     .from('grants')
     .select('id, recipient_name, recipient_entity_id, awarding_agency, project_title, award_amount, recipient_state, start_date, end_date, cfda_number')
-    .or(`recipient_name.ilike.%${query}%,project_title.ilike.%${query}%,awarding_agency.ilike.%${query}%`)
+    .or(buildOrFilter(searchTerms, ['recipient_name', 'project_title', 'awarding_agency', 'cfda_number']))
     .order('award_amount', { ascending: false, nullsFirst: false })
     .limit(limit)
 
@@ -203,18 +206,19 @@ async function searchGrants(supabase: any, query: string, filters: any, limit: n
     state: g.recipient_state,
     value: g.award_amount || 0,
     title: g.project_title,
+    description: g.project_title?.slice(0, 200),
     start_date: g.start_date,
     end_date: g.end_date,
     cfda: g.cfda_number
   }))
 }
 
-async function searchOpportunities(supabase: any, query: string, filters: any, limit: number) {
+async function searchOpportunities(supabase: any, searchTerms: string[], filters: any, limit: number) {
   let q = supabase
     .from('opportunities')
     .select('id, title, description, department, notice_type, response_deadline, pop_state, award_ceiling, naics_code, set_aside')
     .eq('is_active', true)
-    .or(`title.ilike.%${query}%,description.ilike.%${query}%,department.ilike.%${query}%`)
+    .or(buildOrFilter(searchTerms, ['title', 'description', 'department', 'set_aside', 'naics_code']))
     .order('response_deadline', { ascending: true })
     .limit(limit)
 
@@ -309,4 +313,60 @@ function generateInsights(query: string, results: any[], aggs: any) {
   }
 
   return insights
+}
+
+function cleanToken(token: string) {
+  return token.toLowerCase().replace(/[^a-z0-9-]/g, '').trim()
+}
+
+function buildSearchTerms(query: string) {
+  const normalized = query.toLowerCase().replace(/[^a-z0-9\s-]/g, ' ').replace(/\s+/g, ' ').trim()
+  const stopWords = new Set(['the', 'and', 'for', 'with', 'from', 'into', 'that', 'this', 'your'])
+  const tokens = normalized.split(' ').map(cleanToken).filter(t => t.length > 2 && !stopWords.has(t)).slice(0, 6)
+
+  const synonyms: Record<string, string[]> = {
+    healthcare: ['health', 'medical', 'hospital', 'clinic', 'nih', 'hhs', 'cms'],
+    grants: ['grant', 'funding', 'award'],
+    cybersecurity: ['cyber', 'security', 'infosec'],
+    defense: ['dod', 'military', 'army', 'navy', 'airforce'],
+    it: ['technology', 'software', 'cloud']
+  }
+
+  const terms = new Set<string>()
+  if (normalized && !normalized.includes(' ')) terms.add(normalized)
+
+  for (const t of tokens) {
+    terms.add(t)
+    const expanded = synonyms[t]
+    if (expanded) expanded.forEach(s => terms.add(s))
+  }
+
+  return Array.from(terms).slice(0, 10)
+}
+
+function buildOrFilter(searchTerms: string[], columns: string[]) {
+  const clauses: string[] = []
+  for (const term of searchTerms) {
+    for (const column of columns) {
+      clauses.push(`${column}.ilike.%${term}%`)
+    }
+  }
+  return clauses.join(',')
+}
+
+function computeRelevance(result: any, searchTerms: string[]) {
+  const text = [
+    result.name,
+    result.description,
+    result.agency,
+    result.entity_type,
+    result.set_aside,
+    result.state
+  ].filter(Boolean).join(' ').toLowerCase()
+
+  const hitCount = searchTerms.reduce((sum, term) => sum + (text.includes(term) ? 1 : 0), 0)
+  const valueScore = result.value ? Math.min(Math.log10(result.value + 1) * 3, 15) : 0
+  const oppScore = result.opportunity_score ? result.opportunity_score / 10 : 0
+
+  return (hitCount * 20) + valueScore + oppScore
 }
