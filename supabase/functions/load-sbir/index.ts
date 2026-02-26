@@ -6,6 +6,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
+async function fetchWithRetry(url: string, retries = 5, delayMs = 10000): Promise<Response> {
+  for (let i = 0; i < retries; i++) {
+    const res = await fetch(url)
+    if (res.status === 429) {
+      console.log(`Rate limited, waiting ${delayMs}ms before retry ${i + 1}/${retries}`)
+      await new Promise(r => setTimeout(r, delayMs))
+      delayMs *= 2
+      continue
+    }
+    return res
+  }
+  throw new Error('SBIR API rate limit exceeded after retries')
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
   const supabase = createClient(
@@ -18,10 +32,24 @@ serve(async (req) => {
   const year = body.year || 2024
 
   try {
-    const url = `https://api.www.sbir.gov/public/api/awards?agency=${encodeURIComponent(agency)}&year=${year}`
-    const res = await fetch(url)
-    if (!res.ok) throw new Error(`SBIR API returned ${res.status}`)
-    const data = await res.json()
+    // Try alternate endpoint formats
+    const urls = [
+      `https://api.www.sbir.gov/public/api/awards?agency=${encodeURIComponent(agency)}&year=${year}`,
+      `https://www.sbir.gov/api/awards.json?agency=${encodeURIComponent(agency)}&year=${year}`,
+    ]
+    
+    let res: Response | null = null
+    let data: any = null
+    for (const url of urls) {
+      try {
+        res = await fetchWithRetry(url)
+        if (res.ok) {
+          data = await res.json()
+          break
+        }
+      } catch { continue }
+    }
+    if (!data) throw new Error(`SBIR API unavailable - rate limited. Try again in a few minutes.`)
 
     let loaded = 0
     for (const a of (Array.isArray(data) ? data : [])) {
