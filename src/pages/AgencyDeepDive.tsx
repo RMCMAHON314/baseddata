@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
+import { PageSEO } from '@/components/layout/PageSEO';
 import { useAgencyDetail, useAgencyTopContractors } from '@/hooks';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -97,6 +98,7 @@ export default function AgencyDeepDive() {
 
   return (
     <GlobalLayout>
+      <PageSEO title={`${decoded} — Agency Deep Dive`} description={`Federal spending analysis for ${decoded}. Top contractors, spending trends, and contract breakdowns.`} path={`/agency/${agencyName}`} />
       <div className="min-h-screen bg-background">
         {/* Breadcrumb */}
         <div className="container pt-4">

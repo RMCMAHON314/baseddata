@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
+import { PageSEO } from '@/components/layout/PageSEO';
 import { toast } from 'sonner';
 
 // ── Endpoint definitions ──
@@ -306,6 +307,7 @@ export default function ApiDocs() {
 
   return (
     <GlobalLayout>
+      <PageSEO title="API Documentation — BasedData" description="RESTful API for government contract data. Search entities, contracts, grants, and opportunities programmatically." path="/api-docs" />
       <div className="min-h-screen bg-background">
         {/* Hero */}
         <div className="border-b border-border bg-card">

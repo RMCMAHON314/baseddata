@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
+import { PageSEO } from '@/components/layout/PageSEO';
 import { toast } from 'sonner';
 
 // Tab components
@@ -187,6 +188,7 @@ export default function EntityIntelligenceHub() {
 
   return (
     <GlobalLayout>
+      <PageSEO title={`${entity.canonical_name} — Contractor Profile`} description={`360° intelligence on ${entity.canonical_name}. Contracts, grants, competitors, and risk analysis.`} path={`/entity/${entity.id}`} />
       <div className="min-h-screen bg-background">
         {/* Breadcrumb */}
         <div className="container pt-4">

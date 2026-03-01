@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
+import { PageSEO } from '@/components/layout/PageSEO';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -56,6 +57,7 @@ export default function LaborRatesExplorer() {
 
   return (
     <GlobalLayout>
+      <PageSEO title="Government Labor Rates Explorer" description="Compare government contract labor rates by role, agency, and region. Data-driven pricing intelligence." path="/labor-rates" />
       <div className="container py-8 space-y-8">
         {/* Header */}
         <div>

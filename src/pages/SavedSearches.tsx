@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
+import { PageSEO } from '@/components/layout/PageSEO';
 import { toast } from 'sonner';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -86,6 +87,7 @@ export default function SavedSearches() {
 
   return (
     <GlobalLayout>
+      <PageSEO title="Saved Searches" description="Manage your saved government contract searches and alerts." path="/saved-searches" />
       <div className="min-h-screen bg-background">
 
         <div className="border-b border-border bg-card">

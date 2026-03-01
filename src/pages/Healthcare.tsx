@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
+import { PageSEO } from '@/components/layout/PageSEO';
 import { EntityLink } from '@/components/EntityLink';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -140,6 +141,7 @@ export default function Healthcare() {
 
   return (
     <GlobalLayout>
+      <PageSEO title="Healthcare Intelligence Hub" description="Track NIH grants, clinical trials, and healthcare contracts. Federal healthcare spending data and analysis." path="/healthcare" />
       <div className="min-h-screen bg-background">
         {/* Hero */}
         <div className="border-b border-border bg-gradient-to-br from-card via-card to-emerald-50/30">

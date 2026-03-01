@@ -19,6 +19,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
+import { PageSEO } from '@/components/layout/PageSEO';
 import { PremiumMapContainer } from '@/components/map/PremiumMapContainer';
 import { supabase } from '@/integrations/supabase/client';
 import { useMarketExplorer, useMarketFilterOptions, useSaveSearch } from '@/hooks';
@@ -357,6 +358,7 @@ export default function MarketExplorer() {
 
   return (
     <GlobalLayout>
+      <PageSEO title="Market Explorer — Government Contracts Map" description="Explore federal contracts and entities on an interactive map. Filter by state, agency, NAICS, and set-aside type." path="/explore" />
       <div className="min-h-screen bg-background flex flex-col">
         {/* Header */}
         <div className="border-b border-border bg-card">

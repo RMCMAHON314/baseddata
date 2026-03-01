@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
+import { PageSEO } from '@/components/layout/PageSEO';
 import { EntityLink } from '@/components/EntityLink';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -126,6 +127,7 @@ export default function Education() {
 
   return (
     <GlobalLayout>
+      <PageSEO title="Education Intelligence Hub" description="Federal education contracts, NSF grants, and university awards. Track education spending across agencies." path="/education" />
       <div className="min-h-screen bg-background">
         {/* Hero */}
         <div className="border-b border-border bg-gradient-to-br from-card via-card to-amber-50/30">

@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
+import { PageSEO } from '@/components/layout/PageSEO';
 
 function fmt(v: number | null) {
   if (!v) return '$0';
@@ -128,6 +129,7 @@ export default function EntityCompare() {
 
   return (
     <GlobalLayout>
+      <PageSEO title="Compare Federal Contractors" description="Side-by-side comparison of government contractors. Compare revenue, contracts, win rates, and capabilities." path="/compare" />
       <div className="min-h-screen bg-background">
         <div className="container pt-4">
           <nav className="flex items-center gap-1 text-sm text-muted-foreground">

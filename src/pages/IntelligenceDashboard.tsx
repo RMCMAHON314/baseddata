@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
+import { PageSEO } from '@/components/layout/PageSEO';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 function fmt(v: number | null) {
@@ -164,6 +165,7 @@ export default function IntelligenceDashboard() {
 
   return (
     <GlobalLayout>
+      <PageSEO title="Market Intelligence Dashboard" description="AI-powered federal market intelligence. Recompete alerts, buying patterns, and competitive landscape analysis." path="/intelligence" />
       <div className="min-h-screen bg-background">
         <div className="border-b border-border bg-card">
           <div className="container py-6">

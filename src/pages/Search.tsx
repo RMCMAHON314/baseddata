@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
+import { PageSEO } from '@/components/layout/PageSEO';
 import { SearchAutocomplete } from '@/components/search/SearchAutocomplete';
 import { SearchResults } from '@/components/search/SearchResults';
 import { SearchFilters, type SearchFilterState } from '@/components/search/SearchFilters';
@@ -96,6 +97,7 @@ export default function SearchPage() {
 
   return (
     <GlobalLayout>
+      <PageSEO title="Search Government Contracts & Entities" description="Search contracts, entities, grants, and opportunities across 50+ federal data sources. AI-powered intelligence." path="/search" />
       <div className="min-h-screen bg-background">
         {/* Hero search area when no results */}
         {!searched && !loading && (
