@@ -17,7 +17,7 @@ import { usePlatformStats } from '@/hooks/useNewSources';
 import { PageSEO } from '@/components/layout/PageSEO';
 
 /* ── animated counter ── */
-function useAnimatedCounter(target: number, duration = 2000) {
+function useAnimatedCounter(target: number, duration = 1200) {
   const [count, setCount] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true });
@@ -25,10 +25,13 @@ function useAnimatedCounter(target: number, duration = 2000) {
   React.useEffect(() => {
     if (!inView || target === 0) return;
     let start: number | null = null;
+    let last = 0;
     const step = (ts: number) => {
       if (!start) start = ts;
       const p = Math.min((ts - start) / duration, 1);
-      setCount(Math.floor((1 - Math.pow(1 - p, 4)) * target));
+      const next = Math.floor((1 - Math.pow(1 - p, 3)) * target);
+      // Only setState when the formatted display would change (reduces re-renders ~10x)
+      if (next !== last) { last = next; setCount(next); }
       if (p < 1) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
@@ -51,7 +54,7 @@ const fmtPlain = (n: number) => {
   return n.toLocaleString();
 };
 
-const AnimatedStat = ({ value, label, prefix = '', suffix = '' }: { value: number; label: string; prefix?: string; suffix?: string }) => {
+const AnimatedStat = React.memo(({ value, label, prefix = '', suffix = '' }: { value: number; label: string; prefix?: string; suffix?: string }) => {
   const { count, ref } = useAnimatedCounter(value);
   const display = prefix ? `${prefix}${fmt(count).replace(/^\$/, '')}` : `${fmt(count)}`;
   return (
@@ -62,7 +65,7 @@ const AnimatedStat = ({ value, label, prefix = '', suffix = '' }: { value: numbe
       <p className="text-[10px] sm:text-xs text-muted-foreground mt-2 font-semibold uppercase tracking-[0.15em]">{label}</p>
     </div>
   );
-};
+});
 
 const NAV_LINKS = [
   { to: '/explore', label: 'Explore' },
