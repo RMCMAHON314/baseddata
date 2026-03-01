@@ -11,6 +11,7 @@ import { initializeBasedData } from "@/init/startup";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { AdminRoute } from "@/components/layout/AdminRoute";
+import { AiAssistant } from "@/components/ai/AiAssistant";
 
 // Lazy-loaded pages
 const Showcase = lazy(() => import("./pages/Showcase"));
@@ -114,6 +115,7 @@ const App = () => {
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>
+              <AiAssistant />
             </BrowserRouter>
           </TooltipProvider>
         </AuthProvider>
