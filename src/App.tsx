@@ -67,9 +67,11 @@ function PageLoader() {
 
 const App = () => {
   useEffect(() => {
-    // Defer startup init so it doesn't block first paint
-    const id = requestIdleCallback(() => initializeBasedData().catch(console.error));
-    return () => cancelIdleCallback(id);
+    // Defer startup init so it doesn't block first paint (setTimeout fallback for Safari)
+    const ric = typeof requestIdleCallback === 'function' ? requestIdleCallback : (cb: () => void) => window.setTimeout(cb, 1) as unknown as number;
+    const cic = typeof cancelIdleCallback === 'function' ? cancelIdleCallback : (id: number) => clearTimeout(id);
+    const id = ric(() => { initializeBasedData().catch(console.error); });
+    return () => cic(id);
   }, []);
 
   return (
