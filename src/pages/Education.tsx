@@ -1,305 +1,248 @@
-// BASED DATA - Maryland Education Intelligence
-// MEEC Contracts, Institutions, Vendor Spending
+// BASED DATA - Education Intelligence Hub — BOMB-06 Rebuild
+// Federal education contracts, grants, NSF university awards
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
-  GraduationCap, Building, School, FileText, DollarSign, Calendar,
-  Search, Users, ChevronRight, Filter, Award, TrendingUp
+  GraduationCap, Building2, DollarSign, TrendingUp, Search,
+  FileText, School, Award, Users
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Progress } from '@/components/ui/progress';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
-import { 
-  useMEECContracts, 
-  useEducationSpending, 
-  useEducationInstitutions, 
-  useEducationStats,
-  useTopEducationVendors 
-} from '@/hooks/useEducation';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { EntityLink } from '@/components/EntityLink';
+import { supabase } from '@/integrations/supabase/client';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer
+} from 'recharts';
 
-const INSTITUTION_ICONS: Record<string, React.ElementType> = {
-  'K-12': School,
-  'USM': GraduationCap,
-  'Community College': Building,
-  'Private': Award,
-};
+const EDUCATION_NAICS = ['611'];
+const COLORS = ['hsl(var(--primary))', '#f59e0b', '#8b5cf6', '#06b6d4', '#ef4444', '#10b981'];
 
-const CONTRACT_COLORS: Record<string, string> = {
-  'Hardware': 'bg-blue-100 text-blue-700 border-blue-200',
-  'Software': 'bg-purple-100 text-purple-700 border-purple-200',
-  'Services': 'bg-emerald-100 text-emerald-700 border-emerald-200',
-  'Security': 'bg-red-100 text-red-700 border-red-200',
-};
-
-const CHART_COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'];
+function fmt(v: number | null) {
+  if (!v) return '$0';
+  if (v >= 1e9) return `$${(v / 1e9).toFixed(1)}B`;
+  if (v >= 1e6) return `$${(v / 1e6).toFixed(1)}M`;
+  if (v >= 1e3) return `$${(v / 1e3).toFixed(0)}K`;
+  return `$${v.toFixed(0)}`;
+}
 
 export default function Education() {
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('contracts');
   const [searchQuery, setSearchQuery] = useState('');
-  const [fiscalYear, setFiscalYear] = useState<number>(2024);
-  const [countyFilter, setCountyFilter] = useState('all');
-  const [institutionType, setInstitutionType] = useState('all');
 
-  const { data: stats, isLoading: statsLoading } = useEducationStats();
-  const { data: contracts = [], isLoading: contractsLoading } = useMEECContracts();
-  const { data: spending = [], isLoading: spendingLoading } = useEducationSpending({ 
-    county: countyFilter !== 'all' ? countyFilter : undefined,
-    fiscalYear 
+  // Hero stats
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ['education-hero-stats'],
+    queryFn: async () => {
+      const [contractsRes, grantsRes, nsfRes, entitiesRes] = await Promise.all([
+        supabase.from('contracts').select('award_amount').or(`naics_code.like.611%,awarding_agency.ilike.%education%`),
+        supabase.from('grants').select('award_amount').or('awarding_agency.ilike.%education%,awarding_agency.ilike.%school%'),
+        supabase.from('nsf_awards').select('award_amount'),
+        supabase.from('core_entities').select('id', { count: 'exact', head: true }).or('canonical_name.ilike.%university%,canonical_name.ilike.%college%,canonical_name.ilike.%school%'),
+      ]);
+      const contractTotal = contractsRes.data?.reduce((s, c) => s + (Number(c.award_amount) || 0), 0) || 0;
+      const grantTotal = grantsRes.data?.reduce((s, g) => s + (Number(g.award_amount) || 0), 0) || 0;
+      const nsfTotal = nsfRes.data?.reduce((s, n) => s + (Number(n.award_amount) || 0), 0) || 0;
+      return {
+        totalSpending: contractTotal + grantTotal + nsfTotal,
+        contractCount: contractsRes.data?.length || 0,
+        grantCount: grantsRes.data?.length || 0,
+        nsfCount: nsfRes.data?.length || 0,
+        entitiesCount: entitiesRes.count || 0,
+      };
+    },
+    staleTime: 5 * 60 * 1000,
   });
-  const { data: institutions = [], isLoading: institutionsLoading } = useEducationInstitutions(
-    institutionType !== 'all' ? institutionType : undefined
-  );
-  const { data: topVendors = [], isLoading: vendorsLoading } = useTopEducationVendors(10);
 
-  const formatCurrency = (value: number | null | undefined) => {
-    if (!value) return '-';
-    if (value >= 1e9) return `$${(value / 1e9).toFixed(1)}B`;
-    if (value >= 1e6) return `$${(value / 1e6).toFixed(1)}M`;
-    if (value >= 1e3) return `$${(value / 1e3).toFixed(0)}K`;
-    return `$${value.toLocaleString()}`;
-  };
+  // Education contracts (K-12 + Higher Ed)
+  const { data: contracts = [], isLoading: contractsLoading } = useQuery({
+    queryKey: ['education-contracts', searchQuery],
+    queryFn: async () => {
+      let query = supabase.from('contracts').select('id, recipient_name, recipient_entity_id, awarding_agency, award_amount, award_date, naics_code, description, set_aside_type')
+        .or(`naics_code.like.611%,awarding_agency.ilike.%education%`)
+        .order('award_amount', { ascending: false })
+        .limit(200);
+      if (searchQuery.length >= 2) query = query.or(`recipient_name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+      const { data } = await query;
+      return data || [];
+    },
+  });
 
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
-  };
+  // NSF university awards
+  const { data: nsfAwards = [], isLoading: nsfLoading } = useQuery({
+    queryKey: ['education-nsf', searchQuery],
+    queryFn: async () => {
+      let query = supabase.from('nsf_awards').select('*').order('award_amount', { ascending: false }).limit(200);
+      if (searchQuery.length >= 2) query = query.or(`institution_name.ilike.%${searchQuery}%,title.ilike.%${searchQuery}%`);
+      const { data } = await query;
+      return data || [];
+    },
+  });
 
-  // Get unique counties for filter
-  const counties = [...new Set(spending.map(s => s.county))].sort();
+  // Education grants
+  const { data: grants = [], isLoading: grantsLoading } = useQuery({
+    queryKey: ['education-grants', searchQuery],
+    queryFn: async () => {
+      let query = supabase.from('grants').select('id, recipient_name, recipient_entity_id, awarding_agency, award_amount, award_date, description')
+        .or('awarding_agency.ilike.%education%,awarding_agency.ilike.%school%')
+        .order('award_amount', { ascending: false })
+        .limit(200);
+      if (searchQuery.length >= 2) query = query.or(`recipient_name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+      const { data } = await query;
+      return data || [];
+    },
+  });
 
-  // Institution type breakdown
-  const institutionBreakdown = institutions.reduce((acc, i) => {
-    const type = i.institution_type || 'Other';
-    acc[type] = (acc[type] || 0) + (i.annual_budget || 0);
-    return acc;
-  }, {} as Record<string, number>);
+  // Chart: top universities by NSF funding
+  const topUniversities = (() => {
+    const map = new Map<string, number>();
+    for (const a of nsfAwards) if (a.institution_name) map.set(a.institution_name, (map.get(a.institution_name) || 0) + (Number(a.award_amount) || 0));
+    return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([name, value]) => ({ name: name.length > 25 ? name.slice(0, 25) + '…' : name, value }));
+  })();
 
-  const totalBudget = Object.values(institutionBreakdown).reduce((sum, v) => sum + v, 0);
+  // Chart: contracts by agency
+  const contractsByAgency = (() => {
+    const map = new Map<string, number>();
+    for (const c of contracts) if (c.awarding_agency) map.set(c.awarding_agency, (map.get(c.awarding_agency) || 0) + (Number(c.award_amount) || 0));
+    return [...map.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([name, value]) => ({ name: name.length > 25 ? name.slice(0, 25) + '…' : name, value }));
+  })();
 
-  // Chart data
-  const vendorChartData = topVendors.slice(0, 8).map(v => ({
-    name: v.name.length > 15 ? v.name.slice(0, 15) + '...' : v.name,
-    value: v.total,
-    districts: v.districtsCount
-  }));
+  // Chart: ed-tech vendors (top contract recipients)
+  const topVendors = (() => {
+    const map = new Map<string, { name: string; value: number; count: number }>();
+    for (const c of contracts) {
+      const existing = map.get(c.recipient_name) || { name: c.recipient_name, value: 0, count: 0 };
+      existing.value += Number(c.award_amount) || 0;
+      existing.count++;
+      map.set(c.recipient_name, existing);
+    }
+    return [...map.values()].sort((a, b) => b.value - a.value).slice(0, 10);
+  })();
 
   return (
     <GlobalLayout>
       <div className="min-h-screen bg-background">
-        {/* Header */}
-        <div className="border-b border-border bg-gradient-to-br from-card via-card to-amber-50/50">
-          <div className="container py-6">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
-              <div>
-                <h1 className="text-2xl font-bold flex items-center gap-2">
-                  <GraduationCap className="h-6 w-6 text-amber-600" />
-                  Maryland Education Intelligence
-                </h1>
-                <p className="text-muted-foreground">MEEC contracts, institutions, and vendor spending</p>
-              </div>
-              <Select value={fiscalYear.toString()} onValueChange={(v) => setFiscalYear(parseInt(v))}>
-                <SelectTrigger className="w-32">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="2024">FY 2024</SelectItem>
-                  <SelectItem value="2023">FY 2023</SelectItem>
-                  <SelectItem value="2022">FY 2022</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+        {/* Hero */}
+        <div className="border-b border-border bg-gradient-to-br from-card via-card to-amber-50/30">
+          <div className="container py-8">
+            <h1 className="text-3xl font-bold flex items-center gap-3 mb-1">
+              <GraduationCap className="h-7 w-7 text-amber-600" />
+              Education Intelligence
+            </h1>
+            <p className="text-muted-foreground mb-6">Federal education spending, NSF university research, and SLED market intelligence</p>
 
-            {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card className="p-4 border-amber-200/50">
-                <div className="flex items-center gap-2 mb-1">
-                  <FileText className="h-4 w-4 text-amber-600" />
-                  <span className="text-sm text-muted-foreground">MEEC Contract Value</span>
-                </div>
-                <p className="text-2xl font-bold">{statsLoading ? '-' : formatCurrency(stats?.meecValue)}</p>
-              </Card>
-              <Card className="p-4 border-blue-200/50">
-                <div className="flex items-center gap-2 mb-1">
-                  <Building className="h-4 w-4 text-blue-600" />
-                  <span className="text-sm text-muted-foreground">Institutions</span>
-                </div>
-                <p className="text-2xl font-bold">{statsLoading ? '-' : stats?.institutionsCount}</p>
-              </Card>
-              <Card className="p-4 border-emerald-200/50">
-                <div className="flex items-center gap-2 mb-1">
-                  <TrendingUp className="h-4 w-4 text-emerald-600" />
-                  <span className="text-sm text-muted-foreground">Combined Budget</span>
-                </div>
-                <p className="text-2xl font-bold text-emerald-700">{statsLoading ? '-' : formatCurrency(stats?.institutionsBudget)}</p>
-              </Card>
-              <Card className="p-4 border-violet-200/50">
-                <div className="flex items-center gap-2 mb-1">
-                  <DollarSign className="h-4 w-4 text-violet-600" />
-                  <span className="text-sm text-muted-foreground">Vendor Spend (FY)</span>
-                </div>
-                <p className="text-2xl font-bold">{statsLoading ? '-' : formatCurrency(stats?.totalSpending)}</p>
-              </Card>
+              {[
+                { label: 'Education Spending', value: fmt(stats?.totalSpending || 0), icon: DollarSign },
+                { label: 'Education Entities', value: stats?.entitiesCount?.toLocaleString() || '—', icon: Building2 },
+                { label: 'NSF Research Awards', value: stats?.nsfCount?.toLocaleString() || '—', icon: Award },
+                { label: 'Education Grants', value: stats?.grantCount?.toLocaleString() || '—', icon: TrendingUp },
+              ].map((s, i) => (
+                <motion.div key={s.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+                  <Card className="p-4 border-amber-200/30">
+                    <div className="flex items-center gap-2 mb-1">
+                      <s.icon className="h-4 w-4 text-amber-600" />
+                      <span className="text-xs text-muted-foreground">{s.label}</span>
+                    </div>
+                    <p className="text-2xl font-bold">{statsLoading ? '—' : s.value}</p>
+                  </Card>
+                </motion.div>
+              ))}
             </div>
           </div>
         </div>
 
-        <div className="container py-6">
-          {/* Tabs */}
+        <div className="container py-6 space-y-6">
+          {/* Search */}
+          <div className="relative max-w-xl">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search contracts, grants, universities..." className="pl-9" />
+          </div>
+
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="mb-6">
-              <TabsTrigger value="overview" className="gap-2">
-                <TrendingUp className="h-4 w-4" />
-                Overview
-              </TabsTrigger>
-              <TabsTrigger value="contracts" className="gap-2">
-                <FileText className="h-4 w-4" />
-                MEEC Contracts
-              </TabsTrigger>
-              <TabsTrigger value="institutions" className="gap-2">
-                <Building className="h-4 w-4" />
-                Institutions
-              </TabsTrigger>
-              <TabsTrigger value="spending" className="gap-2">
-                <DollarSign className="h-4 w-4" />
-                Vendor Spending
-              </TabsTrigger>
+            <TabsList className="mb-4">
+              <TabsTrigger value="contracts" className="gap-2"><FileText className="h-4 w-4" />K-12 & Contracting</TabsTrigger>
+              <TabsTrigger value="higher-ed" className="gap-2"><GraduationCap className="h-4 w-4" />Higher Education</TabsTrigger>
+              <TabsTrigger value="grants" className="gap-2"><DollarSign className="h-4 w-4" />Education Grants</TabsTrigger>
             </TabsList>
 
-            {/* Overview Tab */}
-            <TabsContent value="overview">
+            {/* K-12 / Contracting */}
+            <TabsContent value="contracts" className="space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Top Vendors Chart */}
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Top Education Vendors</CardTitle>
-                  </CardHeader>
+                  <CardHeader><CardTitle className="text-sm">Education Spending by Agency</CardTitle></CardHeader>
                   <CardContent>
-                    {vendorsLoading ? (
-                      <Skeleton className="h-64" />
-                    ) : (
+                    {!contractsByAgency.length ? <p className="text-center text-muted-foreground py-8">No data</p> : (
                       <div className="h-64">
                         <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={vendorChartData} layout="vertical">
-                            <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                            <XAxis 
-                              type="number" 
-                              tickFormatter={(v) => formatCurrency(v)}
-                              tick={{ fontSize: 12 }}
-                            />
-                            <YAxis 
-                              type="category" 
-                              dataKey="name" 
-                              width={100}
-                              tick={{ fontSize: 12 }}
-                            />
-                            <Tooltip 
-                              formatter={(value: number) => [formatCurrency(value), 'Total Spend']}
-                              contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }}
-                            />
-                            <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                              {vendorChartData.map((_, index) => (
-                                <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                              ))}
-                            </Bar>
+                          <BarChart data={contractsByAgency} layout="vertical">
+                            <XAxis type="number" tickFormatter={v => fmt(v)} tick={{ fontSize: 11 }} />
+                            <YAxis type="category" dataKey="name" width={160} tick={{ fontSize: 10 }} />
+                            <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
+                            <Bar dataKey="value" fill="#f59e0b" radius={[0, 4, 4, 0]} />
                           </BarChart>
                         </ResponsiveContainer>
                       </div>
                     )}
                   </CardContent>
                 </Card>
-
-                {/* Spending by Institution Type */}
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Budget by Institution Type</CardTitle>
-                  </CardHeader>
+                  <CardHeader><CardTitle className="text-sm">Top Ed-Tech Vendors</CardTitle></CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      {Object.entries(institutionBreakdown)
-                        .sort((a, b) => b[1] - a[1])
-                        .map(([type, value], index) => {
-                          const percentage = totalBudget > 0 ? (value / totalBudget) * 100 : 0;
-                          const Icon = INSTITUTION_ICONS[type] || Building;
-                          return (
-                            <div key={type}>
-                              <div className="flex items-center justify-between mb-1">
-                                <div className="flex items-center gap-2">
-                                  <Icon className="h-4 w-4 text-muted-foreground" />
-                                  <span className="text-sm font-medium">{type}</span>
-                                </div>
-                                <span className="text-sm font-bold">{formatCurrency(value)}</span>
-                              </div>
-                              <Progress value={percentage} className="h-2" />
-                            </div>
-                          );
-                        })}
-                    </div>
+                    {!topVendors.length ? <p className="text-center text-muted-foreground py-8">No data</p> : (
+                      <div className="border rounded-lg overflow-auto max-h-[260px]">
+                        <table className="w-full text-sm">
+                          <thead className="sticky top-0 bg-muted"><tr>
+                            <th className="p-2 text-left font-medium">#</th>
+                            <th className="p-2 text-left font-medium">Vendor</th>
+                            <th className="p-2 text-right font-medium">Awards</th>
+                            <th className="p-2 text-right font-medium">Value</th>
+                          </tr></thead>
+                          <tbody>
+                            {topVendors.map((v, i) => (
+                              <tr key={i} className="border-t hover:bg-muted/30">
+                                <td className="p-2 text-muted-foreground">{i + 1}</td>
+                                <td className="p-2 font-medium truncate max-w-[200px]"><EntityLink name={v.name} className="hover:text-primary" /></td>
+                                <td className="p-2 text-right">{v.count}</td>
+                                <td className="p-2 text-right font-mono text-primary">{fmt(v.value)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
-            </TabsContent>
 
-            {/* MEEC Contracts Tab */}
-            <TabsContent value="contracts">
               {contractsLoading ? (
-                <div className="space-y-4">
-                  {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-32" />)}
-                </div>
-              ) : contracts.length === 0 ? (
-                <Card className="p-12 text-center">
-                  <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Contracts Found</h3>
-                  <p className="text-muted-foreground">MEEC contract data will appear here</p>
-                </Card>
+                <div className="space-y-3">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-24" />)}</div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {contracts.map((contract, index) => (
-                    <motion.div
-                      key={contract.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.02 }}
-                    >
-                      <Card className="p-4 h-full hover:border-amber-300/50 transition-colors">
-                        <div className="flex items-start justify-between gap-2 mb-3">
-                          <Badge className={CONTRACT_COLORS[contract.contract_type || ''] || 'bg-secondary'}>
-                            {contract.contract_type || 'General'}
-                          </Badge>
-                          <span className="text-xs font-mono text-muted-foreground">
-                            {contract.contract_number}
-                          </span>
-                        </div>
-                        <h3 className="text-lg font-bold mb-2">{contract.contract_name}</h3>
-                        <p className="text-sm text-muted-foreground mb-3">
-                          {formatDate(contract.start_date)} - {formatDate(contract.end_date)}
-                        </p>
-                        {contract.categories && contract.categories.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5 mb-3">
-                            {contract.categories.slice(0, 4).map((cat, i) => (
-                              <Badge key={i} variant="outline" className="text-xs">
-                                {cat}
-                              </Badge>
-                            ))}
+                <div className="space-y-3">
+                  {contracts.slice(0, 30).map((c, i) => (
+                    <motion.div key={c.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.015 }}>
+                      <Card className="p-4 hover:border-amber-300/50 transition-colors">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 mb-1">
+                              <Badge className="bg-amber-100 text-amber-700 text-xs">{c.awarding_agency || '—'}</Badge>
+                              {c.naics_code && <Badge variant="outline" className="text-xs font-mono">{c.naics_code}</Badge>}
+                            </div>
+                            <p className="text-sm line-clamp-2 mb-1">{c.description || 'No description'}</p>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Building2 className="h-3.5 w-3.5" />
+                              <EntityLink name={c.recipient_name} id={c.recipient_entity_id || undefined} className="hover:text-primary" />
+                            </div>
                           </div>
-                        )}
-                        {contract.prime_contractors && contract.prime_contractors.length > 0 && (
-                          <p className="text-xs text-muted-foreground mb-3">
-                            Contractors: {contract.prime_contractors.slice(0, 3).join(', ')}
-                            {contract.prime_contractors.length > 3 && ` +${contract.prime_contractors.length - 3} more`}
-                          </p>
-                        )}
-                        <div className="pt-2 border-t">
-                          <p className="text-xl font-bold text-primary font-mono">
-                            {formatCurrency(contract.estimated_value)}
-                          </p>
+                          <div className="text-right shrink-0">
+                            <p className="text-lg font-bold text-primary font-mono">{fmt(Number(c.award_amount))}</p>
+                            <p className="text-xs text-muted-foreground">{c.award_date ? new Date(c.award_date).toLocaleDateString() : '—'}</p>
+                          </div>
                         </div>
                       </Card>
                     </motion.div>
@@ -308,149 +251,89 @@ export default function Education() {
               )}
             </TabsContent>
 
-            {/* Institutions Tab */}
-            <TabsContent value="institutions">
-              <div className="mb-6">
-                <Select value={institutionType} onValueChange={setInstitutionType}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Institution Type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="K-12">K-12</SelectItem>
-                    <SelectItem value="USM">University System</SelectItem>
-                    <SelectItem value="Community College">Community College</SelectItem>
-                    <SelectItem value="Private">Private</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            {/* Higher Education / NSF */}
+            <TabsContent value="higher-ed" className="space-y-6">
+              <Card>
+                <CardHeader><CardTitle className="text-sm">Top Universities by Federal Funding (NSF)</CardTitle></CardHeader>
+                <CardContent>
+                  {!topUniversities.length ? <p className="text-center text-muted-foreground py-8">No data</p> : (
+                    <div className="h-72">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={topUniversities} layout="vertical">
+                          <XAxis type="number" tickFormatter={v => fmt(v)} tick={{ fontSize: 11 }} />
+                          <YAxis type="category" dataKey="name" width={180} tick={{ fontSize: 10 }} />
+                          <Tooltip formatter={(v: number) => fmt(v)} contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
+                          <Bar dataKey="value" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
-              {institutionsLoading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-32" />)}
-                </div>
-              ) : institutions.length === 0 ? (
+              {nsfLoading ? (
+                <div className="space-y-3">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-24" />)}</div>
+              ) : nsfAwards.length === 0 ? (
                 <Card className="p-12 text-center">
-                  <Building className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Institutions Found</h3>
-                  <p className="text-muted-foreground">Adjust your filter</p>
+                  <GraduationCap className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No NSF Awards Found</h3>
+                  <p className="text-muted-foreground">NSF data will appear once loaded</p>
                 </Card>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {institutions.map((inst, index) => {
-                    const Icon = INSTITUTION_ICONS[inst.institution_type || ''] || Building;
-                    return (
-                      <motion.div
-                        key={inst.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.02 }}
-                      >
-                        <Card className="p-4 h-full hover:border-blue-300/50 transition-colors">
-                          <div className="flex items-start gap-3">
-                            <div className="p-2 rounded-lg bg-blue-100">
-                              <Icon className="h-5 w-5 text-blue-600" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <Badge variant="secondary" className="text-xs">
-                                  {inst.institution_type || 'Other'}
-                                </Badge>
-                                {inst.meec_member && (
-                                  <Badge className="bg-amber-100 text-amber-700 text-xs">MEEC</Badge>
-                                )}
-                              </div>
-                              <h3 className="font-semibold line-clamp-2 mb-1">{inst.institution_name}</h3>
-                              <p className="text-sm text-muted-foreground">
-                                {[inst.city, inst.county].filter(Boolean).join(', ')}
-                              </p>
-                              <div className="flex items-center gap-4 mt-2 text-sm">
-                                {inst.enrollment && (
-                                  <span className="flex items-center gap-1">
-                                    <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                                    {inst.enrollment.toLocaleString()}
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-lg font-bold text-primary font-mono mt-2">
-                                {formatCurrency(inst.annual_budget)}
-                              </p>
-                            </div>
-                          </div>
-                        </Card>
-                      </motion.div>
-                    );
-                  })}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {nsfAwards.slice(0, 30).map((a, i) => (
+                    <motion.div key={a.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.015 }}>
+                      <Card className="p-4 hover:border-violet-300/50 transition-colors h-full">
+                        <Badge variant="outline" className="text-xs mb-2">{a.agency || 'NSF'}</Badge>
+                        <h3 className="font-semibold line-clamp-2 text-sm mb-2">{a.title || 'Untitled'}</h3>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                          <Building2 className="h-3.5 w-3.5" />
+                          <EntityLink name={a.institution_name || 'Unknown'} className="hover:text-primary" />
+                          {a.institution_state && <span>· {a.institution_state}</span>}
+                        </div>
+                        <div className="flex items-center justify-between pt-2 border-t border-border mt-auto">
+                          <span className="text-lg font-bold text-primary font-mono">{fmt(Number(a.award_amount))}</span>
+                          <span className="text-xs text-muted-foreground">{a.start_date ? new Date(a.start_date).getFullYear() : '—'}</span>
+                        </div>
+                      </Card>
+                    </motion.div>
+                  ))}
                 </div>
               )}
             </TabsContent>
 
-            {/* Vendor Spending Tab */}
-            <TabsContent value="spending">
-              <div className="flex flex-wrap items-center gap-4 mb-6">
-                <div className="relative flex-1 min-w-64">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search vendors..."
-                    className="pl-9"
-                  />
-                </div>
-                <Select value={countyFilter} onValueChange={setCountyFilter}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="County" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Counties</SelectItem>
-                    {counties.map(county => (
-                      <SelectItem key={county} value={county}>{county}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {spendingLoading ? (
-                <div className="space-y-3">
-                  {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-16" />)}
-                </div>
-              ) : spending.length === 0 ? (
+            {/* Education Grants */}
+            <TabsContent value="grants" className="space-y-6">
+              {grantsLoading ? (
+                <div className="space-y-3">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-24" />)}</div>
+              ) : grants.length === 0 ? (
                 <Card className="p-12 text-center">
                   <DollarSign className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No Spending Data</h3>
-                  <p className="text-muted-foreground">Adjust your filters</p>
+                  <h3 className="text-lg font-semibold mb-2">No Education Grants Found</h3>
+                  <p className="text-muted-foreground">Grant data will appear once loaded</p>
                 </Card>
               ) : (
-                <div className="space-y-2">
-                  {spending
-                    .filter(s => !searchQuery || s.payee_name.toLowerCase().includes(searchQuery.toLowerCase()))
-                    .map((record, index) => (
-                      <motion.div
-                        key={record.id}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.01 }}
-                      >
-                        <Card className="p-3 hover:border-violet-300/50 transition-colors">
-                          <div className="flex items-center justify-between gap-4">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <h4 className="font-medium">{record.payee_name}</h4>
-                                <Badge variant="outline" className="text-xs">
-                                  {record.county}
-                                </Badge>
-                              </div>
-                              <p className="text-sm text-muted-foreground">
-                                {record.purpose || 'General'} • FY {record.fiscal_year}
-                              </p>
+                <div className="space-y-3">
+                  {grants.slice(0, 30).map((g, i) => (
+                    <motion.div key={g.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.015 }}>
+                      <Card className="p-4 hover:border-amber-300/50 transition-colors">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <Badge className="bg-amber-100 text-amber-700 text-xs mb-2">{g.awarding_agency || '—'}</Badge>
+                            <p className="text-sm line-clamp-2 mb-1">{g.description || 'No description'}</p>
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Building2 className="h-3.5 w-3.5" />
+                              <EntityLink name={g.recipient_name} id={g.recipient_entity_id || undefined} className="hover:text-primary" />
                             </div>
-                            <p className="text-lg font-bold text-primary font-mono">
-                              {formatCurrency(record.total_payment)}
-                            </p>
                           </div>
-                        </Card>
-                      </motion.div>
-                    ))}
+                          <div className="text-right shrink-0">
+                            <p className="text-lg font-bold text-primary font-mono">{fmt(Number(g.award_amount))}</p>
+                            <p className="text-xs text-muted-foreground">{g.award_date ? new Date(g.award_date).toLocaleDateString() : '—'}</p>
+                          </div>
+                        </div>
+                      </Card>
+                    </motion.div>
+                  ))}
                 </div>
               )}
             </TabsContent>
