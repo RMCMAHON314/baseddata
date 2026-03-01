@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { usePlatformStats } from '@/hooks/useNewSources';
+import { PageSEO } from '@/components/layout/PageSEO';
 
 /* ── animated counter ── */
 function useAnimatedCounter(target: number, duration = 2000) {
@@ -154,12 +155,26 @@ export default function Showcase() {
   const [email, setEmail] = useState('');
 
   const totalValue = Number(ps?.contract_value || 0) + Number(ps?.idv_value || 0) + Number(ps?.grant_value || 0);
-  const totalEntities = Number(ps?.entity_count) || 3398;
+  const totalEntities = Number(ps?.entity_count) || 0;
   const contractCount = Number(ps?.contract_count || 0) + Number(ps?.idv_count || 0);
-  const opportunityCount = Number(ps?.opportunity_count) || 1393;
+  const opportunityCount = Number(ps?.opportunity_count) || 0;
 
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
+      <PageSEO
+        title="BasedData — Government Spending Intelligence Platform"
+        description="Track federal contracts, grants, and opportunities. The most comprehensive government spending intelligence platform."
+        path="/"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          "name": "BasedData",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "description": "Government spending intelligence platform",
+          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+        }}
+      />
       {/* ── NAV ── */}
       <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50">
         <div className="flex items-center justify-between px-6 md:px-12 py-4 max-w-7xl mx-auto">
@@ -231,8 +246,8 @@ export default function Showcase() {
         <div className="relative max-w-5xl mx-auto">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
             <AnimatedStat value={totalEntities} label="Entities Tracked" suffix="+" />
-            <AnimatedStat value={contractCount || 4677} label="Contracts Indexed" />
-            <AnimatedStat value={totalValue || 2440000000000} label="In Spending Data" prefix="$" />
+            <AnimatedStat value={contractCount} label="Contracts Indexed" />
+            <AnimatedStat value={totalValue} label="In Spending Data" prefix="$" />
             <AnimatedStat value={opportunityCount} label="Active Opportunities" />
           </div>
         </div>

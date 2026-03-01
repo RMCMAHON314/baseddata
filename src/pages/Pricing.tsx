@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Check, X, Zap, Building2, Crown, ArrowRight, ChevronDown } from 'lucide-react';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
+import { PageSEO } from '@/components/layout/PageSEO';
 import { motion } from 'framer-motion';
 
 const plans = [
@@ -101,6 +102,7 @@ export default function Pricing() {
 
   return (
     <GlobalLayout>
+      <PageSEO title="Pricing — BasedData" description="Start free. Pro at $99/month. Enterprise with API access and team seats." path="/pricing" />
       <div className="min-h-screen bg-background text-foreground">
         {/* Header */}
         <section className="pt-16 pb-12 px-6">
