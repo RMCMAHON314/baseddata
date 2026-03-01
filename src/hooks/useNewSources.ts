@@ -24,7 +24,7 @@ export function usePlatformStats() {
       // Direct object with stats keys
       return raw;
     },
-    staleTime: 30000,
+    staleTime: 5 * 60_000, // 5 min — stats change infrequently
   });
 }
 

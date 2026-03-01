@@ -11,7 +11,8 @@ import { initializeBasedData } from "@/init/startup";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { AdminRoute } from "@/components/layout/AdminRoute";
-import { AiAssistant } from "@/components/ai/AiAssistant";
+
+const AiAssistant = lazy(() => import("@/components/ai/AiAssistant").then(m => ({ default: m.AiAssistant })));
 
 // Lazy-loaded pages
 const Showcase = lazy(() => import("./pages/Showcase"));
@@ -46,7 +47,7 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
-      staleTime: 30_000,
+      staleTime: 60_000,
       refetchOnWindowFocus: false,
     },
   },
@@ -66,7 +67,9 @@ function PageLoader() {
 
 const App = () => {
   useEffect(() => {
-    initializeBasedData().catch(console.error);
+    // Defer startup init so it doesn't block first paint
+    const id = requestIdleCallback(() => initializeBasedData().catch(console.error));
+    return () => cancelIdleCallback(id);
   }, []);
 
   return (
