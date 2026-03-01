@@ -263,7 +263,7 @@ export function GlobalLayout({ children }: { children: React.ReactNode }) {
       {/* Footer */}
       <footer className="border-t border-border bg-card py-6 mt-12">
         <div className="container flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground px-4">
-          <span>Built in Baltimore 🦀 by Infinite Data Solutions</span>
+          <span>Built by <a href="https://www.infinitedatasolutions.com" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors font-medium">Infinite Data Solutions</a>. <span className="text-primary font-semibold">Built Different.</span></span>
           <DataFreshnessIndicator />
           <div className="flex items-center gap-3">
             <Link to="/pricing" className="hover:text-foreground transition-colors">Pricing</Link>
