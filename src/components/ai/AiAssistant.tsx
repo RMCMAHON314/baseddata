@@ -128,7 +128,7 @@ export function AiAssistant() {
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
         >
-          <img src={aiChatIcon} alt="AI Assistant" className="h-8 w-8 object-contain" />
+          <img src={aiChatIcon} alt="AI Assistant" className="h-11 w-11 object-contain" />
         </motion.button>
       )}
 
