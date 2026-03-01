@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,8 @@ import {
   XCircle, Clock, RefreshCw, Waves, Building2, FileText, Award,
   Briefcase, GitBranch, Lightbulb, Gauge, Play
 } from 'lucide-react';
+
+const SchedulerDashboard = lazy(() => import('@/components/scheduler/SchedulerDashboard'));
 
 interface OceanHealth {
   id: string;
@@ -281,10 +283,17 @@ export default function OceanDashboard() {
         <Tabs value={tab} onValueChange={setTab} className="space-y-6">
           <TabsList className="bg-card border border-border">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="scheduler">Scheduler</TabsTrigger>
             <TabsTrigger value="sources">Sources</TabsTrigger>
             <TabsTrigger value="activity">Activity</TabsTrigger>
             <TabsTrigger value="insights">Insights</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="scheduler">
+            <Suspense fallback={<div className="text-center p-8 text-muted-foreground">Loading scheduler...</div>}>
+              <SchedulerDashboard />
+            </Suspense>
+          </TabsContent>
 
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -167,3 +167,12 @@ verify_jwt = false
 
 [functions.test-pipeline]
 verify_jwt = false
+
+[functions.load-gsa-contracts]
+verify_jwt = false
+
+[functions.load-lobbying]
+verify_jwt = false
+
+[functions.load-patents]
+verify_jwt = false
