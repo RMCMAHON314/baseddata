@@ -122,13 +122,13 @@ export function AiAssistant() {
       {!isOpen && (
         <motion.button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-5 right-5 z-50 h-24 w-24 flex items-center justify-center cursor-pointer"
+          className="fixed bottom-4 right-4 md:bottom-5 md:right-5 z-50 h-14 w-14 md:h-24 md:w-24 flex items-center justify-center cursor-pointer"
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.95 }}
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
         >
-          <img src={aiChatIcon} alt="AI Assistant" className="h-24 w-24 object-contain drop-shadow-lg" />
+          <img src={aiChatIcon} alt="AI Assistant" className="h-14 w-14 md:h-24 md:w-24 object-contain drop-shadow-lg" />
         </motion.button>
       )}
 
