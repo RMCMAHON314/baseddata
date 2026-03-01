@@ -363,7 +363,9 @@ export default function Showcase() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-10 items-start">
             {/* Brand */}
             <div className="flex flex-col gap-4 md:col-span-2">
-              <img src={idsHorizLogo} alt="Infinite Data Solutions" className="h-10 w-auto object-contain object-left" />
+              <a href="https://www.infinitedatasolutions.com" target="_blank" rel="noopener noreferrer">
+                <img src={idsHorizLogo} alt="Infinite Data Solutions" className="h-10 w-auto object-contain object-left" />
+              </a>
               <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
                 AI-powered government contract intelligence. Track competitors, discover opportunities, win more.
               </p>
