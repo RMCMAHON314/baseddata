@@ -6866,6 +6866,48 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduler_runs: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          duration_ms: number | null
+          edge_function: string
+          error_message: string | null
+          id: string
+          metadata: Json | null
+          rows_affected: number | null
+          started_at: string
+          status: string
+          task_name: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          edge_function: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          rows_affected?: number | null
+          started_at?: string
+          status?: string
+          task_name: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          edge_function?: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          rows_affected?: number | null
+          started_at?: string
+          status?: string
+          task_name?: string
+        }
+        Relationships: []
+      }
       schema_registry: {
         Row: {
           auto_generated: boolean | null
