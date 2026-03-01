@@ -6,11 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { motion, useInView } from 'framer-motion';
+import { motion, useInView, AnimatePresence } from 'framer-motion';
 import {
   Search, ArrowRight, Building2, Shield, Target,
   Zap, ChevronRight, Database, BarChart3, Bell,
-  Globe, FileText, Beaker, DollarSign
+  Globe, FileText, Beaker, DollarSign, Menu, X
 } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { usePlatformStats } from '@/hooks/useNewSources';
@@ -53,12 +53,13 @@ const fmtPlain = (n: number) => {
 
 const AnimatedStat = ({ value, label, prefix = '', suffix = '' }: { value: number; label: string; prefix?: string; suffix?: string }) => {
   const { count, ref } = useAnimatedCounter(value);
+  const display = prefix ? `${prefix}${fmt(count).replace(/^\$/, '')}` : `${fmt(count)}`;
   return (
     <div ref={ref} className="text-center">
-      <p className="text-4xl md:text-5xl font-black font-mono tracking-tight text-foreground">
-        {prefix}{fmt(count)}{suffix}
+      <p className="text-3xl sm:text-4xl md:text-5xl font-black font-mono tracking-tight text-foreground">
+        {display}{suffix}
       </p>
-      <p className="text-xs text-muted-foreground mt-2 font-semibold uppercase tracking-[0.15em]">{label}</p>
+      <p className="text-[10px] sm:text-xs text-muted-foreground mt-2 font-semibold uppercase tracking-[0.15em]">{label}</p>
     </div>
   );
 };
@@ -154,6 +155,7 @@ export default function Showcase() {
   const navigate = useNavigate();
   const { data: ps } = usePlatformStats();
   const [email, setEmail] = useState('');
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const totalValue = Number(ps?.contract_value || 0) + Number(ps?.idv_value || 0) + Number(ps?.grant_value || 0);
   const totalEntities = Number(ps?.entity_count) || 0;
@@ -178,11 +180,11 @@ export default function Showcase() {
       />
       {/* ── NAV ── */}
       <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50">
-        <div className="flex items-center justify-between px-6 md:px-12 py-4 max-w-7xl mx-auto">
+        <div className="flex items-center justify-between px-4 sm:px-6 md:px-12 py-3 md:py-4 max-w-7xl mx-auto">
           <Link to="/" className="flex items-center gap-3">
             <Logo size="lg" />
           </Link>
-          <div className="flex items-center gap-1 md:gap-1.5">
+          <div className="hidden md:flex items-center gap-1 md:gap-1.5">
             {NAV_LINKS.map(l => (
               <Link key={l.to} to={l.to}>
                 <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground text-[13px] font-medium">
@@ -194,11 +196,32 @@ export default function Showcase() {
               <Button size="sm" className="text-sm h-8 px-4">Start Free Trial</Button>
             </Link>
           </div>
+          <div className="flex md:hidden items-center gap-2">
+            <Link to="/onboarding">
+              <Button size="sm" className="text-xs h-8 px-3">Free Trial</Button>
+            </Link>
+            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setMobileOpen(!mobileOpen)}>
+              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
+          </div>
         </div>
+        <AnimatePresence>
+          {mobileOpen && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="md:hidden border-t border-border/50 overflow-hidden">
+              <div className="px-4 py-3 flex flex-col gap-1">
+                {NAV_LINKS.map(l => (
+                  <Link key={l.to} to={l.to} onClick={() => setMobileOpen(false)}>
+                    <Button variant="ghost" className="w-full justify-start min-h-[44px]">{l.label}</Button>
+                  </Link>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </nav>
 
       {/* ── HERO ── */}
-      <section className="relative pt-20 pb-28 px-6">
+      <section className="relative pt-12 sm:pt-20 pb-16 sm:pb-28 px-4 sm:px-6">
         <div className="absolute inset-0 radial-overlay pointer-events-none" />
         <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-br from-primary/[0.06] to-accent/[0.04] rounded-full blur-[100px] pointer-events-none" />
 
@@ -211,14 +234,14 @@ export default function Showcase() {
           </motion.div>
 
           <motion.h1 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.08 }}
-            className="text-5xl md:text-7xl font-black leading-[1.05] mb-6 mt-4 tracking-tight text-foreground">
+            className="text-4xl sm:text-5xl md:text-7xl font-black leading-[1.05] mb-6 mt-4 tracking-tight text-foreground">
             Government Spending
             <br />Intelligence,{' '}
             <span className="text-gradient-omni">Decoded.</span>
           </motion.h1>
 
           <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.16 }}
-            className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed">
+            className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8 sm:mb-10 leading-relaxed px-2">
             Track {totalValue > 1e12 ? `$${(totalValue / 1e12).toFixed(2)}T` : fmt(totalValue)} in federal contracts, grants, and opportunities. Find your next win before your competitors.
           </motion.p>
 
@@ -243,9 +266,9 @@ export default function Showcase() {
       </section>
 
       {/* ── LIVE STATS ── */}
-      <section className="relative py-20 px-6 border-y border-border/50 bg-muted/30">
+      <section className="relative py-12 sm:py-20 px-4 sm:px-6 border-y border-border/50 bg-muted/30">
         <div className="relative max-w-5xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-12">
             <AnimatedStat value={totalEntities} label="Entities Tracked" suffix="+" />
             <AnimatedStat value={contractCount} label="Contracts Indexed" />
             <AnimatedStat value={totalValue} label="In Spending Data" prefix="$" />
@@ -255,7 +278,7 @@ export default function Showcase() {
       </section>
 
       {/* ── SOCIAL PROOF ── */}
-      <section className="py-12 px-6 bg-muted/10">
+      <section className="py-8 sm:py-12 px-4 sm:px-6 bg-muted/10">
         <div className="max-w-4xl mx-auto text-center">
           <p className="text-sm text-muted-foreground font-medium">
             Trusted by government contractors, policy analysts, and business development professionals
@@ -265,7 +288,7 @@ export default function Showcase() {
       </section>
 
       {/* ── FEATURE SHOWCASE ── */}
-      <section className="py-24 px-6">
+      <section className="py-16 sm:py-24 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-black mb-4 text-foreground">
@@ -297,7 +320,7 @@ export default function Showcase() {
       </section>
 
       {/* ── DATA COVERAGE ── */}
-      <section className="py-20 px-6 bg-muted/20">
+      <section className="py-12 sm:py-20 px-4 sm:px-6 bg-muted/20">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-black text-foreground mb-3">
@@ -314,7 +337,7 @@ export default function Showcase() {
               </Badge>
             </div>
           </div>
-          <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-3">
+          <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-2 sm:gap-3">
             {DATA_SOURCES.map(s => (
               <Card key={s.name} className="p-3 text-center hover:border-primary/20 transition-colors">
                 <p className="text-2xl mb-1">{s.emoji}</p>
@@ -327,10 +350,10 @@ export default function Showcase() {
       </section>
 
       {/* ── CTA ── */}
-      <section className="py-24 px-6">
+      <section className="py-16 sm:py-24 px-4 sm:px-6">
         <div className="max-w-3xl mx-auto text-center">
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
-            className="card-premium rounded-3xl p-12 md:p-16 relative overflow-hidden">
+            className="card-premium rounded-2xl sm:rounded-3xl p-8 sm:p-12 md:p-16 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.04] to-accent/[0.02] pointer-events-none" />
             <div className="relative z-10">
               <h2 className="text-3xl md:text-4xl font-black mb-4 text-foreground">Ready to win more contracts?</h2>
@@ -359,7 +382,7 @@ export default function Showcase() {
 
       {/* ── FOOTER ── */}
       <footer className="border-t border-border/50 bg-muted/30">
-        <div className="max-w-6xl mx-auto px-6 py-14">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-10 items-start">
             {/* Brand */}
             <div className="flex flex-col gap-4 md:col-span-2">
