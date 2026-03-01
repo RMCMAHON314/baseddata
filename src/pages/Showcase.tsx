@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import idsLogo from '@/assets/IDS-Logo_VertSolidColor.png';
+import idsHorizLogo from '@/assets/IDS-Logo_HorizGradColor.png';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -361,12 +362,12 @@ export default function Showcase() {
         <div className="max-w-6xl mx-auto px-6 py-14">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-10 items-start">
             {/* Brand */}
-            <div className="flex flex-col gap-3 md:col-span-2">
-              <Logo size="md" />
+            <div className="flex flex-col gap-4 md:col-span-2">
+              <img src={idsHorizLogo} alt="Infinite Data Solutions" className="h-10 w-auto object-contain object-left" />
               <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
                 AI-powered government contract intelligence. Track competitors, discover opportunities, win more.
               </p>
-              <p className="text-sm text-muted-foreground font-medium">Built in Baltimore, MD 🦀</p>
+              <p className="text-sm font-semibold text-foreground">Built by Infinite Data Solutions. <span className="text-primary">Built Different.</span></p>
             </div>
 
             {/* Platform */}
@@ -391,7 +392,7 @@ export default function Showcase() {
           </div>
 
           <div className="mt-10 pt-6 border-t border-border/50 flex flex-col md:flex-row items-center justify-between gap-3">
-            <p className="text-xs text-muted-foreground/50">© {new Date().getFullYear()} Based Data by Infinite Data Solutions. All rights reserved.</p>
+            <p className="text-xs text-muted-foreground/50">© {new Date().getFullYear()} Infinite Data Solutions. All rights reserved.</p>
             <div className="flex items-center gap-4 text-xs text-muted-foreground/50">
               <span>Privacy Policy</span>
               <span>Terms of Service</span>
