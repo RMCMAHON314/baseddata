@@ -143,7 +143,7 @@ export function GlobalLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-1">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full"><User className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" aria-label="User menu"><User className="h-4 w-4" /></Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem onClick={() => navigate('/dashboard')}><Database className="mr-2 h-4 w-4" />Dashboard</DropdownMenuItem>
@@ -154,7 +154,7 @@ export function GlobalLayout({ children }: { children: React.ReactNode }) {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button variant="ghost" size="icon" className="lg:hidden h-8 w-8" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+            <Button variant="ghost" size="icon" className="lg:hidden h-8 w-8" onClick={() => setMobileMenuOpen(!mobileMenuOpen)} aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}>
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </Button>
           </div>
@@ -185,7 +185,7 @@ export function GlobalLayout({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      <main className="flex-1">{children}</main>
+      <main className="flex-1" role="main">{children}</main>
 
       {/* Footer */}
       <footer className="border-t border-border bg-card py-6 mt-12">

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  Building2, Search, Filter, Download, Grid3X3, List, 
+  Building2, Search, Filter, Download, Grid3X3, List,
   MapPin, DollarSign, FileText, TrendingUp, ChevronRight, ChevronLeft, Briefcase
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
 import { PortfolioManager } from '@/components/portfolio/PortfolioManager';
+import { ExportMenu } from '@/components/data/ExportMenu';
 
 interface Entity {
   id: string;
@@ -102,21 +103,16 @@ export default function EntitiesList() {
 
               {/* View Toggle */}
               <div className="flex gap-2">
-                <Button 
-                  variant={view === 'list' ? 'default' : 'outline'}
-                  onClick={() => setView('list')}
-                  className="gap-2"
-                >
-                  <Building2 className="h-4 w-4" />
-                  Directory
+                <ExportMenu
+                  data={entities.map(e => ({ Name: e.canonical_name, Type: e.entity_type, State: e.state, City: e.city, 'Contract Value': e.total_contract_value, 'Contract Count': e.contract_count, UEI: e.uei } as Record<string, unknown>))}
+                  filename="entities"
+                  disabled={loading || entities.length === 0}
+                />
+                <Button variant={view === 'list' ? 'default' : 'outline'} onClick={() => setView('list')} className="gap-2">
+                  <Building2 className="h-4 w-4" /> Directory
                 </Button>
-                <Button 
-                  variant={view === 'portfolios' ? 'default' : 'outline'}
-                  onClick={() => setView('portfolios')}
-                  className="gap-2"
-                >
-                  <Briefcase className="h-4 w-4" />
-                  Portfolios
+                <Button variant={view === 'portfolios' ? 'default' : 'outline'} onClick={() => setView('portfolios')} className="gap-2">
+                  <Briefcase className="h-4 w-4" /> Portfolios
                 </Button>
               </div>
             </div>
