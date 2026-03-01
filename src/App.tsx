@@ -5,9 +5,12 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { initializeBasedData } from "@/init/startup";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
+import { AdminRoute } from "@/components/layout/AdminRoute";
 
 // Lazy-loaded pages
 const Showcase = lazy(() => import("./pages/Showcase"));
@@ -35,9 +38,18 @@ const Healthcare = lazy(() => import("./pages/Healthcare"));
 const Education = lazy(() => import("./pages/Education"));
 const LaborRatesExplorer = lazy(() => import("./pages/LaborRatesExplorer"));
 const Install = lazy(() => import("./pages/Install"));
+const LaunchChecklist = lazy(() => import("./pages/LaunchChecklist"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 30_000,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 function PageLoader() {
   return (
@@ -57,55 +69,56 @@ const App = () => {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Suspense fallback={<PageLoader />}>
-              <Routes>
-                <Route path="/" element={<Showcase />} />
-                <Route path="/showcase" element={<Showcase />} />
+    <HelmetProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Suspense fallback={<PageLoader />}>
+                <Routes>
+                  {/* Public routes */}
+                  <Route path="/" element={<Showcase />} />
+                  <Route path="/showcase" element={<Showcase />} />
+                  <Route path="/explore" element={<MarketExplorer />} />
+                  <Route path="/entities" element={<EntitiesList />} />
+                  <Route path="/entity/:id" element={<EntityIntelligenceHub />} />
+                  <Route path="/opportunities" element={<OpportunityCommandCenter />} />
+                  <Route path="/analytics" element={<AnalyticsCommandCenter />} />
+                  <Route path="/intelligence" element={<IntelligenceDashboard />} />
+                  <Route path="/sbir" element={<SbirExplorer />} />
+                  <Route path="/search" element={<Search />} />
+                  <Route path="/pricing" element={<Pricing />} />
+                  <Route path="/api-docs" element={<ApiDocs />} />
+                  <Route path="/onboarding" element={<Onboarding />} />
+                  <Route path="/install" element={<Install />} />
+                  <Route path="/healthcare" element={<Healthcare />} />
+                  <Route path="/education" element={<Education />} />
+                  <Route path="/labor-rates" element={<LaborRatesExplorer />} />
+                  <Route path="/agency/:agencyName" element={<AgencyDeepDive />} />
+                  <Route path="/health" element={<Health />} />
+                  <Route path="/compare" element={<EntityCompare />} />
 
-                {/* Core Routes */}
-                <Route path="/explore" element={<MarketExplorer />} />
-                <Route path="/entities" element={<EntitiesList />} />
-                <Route path="/entity/:id" element={<EntityIntelligenceHub />} />
-                <Route path="/opportunities" element={<OpportunityCommandCenter />} />
-                <Route path="/analytics" element={<AnalyticsCommandCenter />} />
-                <Route path="/intelligence" element={<IntelligenceDashboard />} />
-                <Route path="/sbir" element={<SbirExplorer />} />
+                  {/* Protected routes (require login) */}
+                  <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                  <Route path="/saved-searches" element={<ProtectedRoute><SavedSearches /></ProtectedRoute>} />
 
-                {/* New Routes */}
-                <Route path="/saved-searches" element={<SavedSearches />} />
-                <Route path="/agency/:agencyName" element={<AgencyDeepDive />} />
-                <Route path="/compare" element={<EntityCompare />} />
+                  {/* Admin-only routes */}
+                  <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+                  <Route path="/ocean" element={<AdminRoute><OceanDashboard /></AdminRoute>} />
+                  <Route path="/diagnostic" element={<AdminRoute><Diagnostic /></AdminRoute>} />
+                  <Route path="/gap-fixer" element={<AdminRoute><GapFixer /></AdminRoute>} />
+                  <Route path="/admin/launch-checklist" element={<AdminRoute><LaunchChecklist /></AdminRoute>} />
 
-                {/* Verticals */}
-                <Route path="/healthcare" element={<Healthcare />} />
-                <Route path="/education" element={<Education />} />
-                <Route path="/labor-rates" element={<LaborRatesExplorer />} />
-
-                {/* System */}
-                <Route path="/ocean" element={<OceanDashboard />} />
-                <Route path="/health" element={<Health />} />
-                <Route path="/gap-fixer" element={<GapFixer />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/pricing" element={<Pricing />} />
-                <Route path="/api-docs" element={<ApiDocs />} />
-                <Route path="/admin" element={<Admin />} />
-                <Route path="/onboarding" element={<Onboarding />} />
-                <Route path="/diagnostic" element={<Diagnostic />} />
-                <Route path="/search" element={<Search />} />
-                <Route path="/install" element={<Install />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Suspense>
-          </BrowserRouter>
-        </TooltipProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
+            </BrowserRouter>
+          </TooltipProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </HelmetProvider>
   );
 };
 

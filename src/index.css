@@ -608,4 +608,27 @@
   .shadow-quantum {
     box-shadow: var(--shadow-quantum);
   }
+
+  /* Accessibility — focus ring */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
+  }
+
+  /* Mobile touch targets */
+  @media (max-width: 767px) {
+    .touch-target {
+      min-height: 44px;
+      min-width: 44px;
+    }
+
+    /* Prevent iOS zoom on input focus */
+    input, select, textarea {
+      font-size: 16px !important;
+    }
+  }
+
+  /* Tabular numbers for data alignment */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
 }
