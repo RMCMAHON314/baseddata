@@ -1,291 +1,219 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { SearchAutocomplete } from '@/components/search/SearchAutocomplete';
+import { SearchResults } from '@/components/search/SearchResults';
+import { SearchFilters, type SearchFilterState } from '@/components/search/SearchFilters';
+import { SearchStatsBar } from '@/components/search/SearchStatsBar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { useSearchHistory } from '@/hooks/useSearchHistory';
+import { useNaturalQuery } from '@/hooks/useNaturalQuery';
 import {
-  Search, Building2, FileText, Award, Briefcase, MapPin,
-  Loader2, ChevronRight, ArrowRight, DollarSign, Calendar, Zap
+  Search, SlidersHorizontal, Bookmark, Sparkles, TrendingUp, X
 } from 'lucide-react';
 
-interface SearchResult {
-  id: string;
-  name: string;
-  result_type: 'entity' | 'contract' | 'grant' | 'opportunity';
-  entity_type?: string;
-  entity_id?: string;
-  agency?: string;
-  state?: string;
-  city?: string;
-  value?: number;
-  opportunity_score?: number;
-  description?: string;
-  deadline?: string;
-  set_aside?: string;
-}
-
-interface Aggregations {
-  total_value: number;
-  by_type: { key: string; count: number }[];
-  entity_count: number;
-  contract_count: number;
-  grant_count: number;
-  opportunity_count: number;
-}
-
-function fmt(v: number) {
-  if (v >= 1e9) return `$${(v / 1e9).toFixed(1)}B`;
-  if (v >= 1e6) return `$${(v / 1e6).toFixed(1)}M`;
-  if (v >= 1e3) return `$${(v / 1e3).toFixed(0)}K`;
-  return `$${v.toFixed(0)}`;
-}
-
-const RESULT_ICONS: Record<string, typeof Building2> = {
-  entity: Building2,
-  contract: FileText,
-  grant: Award,
-  opportunity: Briefcase,
-};
-
-const TYPE_COLORS: Record<string, string> = {
-  entity: 'bg-violet-500/10 text-violet-600 border-violet-200',
-  contract: 'bg-emerald-500/10 text-emerald-600 border-emerald-200',
-  grant: 'bg-amber-500/10 text-amber-600 border-amber-200',
-  opportunity: 'bg-blue-500/10 text-blue-600 border-blue-200',
+const EMPTY_FILTERS: SearchFilterState = {
+  states: [], entityTypes: [], agencies: [], minValue: 0, maxValue: 0, setAsides: [], dataSources: [],
 };
 
 export default function SearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const urlQuery = (searchParams.get('q') || '').trim();
 
-  const [query, setQuery] = useState(urlQuery);
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [aggregations, setAggregations] = useState<Aggregations | null>(null);
+  const [results, setResults] = useState<any[]>([]);
+  const [aggregations, setAggregations] = useState<any>(null);
+  const [insights, setInsights] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [responseTime, setResponseTime] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [searched, setSearched] = useState(false);
-  const [filterType, setFilterType] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState<SearchFilterState>(EMPTY_FILTERS);
 
-  const doSearch = useCallback(async (q: string) => {
+  const { recentQueries, history } = useSearchHistory();
+  const { executeQuery: executeNL, result: nlResult, loading: nlLoading } = useNaturalQuery();
+
+  const recentSearchStrings = recentQueries.map(q => q.prompt);
+
+  const doSearch = useCallback(async (q: string, f?: SearchFilterState) => {
     const clean = q.trim();
-    if (!clean) {
-      setResults([]);
-      setAggregations(null);
-      setResponseTime(0);
-      setTotalCount(0);
-      setSearched(false);
-      setLoading(false);
-      return;
-    }
-
+    if (!clean) { setResults([]); setAggregations(null); setInsights([]); setSearched(false); return; }
     setLoading(true);
     setSearched(true);
-
+    const activeFilters = f || filters;
     try {
       const { data, error } = await supabase.functions.invoke('mega-search', {
-        body: { query: clean, limit: 100 }
+        body: {
+          query: clean,
+          limit: 100,
+          filters: {
+            states: activeFilters.states.length > 0 ? activeFilters.states : undefined,
+            entity_types: activeFilters.entityTypes.length > 0 ? activeFilters.entityTypes : undefined,
+            min_value: activeFilters.minValue > 0 ? activeFilters.minValue : undefined,
+          },
+        }
       });
-
       if (error) throw error;
-
       setResults(data?.results || []);
       setAggregations(data?.aggregations || null);
+      setInsights(data?.insights || []);
       setResponseTime(data?.response_time_ms || 0);
       setTotalCount(data?.total || 0);
     } catch (err) {
       console.error('Search error:', err);
-      toast.error('Search failed. Please try again.');
-      setResults([]);
-      setAggregations(null);
-      setResponseTime(0);
-      setTotalCount(0);
+      toast.error('Search failed');
+      setResults([]); setAggregations(null);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filters]);
 
   useEffect(() => {
-    setQuery(urlQuery);
-    if (urlQuery) {
-      setFilterType(null);
-      doSearch(urlQuery);
-    } else {
-      setResults([]);
-      setAggregations(null);
-      setResponseTime(0);
-      setTotalCount(0);
-      setSearched(false);
-      setLoading(false);
-    }
-  }, [urlQuery, doSearch]);
+    if (urlQuery) doSearch(urlQuery);
+    else { setResults([]); setAggregations(null); setInsights([]); setSearched(false); }
+  }, [urlQuery]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleSubmit = (e?: { preventDefault: () => void }) => {
-    e?.preventDefault();
-    const clean = query.trim();
-    if (!clean) return;
-    setFilterType(null);
-    setSearchParams({ q: clean }, { replace: true });
+  const handleSearch = (q: string) => {
+    setSearchParams({ q }, { replace: true });
   };
 
-  const filteredResults = filterType ? results.filter(r => r.result_type === filterType) : results;
-
-  const getLink = (r: SearchResult) => {
-    if (r.result_type === 'entity') return `/entity/${r.id}`;
-    if (r.entity_id) return `/entity/${r.entity_id}`;
-    return '#';
+  const handleNLQuery = async (q: string) => {
+    setSearchParams({ q }, { replace: true });
+    // Also run NL query for structured results
+    await executeNL(q);
   };
 
-  const suggestions = ['IT contractors Virginia', 'Healthcare grants', 'DoD cybersecurity', 'Small business Maryland', 'Lockheed Martin'];
+  const handleFilterChange = (newFilters: SearchFilterState) => {
+    setFilters(newFilters);
+    if (urlQuery) doSearch(urlQuery, newFilters);
+  };
+
+  const trendingSearches = ['IT contractors Virginia', 'Healthcare grants NIH', 'DoD cybersecurity', 'Small business Maryland', 'Lockheed Martin', 'Universities NSF funding'];
 
   return (
     <GlobalLayout>
       <div className="min-h-screen bg-background">
-        <div className="sticky top-14 z-40 bg-background/95 backdrop-blur border-b border-border">
-          <div className="container max-w-4xl py-4">
-            <form onSubmit={handleSubmit} className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                placeholder="Search everything..."
-                className="pl-12 pr-28 h-12 text-base rounded-xl border-input shadow-sm"
-                autoFocus
+        {/* Hero search area when no results */}
+        {!searched && !loading && (
+          <div className="relative overflow-hidden">
+            <div className="absolute inset-0 radial-overlay" />
+            <div className="relative py-20 px-4">
+              <div className="text-center mb-8">
+                <h1 className="text-4xl font-bold text-foreground mb-3 tracking-tight">
+                  Search <span className="text-gradient-omni">Everything</span>
+                </h1>
+                <p className="text-muted-foreground text-base max-w-lg mx-auto">
+                  Contracts, entities, grants, and opportunities — the command center for government intelligence.
+                </p>
+              </div>
+
+              <SearchAutocomplete
+                initialQuery={urlQuery}
+                recentSearches={recentSearchStrings}
+                onSearch={handleSearch}
+                onNLQuery={handleNLQuery}
               />
-              {loading ? (
-                <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 animate-spin text-muted-foreground" />
-              ) : (
-                <Button type="submit" disabled={!query.trim()} size="sm" className="absolute right-2 top-1/2 -translate-y-1/2 gap-1.5">
-                  Search <ArrowRight className="w-3.5 h-3.5" />
-                </Button>
+
+              {/* Recent searches */}
+              {recentSearchStrings.length > 0 && (
+                <div className="mt-8 text-center">
+                  <p className="text-xs text-muted-foreground font-medium mb-3">Recent Searches</p>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {recentSearchStrings.slice(0, 6).map(s => (
+                      <Badge key={s} variant="outline" className="cursor-pointer hover:bg-primary/10 transition-colors text-xs"
+                        onClick={() => handleSearch(s)}>
+                        {s}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
               )}
-            </form>
 
-            {aggregations && results.length > 0 && (
-              <div className="flex items-center gap-2 mt-3 overflow-x-auto">
-                <button
-                  type="button"
-                  onClick={() => setFilterType(null)}
-                  className={`text-sm px-3 py-1 rounded-full transition-colors whitespace-nowrap ${!filterType ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}
-                >
-                  All ({totalCount})
-                </button>
-
-                {aggregations.entity_count > 0 && (
-                  <button type="button" onClick={() => setFilterType('entity')}
-                    className={`text-sm px-3 py-1 rounded-full transition-colors whitespace-nowrap flex items-center gap-1 ${filterType === 'entity' ? 'bg-violet-500/20 text-violet-600' : 'text-muted-foreground hover:bg-muted'}`}>
-                    <Building2 className="w-3.5 h-3.5" /> Entities ({aggregations.entity_count})
-                  </button>
-                )}
-                {aggregations.contract_count > 0 && (
-                  <button type="button" onClick={() => setFilterType('contract')}
-                    className={`text-sm px-3 py-1 rounded-full transition-colors whitespace-nowrap flex items-center gap-1 ${filterType === 'contract' ? 'bg-emerald-500/20 text-emerald-600' : 'text-muted-foreground hover:bg-muted'}`}>
-                    <FileText className="w-3.5 h-3.5" /> Contracts ({aggregations.contract_count})
-                  </button>
-                )}
-                {aggregations.grant_count > 0 && (
-                  <button type="button" onClick={() => setFilterType('grant')}
-                    className={`text-sm px-3 py-1 rounded-full transition-colors whitespace-nowrap flex items-center gap-1 ${filterType === 'grant' ? 'bg-amber-500/20 text-amber-600' : 'text-muted-foreground hover:bg-muted'}`}>
-                    <Award className="w-3.5 h-3.5" /> Grants ({aggregations.grant_count})
-                  </button>
-                )}
-                {aggregations.opportunity_count > 0 && (
-                  <button type="button" onClick={() => setFilterType('opportunity')}
-                    className={`text-sm px-3 py-1 rounded-full transition-colors whitespace-nowrap flex items-center gap-1 ${filterType === 'opportunity' ? 'bg-blue-500/20 text-blue-600' : 'text-muted-foreground hover:bg-muted'}`}>
-                    <Briefcase className="w-3.5 h-3.5" /> Opportunities ({aggregations.opportunity_count})
-                  </button>
-                )}
-
-                <span className="ml-auto text-xs text-muted-foreground whitespace-nowrap">
-                  <Zap className="w-3 h-3 inline" /> {responseTime}ms
-                  {aggregations.total_value > 0 && <> · <DollarSign className="w-3 h-3 inline" /> {fmt(aggregations.total_value)} total</>}
-                </span>
+              {/* Trending */}
+              <div className="mt-6 text-center">
+                <p className="text-xs text-muted-foreground font-medium mb-3 flex items-center justify-center gap-1.5">
+                  <TrendingUp className="w-3 h-3" /> Trending
+                </p>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {trendingSearches.map(s => (
+                    <Badge key={s} variant="secondary" className="cursor-pointer hover:bg-primary/10 transition-colors text-xs"
+                      onClick={() => handleSearch(s)}>
+                      <Sparkles className="w-3 h-3 mr-1" /> {s}
+                    </Badge>
+                  ))}
+                </div>
               </div>
-            )}
+            </div>
           </div>
-        </div>
+        )}
 
-        <div className="container max-w-4xl py-6">
-          {loading && (
-            <div className="space-y-3">
-              {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)}
+        {/* Search bar when results are shown */}
+        {(searched || loading) && (
+          <div className="sticky top-14 z-40 bg-background/95 backdrop-blur border-b border-border">
+            <div className="container max-w-6xl py-3 px-4">
+              <div className="flex items-center gap-3">
+                <div className="flex-1">
+                  <SearchAutocomplete
+                    initialQuery={urlQuery}
+                    recentSearches={recentSearchStrings}
+                    onSearch={handleSearch}
+                    onNLQuery={handleNLQuery}
+                  />
+                </div>
+                <Button variant={showFilters ? 'default' : 'outline'} size="sm" onClick={() => setShowFilters(!showFilters)} className="shrink-0 gap-1.5">
+                  <SlidersHorizontal className="w-4 h-4" /> Filters
+                  {(filters.states.length + filters.entityTypes.length + filters.setAsides.length) > 0 && (
+                    <Badge variant="secondary" className="text-[10px] px-1 ml-1">
+                      {filters.states.length + filters.entityTypes.length + filters.setAsides.length}
+                    </Badge>
+                  )}
+                </Button>
+                <Button variant="outline" size="sm" className="shrink-0 gap-1.5" onClick={() => toast.success('Search saved!')}>
+                  <Bookmark className="w-4 h-4" /> Save
+                </Button>
+              </div>
+
+              {/* Stats bar */}
+              {aggregations && results.length > 0 && (
+                <SearchStatsBar aggregations={aggregations} totalCount={totalCount} responseTime={responseTime} />
+              )}
             </div>
-          )}
+          </div>
+        )}
 
-          {!loading && searched && filteredResults.length > 0 && (
-            <div className="space-y-2">
-              {filteredResults.map(r => {
-                const Icon = RESULT_ICONS[r.result_type] || FileText;
-                const tone = TYPE_COLORS[r.result_type] || '';
-                const toneParts = tone.split(' ');
-                return (
-                  <Link key={`${r.result_type}-${r.id}`} to={getLink(r)}>
-                    <Card className="hover:bg-muted/40 transition-colors cursor-pointer border-border/60">
-                      <CardContent className="p-4 flex items-start gap-3">
-                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${toneParts[0] || 'bg-muted'}`}>
-                          <Icon className={`w-4 h-4 ${toneParts[1] || 'text-muted-foreground'}`} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="font-semibold text-sm truncate">{r.name}</h3>
-                            <Badge variant="outline" className={`text-[10px] capitalize px-1.5 py-0 ${tone}`}>
-                              {r.result_type}
-                            </Badge>
-                            {r.set_aside && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{r.set_aside}</Badge>}
-                          </div>
-                          {r.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{r.description}</p>}
-                          {r.agency && <p className="text-xs text-muted-foreground mt-0.5">{r.agency}</p>}
-                          <div className="flex items-center gap-3 mt-1.5 text-[11px] text-muted-foreground">
-                            {r.state && <span className="flex items-center gap-0.5"><MapPin className="w-3 h-3" /> {r.state}</span>}
-                            {r.deadline && <span className="flex items-center gap-0.5"><Calendar className="w-3 h-3" /> Due {new Date(r.deadline).toLocaleDateString()}</span>}
-                          </div>
-                        </div>
-                        <div className="text-right shrink-0 flex flex-col items-end gap-1">
-                          {r.value && r.value > 0 && <span className="text-sm font-bold text-primary font-mono">{fmt(r.value)}</span>}
-                          {r.opportunity_score && r.opportunity_score >= 60 && (
-                            <Badge className="bg-emerald-500/15 text-emerald-600 text-[10px] px-1.5 py-0">Score {r.opportunity_score}</Badge>
-                          )}
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 mt-2" />
-                      </CardContent>
-                    </Card>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
+        {/* Main content with optional filter sidebar */}
+        {(searched || loading) && (
+          <div className="container max-w-6xl py-6 px-4">
+            <div className="flex gap-6">
+              {/* Filters sidebar */}
+              {showFilters && (
+                <div className="w-64 shrink-0 hidden md:block">
+                  <SearchFilters filters={filters} onChange={handleFilterChange} aggregations={aggregations} />
+                </div>
+              )}
 
-          {!loading && searched && filteredResults.length === 0 && (
-            <div className="text-center py-20">
-              <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold">No results for "{query}"</h3>
-              <p className="text-muted-foreground text-sm mt-1">Try different keywords or broaden your search</p>
-            </div>
-          )}
-
-          {!loading && !searched && (
-            <div className="text-center py-20">
-              <Search className="w-16 h-16 text-muted-foreground/30 mx-auto mb-6" />
-              <h2 className="text-2xl font-bold text-foreground mb-2">Search everything</h2>
-              <p className="text-muted-foreground text-sm max-w-md mx-auto mb-8">
-                Contracts, entities, grants, and opportunities — all in one place.
-              </p>
-              <div className="flex flex-wrap justify-center gap-2">
-                {suggestions.map(s => (
-                  <Badge key={s} variant="outline" className="cursor-pointer hover:bg-primary/10 transition-colors"
-                    onClick={() => setSearchParams({ q: s }, { replace: true })}>
-                    <Search className="w-3 h-3 mr-1" /> {s}
-                  </Badge>
-                ))}
+              {/* Results */}
+              <div className="flex-1 min-w-0">
+                {loading ? (
+                  <div className="space-y-3">
+                    {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)}
+                  </div>
+                ) : (
+                  <SearchResults
+                    results={results}
+                    insights={insights}
+                    query={urlQuery}
+                    onSuggestionClick={handleSearch}
+                  />
+                )}
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </GlobalLayout>
   );
