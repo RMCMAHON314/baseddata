@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
+import { PageSEO } from '@/components/layout/PageSEO';
 import { PortfolioManager } from '@/components/portfolio/PortfolioManager';
 import { ExportMenu } from '@/components/data/ExportMenu';
 
@@ -88,6 +89,7 @@ export default function EntitiesList() {
 
   return (
     <GlobalLayout>
+      <PageSEO title="Government Entities Directory" description="Browse 3,000+ federal contractors, agencies, and grantees. Filter by state, type, and contract value." path="/entities" />
       <div className="min-h-screen bg-background">
         {/* Header */}
         <div className="border-b border-border bg-card">

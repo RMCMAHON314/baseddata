@@ -102,7 +102,15 @@ export default function Pricing() {
 
   return (
     <GlobalLayout>
-      <PageSEO title="Pricing — BasedData" description="Start free. Pro at $99/month. Enterprise with API access and team seats." path="/pricing" />
+      <PageSEO title="Pricing — BasedData" description="Start free. Pro at $99/month. Enterprise with API access and team seats." path="/pricing" jsonLd={{
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          { "@type": "Question", "name": "How much does BasedData cost?", "acceptedAnswer": { "@type": "Answer", "text": "BasedData offers a free tier, Pro at $99/month, and Enterprise plans with custom pricing." }},
+          { "@type": "Question", "name": "What data sources does BasedData include?", "acceptedAnswer": { "@type": "Answer", "text": "BasedData aggregates data from 50+ federal sources including SAM.gov, USASpending, FPDS, SBIR, and more." }},
+          { "@type": "Question", "name": "Does BasedData have an API?", "acceptedAnswer": { "@type": "Answer", "text": "Yes, BasedData provides a RESTful API for programmatic access to government contract intelligence data." }}
+        ]
+      }} />
       <div className="min-h-screen bg-background text-foreground">
         {/* Header */}
         <section className="pt-16 pb-12 px-6">

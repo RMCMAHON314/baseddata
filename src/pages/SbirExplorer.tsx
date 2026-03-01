@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
+import { PageSEO } from '@/components/layout/PageSEO';
 import { EntityLink } from '@/components/EntityLink';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
@@ -119,6 +120,7 @@ export default function SbirExplorer() {
 
   return (
     <GlobalLayout>
+      <PageSEO title="SBIR/STTR Innovation Explorer" description="Explore Small Business Innovation Research awards. Track SBIR/STTR grants by agency, company, and technology area." path="/sbir" />
       <div className="min-h-screen bg-background">
         {/* Hero */}
         <div className="border-b border-border bg-gradient-to-br from-card via-card to-primary/5">

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
+import { PageSEO } from '@/components/layout/PageSEO';
 import { OpportunityFeed } from '@/components/opportunities/OpportunityFeed';
 import { OpportunityDetail } from '@/components/opportunities/OpportunityDetail';
 import { OpportunityPipeline, addToPipeline } from '@/components/opportunities/OpportunityPipeline';
@@ -94,6 +95,7 @@ export default function OpportunityCommandCenter() {
 
   return (
     <GlobalLayout>
+      <PageSEO title="Federal Opportunity Command Center" description="Discover active federal contract opportunities, track deadlines, and manage your bid pipeline. Real-time SAM.gov data." path="/opportunities" />
       <div className="min-h-screen bg-background">
         {/* Header */}
         <div className="border-b border-border bg-card">

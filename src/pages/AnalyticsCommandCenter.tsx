@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
+import { PageSEO } from '@/components/layout/PageSEO';
 import { useAnalyticsDashboard } from '@/hooks/useAnalyticsDashboard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -61,6 +62,7 @@ export default function AnalyticsCommandCenter() {
 
   return (
     <GlobalLayout>
+      <PageSEO title="Government Spending Analytics" description="Analyze trillions in federal spending by agency, state, and sector. Interactive charts and real-time KPIs." path="/analytics" />
       <div className="min-h-screen bg-background">
         {/* Header */}
         <div className="border-b border-border bg-card">
