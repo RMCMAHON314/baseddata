@@ -17,6 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/Logo';
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
+import { AiAssistant } from '@/components/ai/AiAssistant';
 
 const NAV_ITEMS = [
   { path: '/explore', label: 'Explore', icon: Compass },
@@ -193,6 +194,8 @@ export function GlobalLayout({ children }: { children: React.ReactNode }) {
           <span>Powered by USASpending.gov, SAM.gov, NIH, NSF data</span>
         </div>
       </footer>
+
+      <AiAssistant />
     </div>
   );
 }
