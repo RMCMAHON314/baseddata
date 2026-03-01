@@ -1,7 +1,8 @@
 // BASED DATA - Omniscient AI Assistant — BOMB-07 Production Upgrade
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, X, Send, Loader2, Building2, Target, BarChart3, Brain, DollarSign, Search } from 'lucide-react';
+import { X, Send, Loader2, Building2, Target, BarChart3, Brain, DollarSign, Search, Sparkles } from 'lucide-react';
+import aiChatIcon from '@/assets/ai-chat-icon.png';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -121,13 +122,13 @@ export function AiAssistant() {
       {!isOpen && (
         <motion.button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-primary flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow"
+          className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full bg-primary flex items-center justify-center shadow-lg hover:shadow-xl transition-shadow overflow-hidden"
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.95 }}
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
         >
-          <Sparkles className="h-6 w-6 text-primary-foreground" />
+          <img src={aiChatIcon} alt="AI Assistant" className="h-9 w-9 object-contain" />
         </motion.button>
       )}
 
