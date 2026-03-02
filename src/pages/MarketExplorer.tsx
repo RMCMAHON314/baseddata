@@ -405,13 +405,13 @@ export default function MarketExplorer() {
 
             {/* Map mode toggles (only in map view) */}
             {viewMode === 'map' && (
-              <div className="flex items-center gap-2 mt-3">
+              <div className="flex items-center gap-2 mt-3 overflow-x-auto pb-1">
                 {MAP_MODES.map(mode => (
                   <Button
                     key={mode.key}
                     variant={mapMode === mode.key ? 'default' : 'outline'}
                     size="sm"
-                    className="gap-1.5 h-8"
+                    className="gap-1.5 h-8 shrink-0 whitespace-nowrap"
                     onClick={() => setMapMode(mode.key)}
                   >
                     <mode.icon className="h-3.5 w-3.5" />
