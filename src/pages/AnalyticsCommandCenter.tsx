@@ -67,11 +67,6 @@ export default function AnalyticsCommandCenter() {
         {/* Header */}
         <div className="border-b border-border bg-card">
           <div className="container py-6">
-            <nav className="flex items-center gap-1 text-sm text-muted-foreground mb-3">
-              <Link to="/" className="hover:text-foreground">Home</Link>
-              <ChevronRight className="h-3 w-3" />
-              <span className="text-foreground">Analytics</span>
-            </nav>
             <h1 className="text-2xl font-bold flex items-center gap-2 text-foreground">
               <BarChart3 className="h-6 w-6 text-primary" />
               Analytics Command Center

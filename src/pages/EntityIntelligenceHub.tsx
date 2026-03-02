@@ -190,16 +190,7 @@ export default function EntityIntelligenceHub() {
     <GlobalLayout>
       <PageSEO title={`${entity.canonical_name} — Contractor Profile`} description={`360° intelligence on ${entity.canonical_name}. Contracts, grants, competitors, and risk analysis.`} path={`/entity/${entity.id}`} />
       <div className="min-h-screen bg-background">
-        {/* Breadcrumb */}
-        <div className="container pt-4">
-          <nav className="flex items-center gap-1 text-sm text-muted-foreground">
-            <Link to="/" className="hover:text-foreground">Home</Link>
-            <ChevronRight className="h-3 w-3" />
-            <Link to="/entities" className="hover:text-foreground">Entities</Link>
-            <ChevronRight className="h-3 w-3" />
-            <span className="text-foreground truncate max-w-[200px]">{entity.canonical_name}</span>
-          </nav>
-        </div>
+        {/* Breadcrumb handled by GlobalLayout */}
 
         {/* ═══ HERO HEADER ═══ */}
         <div className="border-b border-border bg-gradient-to-br from-card via-card to-primary/5">
