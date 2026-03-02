@@ -638,23 +638,7 @@ export default function MarketExplorer() {
               </aside>
 
               <div className="flex-1 min-w-0">
-                {!hasFilters && !loadingResults && (
-                  <Card className="p-12 text-center">
-                    <Compass className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">Select filters to explore the market</h3>
-                    <p className="text-muted-foreground mb-6">Choose a state, agency, or NAICS code to discover contracts</p>
-                    <div className="flex flex-wrap justify-center gap-2">
-                      {QUICK_FILTERS.map(qf => (
-                        <Button key={qf.label} variant="outline" size="sm" onClick={() => {
-                          setFilters(qf.filters);
-                          if (qf.filters.naics) setNaicsInput(qf.filters.naics);
-                        }}>{qf.label}</Button>
-                      ))}
-                    </div>
-                  </Card>
-                )}
-
-                {hasFilters && loadingResults && (
+                {loadingResults && (
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24" />)}</div>
                     <Skeleton className="h-48" />
@@ -662,7 +646,7 @@ export default function MarketExplorer() {
                   </div>
                 )}
 
-                {hasFilters && !loadingResults && (
+                {!loadingResults && (
                   <>
                     {summary && (
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">

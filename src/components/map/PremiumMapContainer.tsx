@@ -71,10 +71,10 @@ export function PremiumMapContainer({
   const [mapLoaded, setMapLoaded] = useState(false);
   const [initNonce, setInitNonce] = useState(0);
   const [stuckHint, setStuckHint] = useState(false);
-  // Default to OSM if no token is available — don't pester user for one
+  // Use env token or localStorage token — default to Mapbox when available
   const [token, setToken] = useState(() => getRuntimeMapboxToken());
   const [basemap, setBasemap] = useState<'mapbox' | 'osm'>(() => 
-    getRuntimeMapboxToken() && getRuntimeMapboxToken().length > 10 ? 'mapbox' : 'osm'
+    hasMapboxToken() ? 'mapbox' : 'osm'
   );
   const [showTokenOverlay, setShowTokenOverlay] = useState(false);
   const [tokenInput, setTokenInput] = useState('');
@@ -152,8 +152,8 @@ export function PremiumMapContainer({
     map.current = null;
 
     const activeToken = token || getRuntimeMapboxToken();
-    const hasAnyToken = Boolean((activeToken || '').trim());
-    setShowTokenOverlay(!hasAnyToken);
+    // Only show overlay if user explicitly requests it — don't auto-show
+    // The env token (VITE_MAPBOX_TOKEN) should be sufficient
 
     let cancelled = false;
     renderStartTime.current = Date.now();
