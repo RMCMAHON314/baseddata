@@ -71,15 +71,13 @@ export function PremiumMapContainer({
   const [mapLoaded, setMapLoaded] = useState(false);
   const [initNonce, setInitNonce] = useState(0);
   const [stuckHint, setStuckHint] = useState(false);
-  // Use env token or localStorage token — default to Mapbox when available
+  // Always default to OSM (free, reliable CARTO dark basemap) — no token needed
   const [token, setToken] = useState(() => getRuntimeMapboxToken());
-  const [basemap, setBasemap] = useState<'mapbox' | 'osm'>(() => 
-    hasMapboxToken() ? 'mapbox' : 'osm'
-  );
+  const [basemap, setBasemap] = useState<'mapbox' | 'osm'>('osm');
   const [showTokenOverlay, setShowTokenOverlay] = useState(false);
   const [tokenInput, setTokenInput] = useState('');
   const [tokenError, setTokenError] = useState<string | null>(null);
-  const [is3D, setIs3D] = useState(true);
+  const [is3D, setIs3D] = useState(false);
   const renderStartTime = useRef<number>(Date.now());
 
   const filteredFeatures = useMemo<GeoJSONFeatureCollection | undefined>(() => {
@@ -142,18 +140,13 @@ export function PremiumMapContainer({
     }
   };
 
-  // Initialize map - ALWAYS renders a real map (OSM fallback when no valid Mapbox token)
+  // Initialize map — always use OSM (free CARTO dark tiles), no token needed
   useEffect(() => {
     if (!innerRef.current) return;
 
     setMapLoaded(false);
-    setTokenError(null);
     map.current?.remove();
     map.current = null;
-
-    const activeToken = token || getRuntimeMapboxToken();
-    // Only show overlay if user explicitly requests it — don't auto-show
-    // The env token (VITE_MAPBOX_TOKEN) should be sufficient
 
     let cancelled = false;
     renderStartTime.current = Date.now();
@@ -161,67 +154,28 @@ export function PremiumMapContainer({
     (async () => {
       await ensureContainerReady();
       if (cancelled) return;
+      if (!innerRef.current?.clientWidth || !innerRef.current?.clientHeight) return;
 
-      // If we *still* have 0x0, don't attempt init yet.
-      // We'll keep showing the loading overlay and wait for ResizeObserver-driven retries.
-      if (!innerRef.current?.clientWidth || !innerRef.current?.clientHeight) {
-        return;
-      }
-
-      // Determine which basemap to use
-      let resolvedBasemap: 'mapbox' | 'osm' = basemap;
-      if (resolvedBasemap === 'mapbox') {
-        if (!activeToken || !hasMapboxToken()) {
-          resolvedBasemap = 'osm';
-        } else {
-          const check = await validateToken(activeToken);
-          if (cancelled) return;
-          if (!check.ok) {
-            setTokenError('Invalid Mapbox token — showing free basemap.');
-            setShowTokenOverlay(true);
-            resolvedBasemap = 'osm';
-          }
-        }
-      }
-
-      // For OSM, we need a placeholder token (Mapbox GL requires one to init)
-      // For Mapbox, use the real token
-      // CRITICAL: Use a minimal valid-looking placeholder for OSM to avoid auth errors
-      if (resolvedBasemap === 'osm') {
-        // OSM doesn't need Mapbox auth - use empty string
-        // Mapbox GL 3.x allows empty token when using non-Mapbox styles
-        mapboxgl.accessToken = '';
-      } else {
-        mapboxgl.accessToken = activeToken;
-      }
+      // Always use OSM — no token validation needed
+      mapboxgl.accessToken = '';
 
       try {
         map.current = new mapboxgl.Map({
           container: innerRef.current!,
-          style: resolvedBasemap === 'mapbox' ? MAP_STYLES.dark : OSM_RASTER_STYLE,
+          style: OSM_RASTER_STYLE,
           center,
           zoom,
-          pitch: resolvedBasemap === 'mapbox' && is3D ? 45 : 0,
-          bearing: resolvedBasemap === 'mapbox' && is3D ? -10 : 0,
+          pitch: 0,
+          bearing: 0,
           antialias: true,
           attributionControl: false,
         });
 
-        // Premium controls
-        map.current.addControl(
-          new mapboxgl.NavigationControl({ showCompass: true, showZoom: true }),
-          'top-right'
-        );
+        map.current.addControl(new mapboxgl.NavigationControl({ showCompass: true, showZoom: true }), 'top-right');
         map.current.addControl(new mapboxgl.ScaleControl(), 'bottom-left');
 
-        // Cursor tracking
-        map.current.on('mousemove', (e) => {
-          onCursorMove?.({ lng: e.lngLat.lng, lat: e.lngLat.lat });
-        });
-
-        map.current.on('mouseout', () => {
-          onCursorMove?.(null);
-        });
+        map.current.on('mousemove', (e) => onCursorMove?.({ lng: e.lngLat.lng, lat: e.lngLat.lat }));
+        map.current.on('mouseout', () => onCursorMove?.(null));
 
         map.current.on('load', () => {
           setMapLoaded(true);
@@ -229,18 +183,9 @@ export function PremiumMapContainer({
           requestAnimationFrame(() => map.current?.resize());
         });
 
-        map.current.on('error', (e) => {
-          const msg = (e as any)?.error?.message || '';
-          if (msg.toLowerCase().includes('unauthorized')) {
-            setTokenError('Invalid Mapbox token — showing free basemap.');
-            setShowTokenOverlay(true);
-            setBasemap('osm');
-          }
-        });
-
         requestAnimationFrame(() => map.current?.resize());
-      } catch {
-        setShowTokenOverlay(true);
+      } catch (err) {
+        console.error('Map init error:', err);
       }
     })();
 
@@ -250,7 +195,7 @@ export function PremiumMapContainer({
       map.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, is3D, basemap, initNonce]);
+  }, [initNonce]);
 
   // Resize observer (must run even before `mapLoaded` to avoid a 0x0 init getting stuck)
   useEffect(() => {
@@ -564,19 +509,7 @@ export function PremiumMapContainer({
     <div ref={outerRef} className={cn("relative w-full h-full", className)} style={{ minHeight: 0 }}>
       <div ref={innerRef} className="absolute inset-0 w-full h-full" style={{ width: '100%', height: '100%' }} />
 
-      {/* Token/basemap overlay (never blocks map) */}
-      {showTokenOverlay && (
-        <MapTokenOverlay
-          basemap={basemap}
-          tokenInput={tokenInput}
-          onTokenInputChange={setTokenInput}
-          tokenError={tokenError}
-          onSaveToken={handleSaveToken}
-          onUseOsm={() => setBasemap('osm')}
-          onUseMapbox={() => setBasemap('mapbox')}
-          className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-[min(520px,calc(100%-2rem))]"
-        />
-      )}
+      {/* No token overlay — map uses free basemap by default */}
 
       {/* Loading */}
       <AnimatePresence>
@@ -608,26 +541,8 @@ export function PremiumMapContainer({
         )}
       </AnimatePresence>
 
-      {/* Premium Controls */}
+      {/* Map Controls */}
       <div className="absolute top-4 left-4 flex flex-col gap-2 z-20">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              size="icon"
-              variant="outline"
-              className={cn(
-                "w-9 h-9 backdrop-blur-sm shadow-lg",
-                is3D ? "bg-primary/20 text-primary border-primary/30" : "bg-black/60 text-white/70 border-white/20 hover:bg-black/80"
-              )}
-              onClick={toggle3D}
-            >
-              <Layers className="w-4 h-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="right" className="bg-black/90 text-white border-white/20">
-            {is3D ? "Switch to 2D" : "Switch to 3D"}
-          </TooltipContent>
-        </Tooltip>
         
         <Tooltip>
           <TooltipTrigger asChild>
