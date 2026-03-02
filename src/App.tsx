@@ -55,11 +55,31 @@ const queryClient = new QueryClient({
 
 function PageLoader() {
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="space-y-4 w-full max-w-md px-8">
-        <Skeleton className="h-8 w-48 mx-auto" />
-        <Skeleton className="h-4 w-64 mx-auto" />
-        <Skeleton className="h-[200px] w-full" />
+    <div className="min-h-screen bg-background flex items-center justify-center overflow-hidden relative">
+      {/* Radial glow */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,hsl(var(--primary)/0.08)_0%,transparent_70%)]" />
+      
+      <div className="relative flex flex-col items-center gap-6">
+        {/* Animated chevron ring */}
+        <div className="relative w-16 h-16">
+          <div className="absolute inset-0 rounded-full border-2 border-primary/20 animate-ping" style={{ animationDuration: '2s' }} />
+          <div className="absolute inset-1 rounded-full border-2 border-primary/30 animate-ping" style={{ animationDuration: '2s', animationDelay: '0.3s' }} />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="hsl(var(--primary))" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="animate-pulse">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </div>
+        </div>
+
+        {/* Brand text */}
+        <span className="text-lg font-bold text-primary lowercase tracking-tight" style={{ letterSpacing: '-0.02em' }}>
+          based data
+        </span>
+
+        {/* Loading bar */}
+        <div className="w-40 h-0.5 bg-muted rounded-full overflow-hidden">
+          <div className="h-full bg-primary rounded-full animate-[loading-slide_1.2s_ease-in-out_infinite]" />
+        </div>
       </div>
     </div>
   );
