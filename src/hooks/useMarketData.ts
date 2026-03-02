@@ -39,7 +39,6 @@ export function useMarketExplorer(filters: {
       return data;
     },
     staleTime: STALE.dynamic,
-    enabled: Object.values(filters).some(Boolean),
   });
 }
 
