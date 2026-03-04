@@ -103,6 +103,7 @@ const App = () => {
             <Toaster />
             <Sonner />
             <BrowserRouter>
+              <ErrorBoundary>
               <Suspense fallback={<PageLoader />}>
                 <Routes>
                   {/* Public routes */}
@@ -141,6 +142,7 @@ const App = () => {
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>
+              </ErrorBoundary>
               <AiAssistant />
             </BrowserRouter>
           </TooltipProvider>
