@@ -61,6 +61,7 @@ export default function ResetPassword() {
   if (!isRecovery && !done) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <PageSEO title="Reset Password" description="Reset your BasedData account password." path="/reset-password" noindex />
         <Card className="w-full max-w-md">
           <CardContent className="pt-8 pb-8 text-center space-y-4">
             <AlertTriangle className="w-12 h-12 mx-auto text-warning" />
