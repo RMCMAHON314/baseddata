@@ -11,6 +11,7 @@ import {
   Search, Bell, Star, Target, TrendingUp, FileText,
   Plus, Eye, Clock, DollarSign, Users, Zap, Settings, Home
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface DashboardData {
   profile: {
@@ -44,7 +45,6 @@ export default function Dashboard() {
     loadDashboard();
     // Handle checkout success redirect
     if (searchParams.get('checkout') === 'success') {
-      const { toast } = require('sonner');
       toast.success('🎉 Welcome to Pro! Your subscription is now active.');
       setSearchParams({}, { replace: true });
     }
