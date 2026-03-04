@@ -1,5 +1,5 @@
 // Data Freshness Indicator — Global footer bar component
-import { useState, forwardRef } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDistanceToNow } from 'date-fns';
