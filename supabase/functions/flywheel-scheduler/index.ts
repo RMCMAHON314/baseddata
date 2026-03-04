@@ -209,13 +209,15 @@ async function executeTask(supabase: any, task: ScheduledTask) {
     }).eq('id', runId);
     
     // Update vacuum_runs for tracking
-    await supabase.from('vacuum_runs').insert({
-      mode: task.name,
-      status: 'completed',
-      records_ingested: rowsAffected,
-      duration_ms: durationMs,
-      results: data,
-    }).catch(() => {});
+    try {
+      await supabase.from('vacuum_runs').insert({
+        trigger: task.name,
+        status: 'completed',
+        total_loaded: rowsAffected,
+        duration_seconds: Math.round(durationMs / 1000),
+        results: data,
+      });
+    } catch (_) { /* ignore vacuum_runs logging errors */ }
     
     console.log(`[flywheel-scheduler] ${task.name} SUCCESS: ${rowsAffected} rows in ${durationMs}ms`);
     return { task: task.name, status: 'success', rows_affected: rowsAffected, duration_ms: durationMs };
