@@ -83,6 +83,9 @@ async function executeTask(
     case 'grants_gov': return ingestGrantsGov(config, supabase);
     case 'entity_enrichment': return enrichEntity(config, supabase);
     case 'firecrawl_scrape': return firecrawlScrape(config, supabase);
+    case 'lobbying_disclosures': return ingestLobbyingDisclosures(config, supabase);
+    case 'gsa_contracts': return ingestGSAContracts(config, supabase);
+    case 'analytics_daily': return computeAnalyticsDaily(config, supabase);
     default: throw new Error(`Unknown task type: ${type}`);
   }
 }
