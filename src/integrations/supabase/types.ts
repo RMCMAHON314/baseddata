@@ -3089,6 +3089,99 @@ export type Database = {
         }
         Relationships: []
       }
+      fda_510k: {
+        Row: {
+          applicant: string | null
+          contact: string | null
+          created_at: string | null
+          decision_date: string | null
+          decision_description: string | null
+          device_name: string | null
+          expedited_review_flag: string | null
+          id: string
+          k_number: string
+          linked_entity_id: string | null
+          product_code: string | null
+          raw_data: Json | null
+          review_advisory_committee: string | null
+          statement_or_summary: string | null
+          third_party_flag: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          applicant?: string | null
+          contact?: string | null
+          created_at?: string | null
+          decision_date?: string | null
+          decision_description?: string | null
+          device_name?: string | null
+          expedited_review_flag?: string | null
+          id?: string
+          k_number: string
+          linked_entity_id?: string | null
+          product_code?: string | null
+          raw_data?: Json | null
+          review_advisory_committee?: string | null
+          statement_or_summary?: string | null
+          third_party_flag?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          applicant?: string | null
+          contact?: string | null
+          created_at?: string | null
+          decision_date?: string | null
+          decision_description?: string | null
+          device_name?: string | null
+          expedited_review_flag?: string | null
+          id?: string
+          k_number?: string
+          linked_entity_id?: string | null
+          product_code?: string | null
+          raw_data?: Json | null
+          review_advisory_committee?: string | null
+          statement_or_summary?: string | null
+          third_party_flag?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fda_510k_linked_entity_id_fkey"
+            columns: ["linked_entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fda_510k_linked_entity_id_fkey"
+            columns: ["linked_entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fda_510k_linked_entity_id_fkey"
+            columns: ["linked_entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fda_510k_linked_entity_id_fkey"
+            columns: ["linked_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fda_510k_linked_entity_id_fkey"
+            columns: ["linked_entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fda_devices: {
         Row: {
           applicant: string | null
@@ -3275,6 +3368,90 @@ export type Database = {
           },
         ]
       }
+      fda_warning_letters: {
+        Row: {
+          case_number: string | null
+          close_out_date: string | null
+          company_name: string
+          created_at: string | null
+          id: string
+          issue_date: string | null
+          issuing_office: string | null
+          letter_url: string | null
+          linked_entity_id: string | null
+          raw_data: Json | null
+          response_letter_url: string | null
+          subject: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          case_number?: string | null
+          close_out_date?: string | null
+          company_name: string
+          created_at?: string | null
+          id?: string
+          issue_date?: string | null
+          issuing_office?: string | null
+          letter_url?: string | null
+          linked_entity_id?: string | null
+          raw_data?: Json | null
+          response_letter_url?: string | null
+          subject?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          case_number?: string | null
+          close_out_date?: string | null
+          company_name?: string
+          created_at?: string | null
+          id?: string
+          issue_date?: string | null
+          issuing_office?: string | null
+          letter_url?: string | null
+          linked_entity_id?: string | null
+          raw_data?: Json | null
+          response_letter_url?: string | null
+          subject?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fda_warning_letters_linked_entity_id_fkey"
+            columns: ["linked_entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fda_warning_letters_linked_entity_id_fkey"
+            columns: ["linked_entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fda_warning_letters_linked_entity_id_fkey"
+            columns: ["linked_entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fda_warning_letters_linked_entity_id_fkey"
+            columns: ["linked_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fda_warning_letters_linked_entity_id_fkey"
+            columns: ["linked_entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feature_flags: {
         Row: {
           created_at: string | null
@@ -3307,6 +3484,126 @@ export type Database = {
           user_ids?: string[] | null
         }
         Relationships: []
+      }
+      federal_audit_findings: {
+        Row: {
+          audit_year: number
+          auditee_city: string | null
+          auditee_ein: string | null
+          auditee_name: string
+          auditee_state: string | null
+          auditee_uei: string | null
+          cfda_number: string | null
+          cognizant_agency: string | null
+          created_at: string | null
+          dbkey: string | null
+          federal_program_name: string | null
+          finding_ref_number: string | null
+          finding_text: string | null
+          id: string
+          linked_entity_id: string | null
+          material_weakness: string | null
+          modified_opinion: string | null
+          other_matters: string | null
+          questioned_costs: number | null
+          raw_data: Json | null
+          significant_deficiency: string | null
+          total_federal_expenditures: number | null
+          type_of_entity: string | null
+          type_requirement: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          audit_year: number
+          auditee_city?: string | null
+          auditee_ein?: string | null
+          auditee_name: string
+          auditee_state?: string | null
+          auditee_uei?: string | null
+          cfda_number?: string | null
+          cognizant_agency?: string | null
+          created_at?: string | null
+          dbkey?: string | null
+          federal_program_name?: string | null
+          finding_ref_number?: string | null
+          finding_text?: string | null
+          id?: string
+          linked_entity_id?: string | null
+          material_weakness?: string | null
+          modified_opinion?: string | null
+          other_matters?: string | null
+          questioned_costs?: number | null
+          raw_data?: Json | null
+          significant_deficiency?: string | null
+          total_federal_expenditures?: number | null
+          type_of_entity?: string | null
+          type_requirement?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          audit_year?: number
+          auditee_city?: string | null
+          auditee_ein?: string | null
+          auditee_name?: string
+          auditee_state?: string | null
+          auditee_uei?: string | null
+          cfda_number?: string | null
+          cognizant_agency?: string | null
+          created_at?: string | null
+          dbkey?: string | null
+          federal_program_name?: string | null
+          finding_ref_number?: string | null
+          finding_text?: string | null
+          id?: string
+          linked_entity_id?: string | null
+          material_weakness?: string | null
+          modified_opinion?: string | null
+          other_matters?: string | null
+          questioned_costs?: number | null
+          raw_data?: Json | null
+          significant_deficiency?: string | null
+          total_federal_expenditures?: number | null
+          type_of_entity?: string | null
+          type_requirement?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "federal_audit_findings_linked_entity_id_fkey"
+            columns: ["linked_entity_id"]
+            isOneToOne: false
+            referencedRelation: "core_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "federal_audit_findings_linked_entity_id_fkey"
+            columns: ["linked_entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_360_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "federal_audit_findings_linked_entity_id_fkey"
+            columns: ["linked_entity_id"]
+            isOneToOne: false
+            referencedRelation: "high_value_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "federal_audit_findings_linked_entity_id_fkey"
+            columns: ["linked_entity_id"]
+            isOneToOne: false
+            referencedRelation: "mv_top_contractors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "federal_audit_findings_linked_entity_id_fkey"
+            columns: ["linked_entity_id"]
+            isOneToOne: false
+            referencedRelation: "top_entities_mv"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       federal_audits: {
         Row: {
