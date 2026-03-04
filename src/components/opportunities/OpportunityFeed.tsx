@@ -73,6 +73,12 @@ function countdownText(days: number | null) {
   return `${Math.ceil(days / 30)} months left`;
 }
 
+function decodeHtmlEntities(text: string): string {
+  const textarea = document.createElement('textarea');
+  textarea.innerHTML = text;
+  return textarea.value;
+}
+
 export function OpportunityFeed({ opportunities, loading, onSelect, onTrack }: OpportunityFeedProps) {
   const [search, setSearch] = useState('');
   const [agency, setAgency] = useState('__all__');
@@ -123,8 +129,14 @@ export function OpportunityFeed({ opportunities, loading, onSelect, onTrack }: O
         return d !== null && d >= 0 && d <= days;
       });
     }
-    // Sort by deadline nearest first
+    // Sort: active (with future deadlines) first by nearest deadline, then closed at the bottom
     list.sort((a, b) => {
+      const daysA = daysUntil(a.response_deadline);
+      const daysB = daysUntil(b.response_deadline);
+      const activeA = daysA !== null && daysA >= 0;
+      const activeB = daysB !== null && daysB >= 0;
+      if (activeA && !activeB) return -1;
+      if (!activeA && activeB) return 1;
       const da = a.response_deadline ? new Date(a.response_deadline).getTime() : Infinity;
       const db = b.response_deadline ? new Date(b.response_deadline).getTime() : Infinity;
       return da - db;
@@ -204,7 +216,7 @@ export function OpportunityFeed({ opportunities, loading, onSelect, onTrack }: O
                     <div className="flex-1 min-w-0 space-y-2">
                       {/* Title */}
                       <h3 className="font-semibold text-sm text-foreground group-hover:text-primary transition-colors line-clamp-2">
-                        {opp.title || 'Untitled Opportunity'}
+                        {opp.title ? decodeHtmlEntities(opp.title) : 'Untitled Opportunity'}
                       </h3>
 
                       {/* Agency + Timeline */}

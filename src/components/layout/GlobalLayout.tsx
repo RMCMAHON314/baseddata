@@ -20,7 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/Logo';
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
-import { AiAssistant } from '@/components/ai/AiAssistant';
+// AiAssistant is rendered once in App.tsx — do not duplicate here
 import { DataFreshnessIndicator } from '@/components/layout/DataFreshnessIndicator';
 import { useIsAdmin } from '@/components/layout/AdminRoute';
 import { useAuth } from '@/contexts/AuthContext';
@@ -273,7 +273,6 @@ export function GlobalLayout({ children }: { children: React.ReactNode }) {
         </div>
       </footer>
 
-      <AiAssistant />
     </div>
   );
 }
