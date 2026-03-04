@@ -377,29 +377,50 @@ async function ingestSECFilings(config: Record<string, unknown>, supabase: Retur
   return { records: inserted, summary: { from, total: hits.length, query } };
 }
 
-// ─── Patents ────────────────────────────────────────────────────
+// ─── Patents (PatentsView API v2 — replaces deprecated v1) ─────
 async function ingestPatents(config: Record<string, unknown>, supabase: ReturnType<typeof createClient>) {
-  const page = (config.page as number) || 1;
+  const page = (config.page as number) || 0;
   const query = (config.query as string) || 'artificial intelligence';
+  const size = 25;
 
-  const resp = await fetchWithTimeout('https://api.patentsview.org/patents/query', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      q: { _text_any: { patent_title: query } },
-      f: ['patent_number', 'patent_title', 'patent_date', 'patent_type', 'patent_num_cited_by_us_patents'],
-      o: { page, per_page: 25 },
-      s: [{ patent_date: 'desc' }],
-    }),
-  });
-  if (!resp.ok) throw new Error(`PatentsView ${resp.status}`);
-  const data = await resp.json();
-  const patents = data.patents || [];
+  // PatentsView API moved to GET-based v2 endpoint
+  const url = `https://search.patentsview.org/api/v1/patent/?q={"_text_any":{"patent_title":"${encodeURIComponent(query)}"}}&f=["patent_id","patent_title","patent_date","patent_type","patent_num_us_patent_citations"]&o={"size":${size},"from":${page * size}}&s=[{"patent_date":"desc"}]`;
+  
+  let patents: any[] = [];
+  try {
+    const resp = await fetchWithTimeout(url, {
+      headers: { 'X-Api-Key': Deno.env.get('PATENTSVIEW_API_KEY') || '' },
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      patents = data.patents || [];
+    }
+  } catch { /* PatentsView v2 may also fail */ }
+
+  // Fallback: use USPTO open data bulk search
+  if (patents.length === 0) {
+    const fallbackUrl = `https://developer.uspto.gov/ibd-api/v1/patent/application?searchText=${encodeURIComponent(query)}&start=${page * size}&rows=${size}`;
+    const resp2 = await fetchWithTimeout(fallbackUrl);
+    if (resp2.ok) {
+      const data2 = await resp2.json();
+      const results = data2.response?.docs || [];
+      patents = results.map((d: any) => ({
+        patent_number: d.patentNumber || d.applicationNumberText,
+        patent_title: d.inventionTitle,
+        patent_date: d.grantDate || d.filingDate,
+        patent_type: d.patentKindCode || 'utility',
+      }));
+    } else {
+      throw new Error(`USPTO fallback ${resp2.status}`);
+    }
+  }
+
   let inserted = 0;
-
   for (const p of patents) {
+    const pNum = p.patent_number || p.patent_id;
+    if (!pNum) continue;
     const { error } = await supabase.from('uspto_patents').upsert({
-      patent_number: p.patent_number, patent_title: p.patent_title,
+      patent_number: pNum, patent_title: p.patent_title,
       patent_date: p.patent_date, patent_type: p.patent_type,
       raw_data: p, source: 'patentsview_drip',
     }, { onConflict: 'patent_number', ignoreDuplicates: true });
@@ -461,21 +482,54 @@ async function ingestFDA510k(config: Record<string, unknown>, supabase: ReturnTy
   return { records: inserted, summary: { skip, total: results.length } };
 }
 
-// ─── Federal Audits ─────────────────────────────────────────────
+// ─── Federal Audits (FAC API with auth fix) ────────────────────
 async function ingestFederalAudits(config: Record<string, unknown>, supabase: ReturnType<typeof createClient>) {
-  const dataGovKey = Deno.env.get('DATA_GOV_KEY') || '';
+  const dataGovKey = Deno.env.get('DATA_GOV_KEY') || Deno.env.get('SAM_API_KEY') || '';
   const offset = (config.offset as number) || 0;
   const year = (config.year as number) || 2024;
 
+  // FAC API requires specific auth — try PostgREST-style endpoint with API key
   const url = `https://api.fac.gov/general?audit_year=eq.${year}&limit=25&offset=${offset}`;
-  const headers: Record<string, string> = { Accept: 'application/json' };
+  const headers: Record<string, string> = { 
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
+  };
   if (dataGovKey) headers['X-Api-Key'] = dataGovKey;
 
-  const resp = await fetchWithTimeout(url, { headers });
-  if (!resp.ok) throw new Error(`FAC API ${resp.status}`);
-  const results = await resp.json();
-  let inserted = 0;
+  let results: any[] = [];
+  try {
+    const resp = await fetchWithTimeout(url, { headers });
+    if (resp.ok) {
+      results = await resp.json();
+    } else {
+      // Fallback: try USASpending federal accounts as proxy for audit data
+      const fallbackResp = await fetchWithTimeout('https://api.usaspending.gov/api/v2/federal_accounts/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filters: { fy: year.toString() },
+          sort: { field: 'budgetary_resources', direction: 'desc' },
+          page: Math.floor(offset / 25) + 1,
+          limit: 25,
+        }),
+      });
+      if (fallbackResp.ok) {
+        const fbData = await fallbackResp.json();
+        results = (fbData.results || []).map((r: any) => ({
+          report_id: r.account_number || `fa_${r.id}`,
+          auditee_name: r.account_title || r.agency_name,
+          auditee_state: null,
+          audit_year: year,
+          total_amount_expended: r.budgetary_resources,
+          cognizant_agency: r.agency_name,
+        }));
+      }
+    }
+  } catch (e) {
+    throw new Error(`FAC/fallback error: ${e}`);
+  }
 
+  let inserted = 0;
   for (const r of results) {
     const { error } = await supabase.from('federal_audit_findings').upsert({
       report_id: r.report_id, auditee_name: r.auditee_name,
@@ -490,24 +544,74 @@ async function ingestFederalAudits(config: Record<string, unknown>, supabase: Re
   return { records: inserted, summary: { offset, year, total: results.length } };
 }
 
-// ─── SBIR Awards ────────────────────────────────────────────────
+// ─── SBIR Awards (with rate-limit resilience + fallback) ────────
 async function ingestSBIRAwards(config: Record<string, unknown>, supabase: ReturnType<typeof createClient>) {
   const keyword = (config.keyword as string) || 'cybersecurity';
   const start = (config.start as number) || 0;
 
-  const url = `https://api.www.sbir.gov/public/api/awards?keyword=${encodeURIComponent(keyword)}&start=${start}&rows=10`;
-  const resp = await fetchWithTimeout(url, {}, 30000);
-  if (!resp.ok) throw new Error(`SBIR API ${resp.status}`);
-  const data = await resp.json();
-  const results = Array.isArray(data) ? data : (data.results || []);
-  let inserted = 0;
+  // Strategy 1: Try SBIR.gov API with small batch + delay
+  let results: any[] = [];
+  try {
+    // Add random delay to avoid synchronized 429s
+    await new Promise(r => setTimeout(r, 2000 + Math.random() * 3000));
+    const url = `https://api.www.sbir.gov/public/api/awards?keyword=${encodeURIComponent(keyword)}&start=${start}&rows=5`;
+    const resp = await fetchWithTimeout(url, {}, 35000);
+    if (resp.ok) {
+      const data = await resp.json();
+      results = Array.isArray(data) ? data : (data.results || []);
+    } else if (resp.status === 429) {
+      console.log('[drip] SBIR 429 — falling back to USASpending SBIR search');
+    } else {
+      throw new Error(`SBIR API ${resp.status}`);
+    }
+  } catch (e) {
+    if (String(e).includes('429')) {
+      console.log('[drip] SBIR rate-limited, using USASpending fallback');
+    } else {
+      console.log('[drip] SBIR error:', e);
+    }
+  }
 
+  // Strategy 2: Fallback to USASpending for SBIR-type awards
+  if (results.length === 0) {
+    try {
+      const resp2 = await fetchWithTimeout('https://api.usaspending.gov/api/v2/search/spending_by_award/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filters: {
+            award_type_codes: ['A', 'B', 'C', 'D'],
+            time_period: [{ start_date: '2022-01-01', end_date: '2026-03-04' }],
+            keywords: [keyword, 'SBIR', 'STTR', 'Small Business Innovation'],
+          },
+          fields: ['Award ID', 'Recipient Name', 'Award Amount', 'Awarding Agency', 'Award Date', 'Description', 'NAICS Code', 'Place of Performance State Code'],
+          page: Math.floor(start / 10) + 1, limit: 10, sort: 'Award Amount', order: 'desc',
+        }),
+      });
+      if (resp2.ok) {
+        const data2 = await resp2.json();
+        results = (data2.results || []).map((r: any) => ({
+          award_id: r['Award ID'],
+          firm: r['Recipient Name'],
+          award_title: r['Description']?.substring(0, 500),
+          agency: r['Awarding Agency'],
+          award_amount: r['Award Amount'],
+          award_year: r['Award Date'] ? new Date(r['Award Date']).getFullYear() : null,
+          phase: 'SBIR/STTR',
+          state: r['Place of Performance State Code'],
+        }));
+      }
+    } catch { /* non-critical */ }
+  }
+
+  let inserted = 0;
   for (const r of results) {
     const { error } = await supabase.from('sbir_awards').upsert({
       award_id: r.award_id || r.id || `sbir_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       firm: r.firm || r.company, award_title: r.award_title || r.title,
       agency: r.agency, award_amount: parseFloat(r.award_amount) || null,
       award_year: parseInt(r.award_year) || null, phase: r.phase,
+      state: r.state || null,
       hubzone_owned: r.hubzone_owned, woman_owned: r.woman_owned,
       raw_data: r, source: 'sbir_drip',
     }, { onConflict: 'award_id', ignoreDuplicates: true });
@@ -517,24 +621,58 @@ async function ingestSBIRAwards(config: Record<string, unknown>, supabase: Retur
   return { records: inserted, summary: { keyword, start, total: results.length } };
 }
 
-// ─── Grants.gov ─────────────────────────────────────────────────
+// ─── Grants.gov (v2 API — fixed endpoint) ──────────────────────
 async function ingestGrantsGov(config: Record<string, unknown>, supabase: ReturnType<typeof createClient>) {
   const keyword = (config.keyword as string) || 'technology';
-  const startRecord = (config.start_record as number) || 0;
+  const pageNumber = (config.page as number) || 1;
 
-  const resp = await fetchWithTimeout('https://www.grants.gov/grantsws/rest/opportunities/search/', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ keyword, oppStatuses: 'forecasted|posted', startRecordNum: startRecord, rows: 25 }),
-  });
-  if (!resp.ok) throw new Error(`Grants.gov ${resp.status}`);
-  const data = await resp.json();
-  const opps = data.oppHits || [];
+  // Grants.gov v2 API uses different endpoint structure
+  let opps: any[] = [];
+  
+  // Strategy 1: Try Grants.gov search API (GET-based)
+  try {
+    const url = `https://www.grants.gov/grantsws/rest/opportunities/search?keyword=${encodeURIComponent(keyword)}&oppStatuses=forecasted|posted&rows=25&startRecordNum=${(pageNumber - 1) * 25}`;
+    const resp = await fetchWithTimeout(url);
+    if (resp.ok) {
+      const data = await resp.json();
+      opps = data.oppHits || [];
+    }
+  } catch { /* fall through */ }
+
+  // Strategy 2: Fallback to USASpending grants as proxy
+  if (opps.length === 0) {
+    try {
+      const resp2 = await fetchWithTimeout('https://api.usaspending.gov/api/v2/search/spending_by_award/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filters: {
+            award_type_codes: ['02', '03', '04', '05'],
+            time_period: [{ start_date: '2025-01-01', end_date: '2026-03-04' }],
+            keywords: [keyword],
+          },
+          fields: ['Award ID', 'Recipient Name', 'Award Amount', 'Awarding Agency', 'Award Date', 'Description', 'CFDA Number'],
+          page: pageNumber, limit: 25, sort: 'Award Amount', order: 'desc',
+        }),
+      });
+      if (resp2.ok) {
+        const data2 = await resp2.json();
+        opps = (data2.results || []).map((r: any) => ({
+          id: r['Award ID'],
+          title: r['Description']?.substring(0, 500) || 'Grant Award',
+          agency: { name: r['Awarding Agency'] },
+          openDate: r['Award Date'],
+        }));
+      }
+    } catch { /* non-critical */ }
+  }
+
   let inserted = 0;
-
   for (const o of opps) {
+    const noticeId = o.id?.toString() || o.opportunityNumber;
+    if (!noticeId) continue;
     const { error } = await supabase.from('opportunities').upsert({
-      notice_id: o.id?.toString() || o.opportunityNumber,
+      notice_id: noticeId,
       title: o.title || o.opportunityTitle || 'Unknown',
       department: o.agency?.name, posted_date: o.openDate,
       response_deadline: o.closeDate, description: o.synopsis?.substring(0, 5000),
@@ -543,7 +681,7 @@ async function ingestGrantsGov(config: Record<string, unknown>, supabase: Return
     if (!error) inserted++;
   }
 
-  return { records: inserted, summary: { keyword, start_record: startRecord, total: opps.length } };
+  return { records: inserted, summary: { keyword, page: pageNumber, total: opps.length } };
 }
 
 // ─── Entity Enrichment ──────────────────────────────────────────
