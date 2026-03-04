@@ -1,35 +1,36 @@
-// BOMB-02 — Competitive Intelligence Tab: Competitors, win rate, market share, side-by-side
+// BOMB-02 — Competitive Intelligence Tab V2: Win/loss by agency, market share, head-to-head
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Users, GitCompare, Trophy, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Users, GitCompare, Trophy, TrendingUp, TrendingDown, Minus, Target, BarChart3 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 import { fmt } from '@/pages/EntityIntelligenceHub';
 
 interface Props { entityId: string; entityName: string; }
+
+const COLORS = ['hsl(var(--primary))', '#06b6d4', '#8b5cf6', '#f59e0b', '#ef4444', '#10b981'];
 
 export function EntityCompetitiveTab({ entityId, entityName }: Props) {
   const navigate = useNavigate();
 
   const { data, isLoading } = useQuery({
-    queryKey: ['entity-competitive', entityId],
+    queryKey: ['entity-competitive-v2', entityId],
     queryFn: async () => {
-      // Get entity's value + agencies
       const [{ data: entity }, { data: myContracts }] = await Promise.all([
         supabase.from('core_entities').select('total_contract_value, contract_count, naics_codes').eq('id', entityId).single(),
-        supabase.from('contracts').select('awarding_agency, award_amount, naics_code').eq('recipient_entity_id', entityId).not('awarding_agency', 'is', null).limit(200),
+        supabase.from('contracts').select('awarding_agency, award_amount, naics_code, award_date, competition_type, set_aside_type').eq('recipient_entity_id', entityId).not('awarding_agency', 'is', null).limit(500),
       ]);
 
       const myValue = entity?.total_contract_value || 0;
       const myAgencies = [...new Set((myContracts || []).map(c => c.awarding_agency).filter(Boolean))];
       const myNaics = [...new Set((myContracts || []).map(c => c.naics_code).filter(Boolean))];
 
-      if (!myAgencies.length) return { competitors: [], myValue, myContractCount: entity?.contract_count || 0, naicsMarketShare: [] };
+      if (!myAgencies.length) return { competitors: [], myValue, myContractCount: entity?.contract_count || 0, naicsMarketShare: [], winLossByAgency: [], competitionBreakdown: [], setAsideBreakdown: [] };
 
       // Find competitors by shared agencies
       const { data: competitorContracts } = await supabase
@@ -56,14 +57,40 @@ export function EntityCompetitiveTab({ entityId, entityName }: Props) {
         .slice(0, 15)
         .map(c => ({ ...c, agencies: [...c.agencies], naics: [...c.naics], sharedNaics: [...c.naics].filter(n => myNaics.includes(n)).length }));
 
-      // NAICS market share calculation
+      // Win/Loss by Agency — how entity compares to top competitor at each agency
+      const winLossByAgency = myAgencies.slice(0, 8).map(agency => {
+        const mySpend = (myContracts || []).filter(c => c.awarding_agency === agency).reduce((s, c) => s + (Number(c.award_amount) || 0), 0);
+        const myCount = (myContracts || []).filter(c => c.awarding_agency === agency).length;
+        const compSpend = (competitorContracts || []).filter(c => c.awarding_agency === agency).reduce((s, c) => s + (Number(c.award_amount) || 0), 0);
+        const compCount = (competitorContracts || []).filter(c => c.awarding_agency === agency).length;
+        const totalSpend = mySpend + compSpend;
+        const share = totalSpend > 0 ? (mySpend / totalSpend) * 100 : 50;
+        return { agency: agency!.length > 28 ? agency!.slice(0, 28) + '…' : agency!, mySpend, myCount, compSpend, compCount, share, winning: share > 50 };
+      }).sort((a, b) => b.mySpend - a.mySpend);
+
+      // Competition type breakdown
+      const compMap = new Map<string, number>();
+      for (const c of myContracts || []) {
+        const ct = c.competition_type || 'Unknown';
+        compMap.set(ct, (compMap.get(ct) || 0) + 1);
+      }
+      const competitionBreakdown = [...compMap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([name, value]) => ({ name: name.length > 25 ? name.slice(0, 25) + '…' : name, value }));
+
+      // Set-aside breakdown
+      const saMap = new Map<string, number>();
+      for (const c of myContracts || []) {
+        if (c.set_aside_type) saMap.set(c.set_aside_type, (saMap.get(c.set_aside_type) || 0) + 1);
+      }
+      const setAsideBreakdown = [...saMap.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).map(([name, value]) => ({ name, value }));
+
+      // NAICS market share
       const naicsMarketShare = myNaics.slice(0, 5).map(code => {
         const mySpend = (myContracts || []).filter(c => c.naics_code === code).reduce((s, c) => s + (Number(c.award_amount) || 0), 0);
         const totalSpend = (competitorContracts || []).filter(c => c.naics_code === code).reduce((s, c) => s + (Number(c.award_amount) || 0), 0) + mySpend;
         return { code, mySpend, totalSpend, share: totalSpend > 0 ? (mySpend / totalSpend) * 100 : 0 };
       }).filter(n => n.totalSpend > 0);
 
-      return { competitors, myValue, myContractCount: entity?.contract_count || 0, naicsMarketShare };
+      return { competitors, myValue, myContractCount: entity?.contract_count || 0, naicsMarketShare, winLossByAgency, competitionBreakdown, setAsideBreakdown };
     },
   });
 
@@ -87,6 +114,72 @@ export function EntityCompetitiveTab({ entityId, entityName }: Props) {
 
   return (
     <div className="space-y-6">
+      {/* Win/Loss by Agency */}
+      {data.winLossByAgency.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Target className="h-4 w-4" />Win Rate by Agency
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {data.winLossByAgency.map(a => (
+              <div key={a.agency} className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span className="font-medium truncate max-w-[50%]">{a.agency}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">{a.myCount} awards · {fmt(a.mySpend)}</span>
+                    <Badge variant={a.winning ? 'default' : 'secondary'} className="text-xs">
+                      {a.share.toFixed(0)}% share
+                    </Badge>
+                  </div>
+                </div>
+                <div className="flex h-2 rounded-full overflow-hidden bg-muted">
+                  <div className="bg-primary rounded-l-full transition-all" style={{ width: `${a.share}%` }} />
+                  <div className="bg-muted-foreground/20 rounded-r-full flex-1" />
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Competition Type + Set-Aside Breakdown */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {data.competitionBreakdown.length > 0 && (
+          <Card>
+            <CardHeader><CardTitle className="text-sm flex items-center gap-2"><BarChart3 className="h-4 w-4" />Competition Type</CardTitle></CardHeader>
+            <CardContent>
+              <div className="h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={data.competitionBreakdown} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70} label={({ name, value }) => `${name} (${value})`}>
+                      {data.competitionBreakdown.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        {data.setAsideBreakdown.length > 0 && (
+          <Card>
+            <CardHeader><CardTitle className="text-sm">Set-Aside Distribution</CardTitle></CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {data.setAsideBreakdown.map(sa => (
+                  <div key={sa.name} className="flex justify-between items-center text-sm p-2 rounded bg-secondary/30">
+                    <span className="truncate max-w-[70%]">{sa.name}</span>
+                    <Badge variant="outline">{sa.value} awards</Badge>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
       {/* Comparison Chart */}
       <Card>
         <CardHeader>

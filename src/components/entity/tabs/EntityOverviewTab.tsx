@@ -1,6 +1,6 @@
-// BOMB-02 — Overview Tab: Executive summary, metrics, timeline chart, recent activity
+// BOMB-02 — Overview Tab: Executive summary, metrics, timeline chart, SAM registration, recent activity
 import { useQuery } from '@tanstack/react-query';
-import { TrendingUp, FileText, Award, Activity, Sparkles, Clock } from 'lucide-react';
+import { TrendingUp, FileText, Award, Activity, Sparkles, Clock, ShieldCheck, Building2, Globe, BadgeCheck } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -33,6 +33,34 @@ export function EntityOverviewTab({ entityId, entityName, stats }: Props) {
         .order('created_at', { ascending: false })
         .limit(3);
       return data || [];
+    },
+  });
+
+  // SAM Registration data
+  const { data: samRegistration } = useQuery({
+    queryKey: ['entity-sam-registration', entityName],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('sam_entities')
+        .select('*')
+        .ilike('legal_business_name', `%${entityName.split(' ').slice(0, 3).join(' ')}%`)
+        .limit(1)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!entityName,
+  });
+
+  // Entity core data (for certifications/business types)
+  const { data: entityData } = useQuery({
+    queryKey: ['entity-core-data', entityId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('core_entities')
+        .select('business_types, naics_codes, psc_codes, uei, cage_code, duns, website, employee_count, annual_revenue, description')
+        .eq('id', entityId)
+        .single();
+      return data;
     },
   });
 
@@ -110,7 +138,17 @@ export function EntityOverviewTab({ entityId, entityName, stats }: Props) {
 
   const totalValue = (stats?.contractValue || 0) + (stats?.grantValue || 0);
   const avgDealSize = stats?.contractCount ? (stats.contractValue / stats.contractCount) : 0;
-  const largestContract = quarterlyData?.reduce((max, q) => Math.max(max, q.value), 0) || 0;
+
+  // Parse SAM business types
+  const businessTypes: string[] = (() => {
+    if (samRegistration?.business_types) {
+      const bt = samRegistration.business_types;
+      if (Array.isArray(bt)) return bt as string[];
+      if (typeof bt === 'object') return Object.values(bt).filter(Boolean).map(String);
+    }
+    if (entityData?.business_types) return entityData.business_types;
+    return [];
+  })();
 
   return (
     <div className="space-y-6">
@@ -153,6 +191,120 @@ export function EntityOverviewTab({ entityId, entityName, stats }: Props) {
           <p className="text-2xl font-bold mt-1">{stats?.grantCount || 0}</p>
         </Card>
       </div>
+
+      {/* SAM Registration & Company Profile */}
+      {(samRegistration || entityData) && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Building2 className="h-4 w-4" />Company Profile
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Identifiers */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Identifiers</h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  {(samRegistration?.uei || entityData?.uei) && (
+                    <div><span className="text-muted-foreground">UEI:</span> <span className="font-mono font-medium">{samRegistration?.uei || entityData?.uei}</span></div>
+                  )}
+                  {entityData?.cage_code && (
+                    <div><span className="text-muted-foreground">CAGE:</span> <span className="font-mono font-medium">{entityData.cage_code}</span></div>
+                  )}
+                  {entityData?.duns && (
+                    <div><span className="text-muted-foreground">DUNS:</span> <span className="font-mono font-medium">{entityData.duns}</span></div>
+                  )}
+                  {samRegistration?.entity_structure && (
+                    <div><span className="text-muted-foreground">Structure:</span> <span className="font-medium">{samRegistration.entity_structure}</span></div>
+                  )}
+                </div>
+
+                {/* SAM Registration Status */}
+                {samRegistration && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <ShieldCheck className="h-4 w-4 text-success" />
+                    <span className="text-sm font-medium">SAM.gov Registered</span>
+                    <Badge variant="outline" className="text-xs">
+                      {samRegistration.registration_status || 'Active'}
+                    </Badge>
+                    {samRegistration.expiration_date && (
+                      <span className="text-xs text-muted-foreground">Exp: {samRegistration.expiration_date}</span>
+                    )}
+                  </div>
+                )}
+
+                {/* Website */}
+                {(samRegistration?.entity_url || entityData?.website) && (
+                  <div className="flex items-center gap-2">
+                    <Globe className="h-4 w-4 text-muted-foreground" />
+                    <a href={samRegistration?.entity_url || entityData?.website || '#'} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate">
+                      {(samRegistration?.entity_url || entityData?.website || '').replace(/^https?:\/\//, '')}
+                    </a>
+                  </div>
+                )}
+
+                {/* Employee count & Revenue */}
+                {(entityData?.employee_count || entityData?.annual_revenue) && (
+                  <div className="flex gap-4 text-sm">
+                    {entityData?.employee_count && (
+                      <span><span className="text-muted-foreground">Employees:</span> <span className="font-medium">{entityData.employee_count.toLocaleString()}</span></span>
+                    )}
+                    {entityData?.annual_revenue && (
+                      <span><span className="text-muted-foreground">Revenue:</span> <span className="font-medium">{fmt(entityData.annual_revenue)}</span></span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Certifications & Business Types */}
+              <div className="space-y-3">
+                {businessTypes.length > 0 && (
+                  <>
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Certifications & Business Types</h4>
+                    <div className="flex flex-wrap gap-1.5">
+                      {businessTypes.slice(0, 12).map((bt, i) => (
+                        <Badge key={i} variant="secondary" className="text-xs">
+                          <BadgeCheck className="h-3 w-3 mr-1" />{typeof bt === 'string' ? bt : String(bt)}
+                        </Badge>
+                      ))}
+                    </div>
+                  </>
+                )}
+
+                {/* NAICS & PSC codes */}
+                {entityData?.naics_codes && entityData.naics_codes.length > 0 && (
+                  <>
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mt-3">NAICS Codes</h4>
+                    <div className="flex flex-wrap gap-1">
+                      {entityData.naics_codes.slice(0, 8).map(code => (
+                        <Badge key={code} variant="outline" className="text-xs font-mono">{code}</Badge>
+                      ))}
+                      {entityData.naics_codes.length > 8 && <Badge variant="outline" className="text-xs">+{entityData.naics_codes.length - 8}</Badge>}
+                    </div>
+                  </>
+                )}
+                {entityData?.psc_codes && entityData.psc_codes.length > 0 && (
+                  <>
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mt-3">PSC Codes</h4>
+                    <div className="flex flex-wrap gap-1">
+                      {entityData.psc_codes.slice(0, 8).map(code => (
+                        <Badge key={code} variant="outline" className="text-xs font-mono">{code}</Badge>
+                      ))}
+                      {entityData.psc_codes.length > 8 && <Badge variant="outline" className="text-xs">+{entityData.psc_codes.length - 8}</Badge>}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Description */}
+            {entityData?.description && (
+              <p className="text-sm text-muted-foreground mt-4 border-t pt-3">{entityData.description}</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Timeline Chart */}
       {quarterlyData && quarterlyData.length > 1 && (

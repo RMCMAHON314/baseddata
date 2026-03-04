@@ -1,6 +1,6 @@
-// BOMB-02 — Risk & Compliance Tab V2: SAM exclusions, contract expiry timeline, risk breakdown
+// BOMB-02 — Risk & Compliance Tab V2: SAM exclusions, federal audits, contract expiry, risk breakdown
 import { useQuery } from '@tanstack/react-query';
-import { Shield, AlertTriangle, CheckCircle2, Clock, FileText } from 'lucide-react';
+import { Shield, AlertTriangle, CheckCircle2, Clock, FileText, Scale, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -34,6 +34,57 @@ export function EntityRiskTabV2({ entityId, entityName }: Props) {
     },
   });
 
+  // Federal Audit Findings
+  const { data: auditFindings } = useQuery({
+    queryKey: ['entity-audit-findings', entityId, entityName],
+    queryFn: async () => {
+      // Try linked entity first, then name match
+      let { data } = await supabase
+        .from('federal_audit_findings')
+        .select('*')
+        .eq('linked_entity_id', entityId)
+        .order('audit_year', { ascending: false })
+        .limit(10);
+
+      if (!data?.length) {
+        const nameSearch = entityName.split(' ').slice(0, 3).join(' ');
+        const result = await supabase
+          .from('federal_audit_findings')
+          .select('*')
+          .ilike('auditee_name', `%${nameSearch}%`)
+          .order('audit_year', { ascending: false })
+          .limit(10);
+        data = result.data;
+      }
+      return data || [];
+    },
+  });
+
+  // FDA Warning Letters
+  const { data: fdaWarnings } = useQuery({
+    queryKey: ['entity-fda-warnings', entityId, entityName],
+    queryFn: async () => {
+      let { data } = await supabase
+        .from('fda_warning_letters')
+        .select('*')
+        .eq('linked_entity_id', entityId)
+        .order('issue_date', { ascending: false })
+        .limit(5);
+
+      if (!data?.length) {
+        const nameSearch = entityName.split(' ').slice(0, 2).join(' ');
+        const result = await supabase
+          .from('fda_warning_letters')
+          .select('*')
+          .ilike('company_name', `%${nameSearch}%`)
+          .order('issue_date', { ascending: false })
+          .limit(5);
+        data = result.data;
+      }
+      return data || [];
+    },
+  });
+
   // Expiring contracts
   const { data: expiringContracts } = useQuery({
     queryKey: ['entity-expiring', entityId],
@@ -58,6 +109,8 @@ export function EntityRiskTabV2({ entityId, entityName }: Props) {
     MEDIUM: 'bg-warning/10 text-warning border-warning/20',
     HIGH: 'bg-destructive/10 text-destructive border-destructive/20',
   };
+
+  const hasAuditIssues = auditFindings?.some(a => a.material_weakness === 'Y' || a.significant_deficiency === 'Y');
 
   return (
     <div className="space-y-6">
@@ -121,6 +174,85 @@ export function EntityRiskTabV2({ entityId, entityName }: Props) {
         </CardContent>
       </Card>
 
+      {/* Federal Audit Findings */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Scale className="h-4 w-4" />Federal Audit Findings
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {auditFindings && auditFindings.length > 0 ? (
+            <div className="space-y-3">
+              {hasAuditIssues && (
+                <div className="p-3 rounded-lg bg-warning/5 border border-warning/20">
+                  <div className="flex items-center gap-2 mb-1">
+                    <AlertCircle className="h-4 w-4 text-warning" />
+                    <span className="font-medium text-warning">Audit Issues Detected</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">Material weaknesses or significant deficiencies found in federal audits.</p>
+                </div>
+              )}
+              {auditFindings.map((af: any, i: number) => (
+                <div key={i} className="p-3 rounded-lg border bg-secondary/30 text-sm">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <span className="font-medium">{af.auditee_name}</span>
+                    <Badge variant="outline" className="text-xs shrink-0">FY{af.audit_year}</Badge>
+                  </div>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {af.total_federal_expenditures && (
+                      <span className="text-xs text-muted-foreground">Federal Expenditures: {fmt(Number(af.total_federal_expenditures))}</span>
+                    )}
+                    {af.material_weakness === 'Y' && (
+                      <Badge className="bg-destructive/10 text-destructive text-xs">Material Weakness</Badge>
+                    )}
+                    {af.significant_deficiency === 'Y' && (
+                      <Badge className="bg-warning/10 text-warning text-xs">Significant Deficiency</Badge>
+                    )}
+                    {af.questioned_costs && Number(af.questioned_costs) > 0 && (
+                      <Badge className="bg-destructive/10 text-destructive text-xs">Questioned: {fmt(Number(af.questioned_costs))}</Badge>
+                    )}
+                  </div>
+                  {af.federal_program_name && (
+                    <p className="text-xs text-muted-foreground mt-1">Program: {af.federal_program_name}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-3 rounded-lg bg-success/5 border border-success/20 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-success" />
+              <span className="text-sm text-success font-medium">No federal audit findings on record</span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* FDA Warning Letters */}
+      {fdaWarnings && fdaWarnings.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />FDA Enforcement Actions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {fdaWarnings.map((fw: any, i: number) => (
+                <div key={i} className="p-3 rounded-lg border bg-secondary/30 text-sm">
+                  <p className="font-medium">{fw.company_name}</p>
+                  <p className="text-muted-foreground mt-1 line-clamp-2">{fw.subject}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    {fw.issue_date && <span className="text-xs text-muted-foreground">{fmtDate(fw.issue_date)}</span>}
+                    {fw.issuing_office && <Badge variant="outline" className="text-xs">{fw.issuing_office}</Badge>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Contract Expiration Timeline */}
       {expiringContracts && expiringContracts.length > 0 && (
         <Card>
@@ -183,6 +315,18 @@ export function EntityRiskTabV2({ entityId, entityName }: Props) {
                 value={fmt(Number(risk.recompete_exposure))}
                 good={Number(risk.recompete_exposure) < 1000000}
                 detail="Value of contracts expiring within 12 months"
+              />
+              <RiskItem
+                label="Federal Audit Findings"
+                value={auditFindings?.length ? `${auditFindings.length} records` : 'None'}
+                good={!hasAuditIssues}
+                detail={hasAuditIssues ? 'Material weaknesses or deficiencies detected' : 'No audit issues on record'}
+              />
+              <RiskItem
+                label="FDA Actions"
+                value={fdaWarnings?.length ? `${fdaWarnings.length} actions` : 'None'}
+                good={!fdaWarnings?.length}
+                detail={fdaWarnings?.length ? 'FDA enforcement actions found for this entity' : 'No FDA enforcement actions'}
               />
             </div>
           </CardContent>
