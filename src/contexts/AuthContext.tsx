@@ -25,7 +25,6 @@ interface SubscriptionState {
 
 // Map Stripe product IDs to tier names
 const PRODUCT_TIERS: Record<string, string> = {
-  'prod_U5QGa4LQQ3FTM5': 'pro',
   'prod_U5QYBgXK9IJhW1': 'pro',
 };
 

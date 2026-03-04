@@ -15,7 +15,7 @@ import { toast } from 'sonner';
 // The restricted API key lacks rak_plan_write, so prices must be created manually in Stripe Dashboard
 // Once created, replace this placeholder with the real price_xxx ID
 const STRIPE_PRICES = {
-  pro_monthly: 'price_REPLACE_WITH_REAL_PRO_PRICE_ID',
+  pro_monthly: 'price_1T7Fp4AAbooBTflFQEamJfnZ',
 };
 
 const plans = [
@@ -45,7 +45,7 @@ const plans = [
     id: 'pro',
     name: 'Pro',
     icon: Building2,
-    price: '$99',
+    price: '$99.99',
     period: '/month',
     annual: '$990/year (save $198)',
     description: 'For BD professionals and analysts',
