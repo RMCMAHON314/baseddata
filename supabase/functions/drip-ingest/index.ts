@@ -86,6 +86,10 @@ async function executeTask(
     case 'lobbying_disclosures': return ingestLobbyingDisclosures(config, supabase);
     case 'gsa_contracts': return ingestGSAContracts(config, supabase);
     case 'analytics_daily': return computeAnalyticsDaily(config, supabase);
+    case 'web_enrich_batch': return webEnrichBatch(config, supabase);
+    case 'ai_search_opportunities': return aiSearchIntel('opportunities', config, supabase);
+    case 'ai_search_grants': return aiSearchIntel('grants', config, supabase);
+    case 'ai_search_news': return aiSearchNews(config, supabase);
     default: throw new Error(`Unknown task type: ${type}`);
   }
 }
@@ -714,4 +718,61 @@ async function computeAnalyticsDaily(_config: Record<string, unknown>, supabase:
   }, { onConflict: 'date' });
 
   return { records: error ? 0 : 1, summary: { date: today, entities: entities.count, contracts: contracts.count } };
+}
+
+// ─── Web Enrich Batch (calls web-enrich function) ───────────────
+async function webEnrichBatch(_config: Record<string, unknown>, supabase: ReturnType<typeof createClient>) {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+  const resp = await fetchWithTimeout(`${supabaseUrl}/functions/v1/web-enrich`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ batch: true }),
+  }, 50000);
+
+  const data = await resp.json();
+  const results = data.results || [];
+  const factsCreated = results.reduce((s: number, r: any) => s + (r.facts_created || 0), 0);
+  return { records: factsCreated, summary: { entities_processed: results.length, facts_created: factsCreated } };
+}
+
+// ─── AI Search Intel (calls ai-search-intel function) ───────────
+async function aiSearchIntel(mode: string, config: Record<string, unknown>, supabase: ReturnType<typeof createClient>) {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+  const resp = await fetchWithTimeout(`${supabaseUrl}/functions/v1/ai-search-intel`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mode, keywords: config.keywords }),
+  }, 50000);
+
+  const data = await resp.json();
+  return { records: data.inserted || 0, summary: data };
+}
+
+// ─── AI Search News (entity news via ai-search-intel) ───────────
+async function aiSearchNews(config: Record<string, unknown>, supabase: ReturnType<typeof createClient>) {
+  // Pick a random entity to search news for
+  const { data: entities } = await supabase
+    .from('core_entities')
+    .select('id')
+    .gte('total_contract_value', 1000000)
+    .order('updated_at', { ascending: true })
+    .limit(1);
+
+  if (!entities?.length) return { records: 0, summary: { message: 'No entities to search' } };
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+  const resp = await fetchWithTimeout(`${supabaseUrl}/functions/v1/ai-search-intel`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mode: 'news', entity_id: entities[0].id }),
+  }, 50000);
+
+  const data = await resp.json();
+  return { records: data.facts_created || 0, summary: data };
 }
