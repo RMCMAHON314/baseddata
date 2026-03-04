@@ -1,9 +1,13 @@
+// BASED DATA — USPTO Patent Data Loader V2
+// Uses PatentsView PatentSearch API v2 (search.patentsview.org)
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
+
+const API_BASE = 'https://search.patentsview.org/api/v1/patent/'
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
@@ -15,12 +19,12 @@ Deno.serve(async (req) => {
 
   const body = await req.json().catch(() => ({}))
   const queries = body.queries || [
-    'artificial intelligence',
+    'defense',
     'cybersecurity',
+    'artificial intelligence',
     'cloud computing',
-    'machine learning',
-    'blockchain',
-    'quantum computing'
+    'quantum computing',
+    'biotechnology'
   ]
 
   try {
@@ -29,40 +33,31 @@ Deno.serve(async (req) => {
 
     for (const query of queries) {
       try {
-        await new Promise(r => setTimeout(r, 1500))
+        await new Promise(r => setTimeout(r, 1200))
         
-        console.log(`[load-patents] Searching: "${query}"`)
+        console.log(`[load-patents] Searching PatentsView v2: "${query}"`)
         
-        const res = await fetch('https://api.patentsview.org/patents/query', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            q: { _or: [
-              { _text_any: { patent_title: query } },
-              { _text_any: { patent_abstract: query } }
-            ]},
-            f: [
-              'patent_number', 'patent_title', 'patent_abstract', 'patent_date', 'patent_type',
-              'assignee_organization', 'assignee_state', 'assignee_country',
-              'inventor_first_name', 'inventor_last_name',
-              'cpc_group_id', 'patent_num_cited_by_us_patents'
-            ],
-            o: { page: 1, per_page: 100 },
-            s: [{ patent_date: 'desc' }],
-          }),
+        // PatentsView v2 uses GET with q parameter as JSON
+        const q = JSON.stringify({ _text_any: { patent_abstract: query } })
+        const f = JSON.stringify([
+          'patent_id', 'patent_title', 'patent_abstract', 'patent_date', 'patent_type',
+          'assignees.assignee_organization', 'assignees.assignee_state',
+          'assignees.assignee_country', 'inventors.inventor_name_first',
+          'inventors.inventor_name_last', 'cpcs.cpc_group_id',
+          'patent_num_us_patent_citations'
+        ])
+        const o = JSON.stringify({ size: 100 })
+        const s = JSON.stringify([{ patent_date: 'desc' }])
+        
+        const url = `${API_BASE}?q=${encodeURIComponent(q)}&f=${encodeURIComponent(f)}&o=${encodeURIComponent(o)}&s=${encodeURIComponent(s)}`
+        
+        const res = await fetch(url, {
+          headers: { 'Accept': 'application/json' }
         })
 
         if (!res.ok) {
-          console.error(`[load-patents] PatentsView API ${res.status}: ${res.statusText}`)
+          console.error(`[load-patents] PatentsView v2 ${res.status}: ${res.statusText}`)
           results.push({ query, error: `${res.status}`, loaded: 0 })
-          
-          // If API is gone (410), try alternative
-          if (res.status === 410) {
-            console.log('[load-patents] PatentsView API deprecated, trying v1...')
-            const altResult = await tryAlternativePatentAPI(supabase, query)
-            results.push({ query, ...altResult })
-            totalLoaded += altResult.loaded || 0
-          }
           continue
         }
 
@@ -75,7 +70,7 @@ Deno.serve(async (req) => {
         }
 
         const batch = patents.map((p: any) => ({
-          patent_number: p.patent_number,
+          patent_number: p.patent_id,
           title: p.patent_title || 'Untitled',
           abstract: p.patent_abstract?.substring(0, 5000),
           patent_type: p.patent_type,
@@ -83,11 +78,11 @@ Deno.serve(async (req) => {
           assignee_name: p.assignees?.[0]?.assignee_organization,
           assignee_state: p.assignees?.[0]?.assignee_state,
           assignee_country: p.assignees?.[0]?.assignee_country,
-          inventors: (p.inventors || []).map((i: any) => `${i.inventor_first_name} ${i.inventor_last_name}`).slice(0, 10),
+          inventors: (p.inventors || []).map((i: any) => `${i.inventor_name_first || ''} ${i.inventor_name_last || ''}`).slice(0, 10),
           cpc_codes: (p.cpcs || []).map((c: any) => c.cpc_group_id).filter(Boolean).slice(0, 10),
-          citation_count: p.patent_num_cited_by_us_patents || 0,
+          citation_count: p.patent_num_us_patent_citations || 0,
           search_keyword: query,
-          source: 'patentsview',
+          source: 'patentsview_v2',
           updated_at: new Date().toISOString(),
         }))
 
@@ -99,7 +94,7 @@ Deno.serve(async (req) => {
           totalLoaded += batch.length
           results.push({ query, returned: patents.length, loaded: batch.length })
         } else {
-          console.error(`[load-patents] Upsert error for "${query}":`, error.message)
+          console.error(`[load-patents] Upsert error:`, error.message)
           // Fallback insert
           const { error: ie } = await supabase.from('uspto_patents').insert(batch)
           if (!ie) {
@@ -133,36 +128,3 @@ Deno.serve(async (req) => {
     })
   }
 })
-
-async function tryAlternativePatentAPI(supabase: any, query: string) {
-  // Try USPTO Open Data API as fallback
-  try {
-    const url = `https://developer.uspto.gov/ibd-api/v1/application/publications?searchText=${encodeURIComponent(query)}&start=0&rows=50`
-    const res = await fetch(url)
-    if (!res.ok) return { loaded: 0, error: `USPTO alt API ${res.status}` }
-    
-    const data = await res.json()
-    const docs = data.response?.docs || []
-    
-    const batch = docs.map((d: any) => ({
-      patent_number: d.patentApplicationNumber || d.publicationDocumentIdentifier || `uspto-${Math.random().toString(36).slice(2, 10)}`,
-      title: d.inventionTitle || 'Untitled',
-      abstract: d.abstractText?.join(' ')?.substring(0, 5000),
-      patent_type: d.applicationTypeCategory,
-      grant_date: d.publicationDate,
-      assignee_name: d.applicantName?.join(', '),
-      inventors: d.inventorName || [],
-      search_keyword: query,
-      source: 'uspto_ibd',
-      updated_at: new Date().toISOString(),
-    }))
-    
-    if (batch.length > 0) {
-      const { error } = await supabase.from('uspto_patents').insert(batch)
-      if (!error) return { loaded: batch.length }
-    }
-    return { loaded: 0 }
-  } catch (e) {
-    return { loaded: 0, error: e.message }
-  }
-}
