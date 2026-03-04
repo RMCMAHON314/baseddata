@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { GlobalLayout } from '@/components/layout/GlobalLayout';
 import { useLastRefresh, formatRefreshTime } from '@/hooks/useLastRefresh';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -122,6 +123,7 @@ export default function Dashboard() {
   };
 
   return (
+    <GlobalLayout>
     <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
       <header className="border-b border-border px-6 py-4">
@@ -368,6 +370,7 @@ export default function Dashboard() {
         </Card>
       </div>
     </div>
+    </GlobalLayout>
   );
 }
 

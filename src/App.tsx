@@ -14,6 +14,7 @@ import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { AdminRoute } from "@/components/layout/AdminRoute";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
+import { AppInterceptors } from "@/components/layout/AppInterceptors";
 
 const AiAssistant = lazy(() => import("@/components/ai/AiAssistant"));
 
@@ -108,6 +109,7 @@ const App = () => {
             <Toaster />
             <Sonner />
             <BrowserRouter>
+              <AppInterceptors />
               <ErrorBoundary>
               <Suspense fallback={<PageLoader />}>
                 <Routes>

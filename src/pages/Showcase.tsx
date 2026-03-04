@@ -284,9 +284,9 @@ export default function Showcase() {
       <section className="py-8 sm:py-12 px-4 sm:px-6 bg-muted/10">
         <div className="max-w-4xl mx-auto text-center">
           <p className="text-sm text-muted-foreground font-medium">
-            Trusted by government contractors, policy analysts, and business development professionals
+            Built for government contractors, policy analysts, and business development professionals
           </p>
-          <p className="text-xs text-muted-foreground/60 mt-2">Join 50+ organizations using real-time federal intelligence</p>
+          <p className="text-xs text-muted-foreground/60 mt-2">Powered by 9 federal data sources updated every 4 hours</p>
         </div>
       </section>
 
