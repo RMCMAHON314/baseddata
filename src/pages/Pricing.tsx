@@ -110,7 +110,42 @@ const FAQS = [
 
 export default function Pricing() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [loading, setLoading] = useState<string | null>(null);
+
+  const handleCheckout = async (planId: string, priceId: string | null) => {
+    if (!priceId) {
+      if (planId === 'enterprise') {
+        window.location.href = 'mailto:sales@baseddata.io';
+      } else {
+        navigate('/onboarding');
+      }
+      return;
+    }
+
+    if (!user) {
+      toast.info('Please sign in first to subscribe');
+      navigate('/onboarding');
+      return;
+    }
+
+    setLoading(planId);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { priceId },
+      });
+      if (error) throw error;
+      if (data?.url) {
+        window.open(data.url, '_blank');
+      }
+    } catch (err) {
+      console.error('Checkout error:', err);
+      toast.error('Failed to start checkout. Please try again.');
+    } finally {
+      setLoading(null);
+    }
+  };
 
   return (
     <GlobalLayout>
@@ -183,15 +218,14 @@ export default function Pricing() {
                     <Button
                       className={`w-full ${plan.popular ? '' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
                       variant={plan.popular ? 'default' : 'secondary'}
-                      onClick={() => {
-                        if (plan.id === 'enterprise') {
-                          window.location.href = 'mailto:sales@baseddata.io';
-                        } else {
-                          navigate('/onboarding');
-                        }
-                      }}
+                      disabled={loading === plan.id}
+                      onClick={() => handleCheckout(plan.id, plan.priceId)}
                     >
-                      {plan.cta} {plan.id !== 'enterprise' && <ArrowRight className="w-4 h-4 ml-1" />}
+                      {loading === plan.id ? (
+                        <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Processing...</>
+                      ) : (
+                        <>{plan.cta} {plan.id !== 'enterprise' && <ArrowRight className="w-4 h-4 ml-1" />}</>
+                      )}
                     </Button>
                   </CardContent>
                 </Card>
