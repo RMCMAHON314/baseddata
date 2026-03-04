@@ -777,3 +777,18 @@ async function aiSearchNews(config: Record<string, unknown>, supabase: ReturnTyp
   const data = await resp.json();
   return { records: data.facts_created || 0, summary: data };
 }
+
+// ─── AI Dossier Batch (calls ai-dossier function) ───────────────
+async function aiDossierBatch(_config: Record<string, unknown>, supabase: ReturnType<typeof createClient>) {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+  const resp = await fetchWithTimeout(`${supabaseUrl}/functions/v1/ai-dossier`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${serviceKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mode: 'batch' }),
+  }, 55000);
+
+  const data = await resp.json();
+  return { records: data.processed || 0, summary: data };
+}
