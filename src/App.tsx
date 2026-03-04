@@ -153,6 +153,7 @@ const App = () => {
           </TooltipProvider>
         </AuthProvider>
       </QueryClientProvider>
+      </ThemeProvider>
     </HelmetProvider>
   );
 };
