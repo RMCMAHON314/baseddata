@@ -9,6 +9,7 @@ import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { initializeBasedData } from "@/init/startup";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PageSkeleton } from "@/components/ui/PageSkeleton";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { AdminRoute } from "@/components/layout/AdminRoute";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
