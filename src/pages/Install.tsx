@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Download, Smartphone, Monitor, CheckCircle, Share, Plus } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { Link } from 'react-router-dom';
+import { PageSEO } from '@/components/layout/PageSEO';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -45,6 +46,7 @@ export default function Install() {
 
   return (
     <div className="min-h-screen bg-[hsl(222,47%,5%)] text-white flex flex-col items-center justify-center p-6">
+      <PageSEO title="Install BasedData App" description="Install BasedData as a progressive web app for instant access to government contract intelligence on any device." path="/install" />
       <div className="max-w-lg w-full space-y-8 text-center">
         <Link to="/" className="inline-block">
           <Logo size="lg" />

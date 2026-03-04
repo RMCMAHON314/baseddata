@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
 import { useAuth } from '@/contexts/AuthContext';
+import { PageSEO } from '@/components/layout/PageSEO';
 
 const PERKS = [
   { icon: Zap, title: 'Unlimited Exports', desc: 'CSV, XLSX, PDF, and JSON — no restrictions' },

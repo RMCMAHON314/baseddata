@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Lock, Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { toast } from 'sonner';
+import { PageSEO } from '@/components/layout/PageSEO';
 
 export default function ResetPassword() {
   const [password, setPassword] = useState('');

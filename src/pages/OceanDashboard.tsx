@@ -10,6 +10,7 @@ import {
   LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer
 } from 'recharts';
+import { PageSEO } from '@/components/layout/PageSEO';
 import {
   Activity, Database, TrendingUp, AlertTriangle, CheckCircle,
   XCircle, Clock, RefreshCw, Waves, Building2, FileText, Award,
@@ -153,6 +154,7 @@ export default function OceanDashboard() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <PageSEO title="Ocean Pipeline" description="Data ingestion pipeline control center." path="/ocean" noindex />
       {/* Header */}
       <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10 border-b border-border">
         <div className="max-w-7xl mx-auto px-6 py-6">

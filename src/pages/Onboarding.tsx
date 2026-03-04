@@ -16,6 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/Logo';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePlatformStats } from '@/hooks/useNewSources';
+import { PageSEO } from '@/components/layout/PageSEO';
 import { useQuery } from '@tanstack/react-query';
 
 const STEPS = [
