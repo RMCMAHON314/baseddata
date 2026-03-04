@@ -1950,7 +1950,7 @@ export type Database = {
       data_sources: {
         Row: {
           content_hash: string | null
-          crawl_frequency: unknown
+          crawl_frequency: string | null
           created_at: string
           domain: string
           id: string
@@ -1963,7 +1963,7 @@ export type Database = {
         }
         Insert: {
           content_hash?: string | null
-          crawl_frequency?: unknown
+          crawl_frequency?: string | null
           created_at?: string
           domain: string
           id?: string
@@ -1976,7 +1976,7 @@ export type Database = {
         }
         Update: {
           content_hash?: string | null
-          crawl_frequency?: unknown
+          crawl_frequency?: string | null
           created_at?: string
           domain?: string
           id?: string
@@ -8470,7 +8470,7 @@ export type Database = {
       calculate_opportunity_scores: { Args: never; Returns: undefined }
       calculate_retry_delay: {
         Args: { p_attempt: number; p_base_delay?: number }
-        Returns: unknown
+        Returns: string
       }
       calculate_state_market_concentration: {
         Args: never
