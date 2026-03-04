@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { X, Loader2, Zap, Mail, Lock, User } from "lucide-react";
 import { toast } from "sonner";
 
@@ -14,7 +15,7 @@ interface AuthModalProps {
 }
 
 export function AuthModal({ isOpen, onClose, defaultMode = "signup" }: AuthModalProps) {
-  const [mode, setMode] = useState<"signin" | "signup">(defaultMode);
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot">(defaultMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -79,113 +80,95 @@ export function AuthModal({ isOpen, onClose, defaultMode = "signup" }: AuthModal
                   <Zap className="w-7 h-7 text-primary-foreground" />
                 </div>
                 <h2 className="font-display text-2xl font-bold text-foreground">
-                  {mode === "signup" ? "Get Started" : "Welcome Back"}
+                  {mode === "signup" ? "Get Started" : mode === "forgot" ? "Reset Password" : "Welcome Back"}
                 </h2>
                 <p className="text-muted-foreground text-sm mt-2">
                   {mode === "signup"
                     ? "Create an account and get 100 free credits"
-                    : "Sign in to continue generating datasets"}
+                    : mode === "forgot"
+                    ? "We'll send you a reset link"
+                    : "Sign in to continue"}
                 </p>
               </div>
 
-              {/* Form */}
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {mode === "signup" && (
+              {mode === "forgot" ? (
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  setIsLoading(true);
+                  try {
+                    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+                      redirectTo: `${window.location.origin}/reset-password`,
+                    });
+                    if (error) throw error;
+                    toast.success("Check your email for the reset link");
+                    setMode("signin");
+                  } catch (error: any) {
+                    toast.error(error.message || "Failed to send reset email");
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="fullName" className="text-foreground">
-                      Full name
-                    </Label>
+                    <Label htmlFor="resetEmail" className="text-foreground">Email</Label>
                     <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="fullName"
-                        type="text"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        placeholder="John Doe"
-                        className="pl-10"
-                      />
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input id="resetEmail" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required className="pl-10" />
                     </div>
                   </div>
-                )}
+                  <Button type="submit" size="lg" className="w-full" disabled={isLoading}>
+                    {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Send Reset Link"}
+                  </Button>
+                  <p className="text-center text-sm text-muted-foreground">
+                    <button onClick={() => setMode("signin")} className="text-primary hover:underline transition-colors">Back to sign in</button>
+                  </p>
+                </form>
+              ) : (
+                <>
+                  {/* Form */}
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    {mode === "signup" && (
+                      <div className="space-y-2">
+                        <Label htmlFor="fullName" className="text-foreground">Full name</Label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input id="fullName" type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="John Doe" className="pl-10" />
+                        </div>
+                      </div>
+                    )}
+                    <div className="space-y-2">
+                      <Label htmlFor="email" className="text-foreground">Email</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required className="pl-10" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="password" className="text-foreground">Password</Label>
+                        {mode === "signin" && (
+                          <button type="button" onClick={() => setMode("forgot")} className="text-xs text-primary hover:underline transition-colors">Forgot password?</button>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required minLength={6} className="pl-10" />
+                      </div>
+                    </div>
+                    <Button type="submit" size="lg" className="w-full" disabled={isLoading}>
+                      {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : mode === "signup" ? "Create Account" : "Sign In"}
+                    </Button>
+                  </form>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-foreground">
-                    Email
-                  </Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="you@example.com"
-                      required
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-foreground">
-                    Password
-                  </Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      required
-                      minLength={6}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-
-                <Button
-                  type="submit"
-                  size="lg"
-                  className="w-full"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : mode === "signup" ? (
-                    "Create Account"
-                  ) : (
-                    "Sign In"
-                  )}
-                </Button>
-              </form>
-
-              {/* Toggle mode */}
-              <p className="text-center text-sm text-muted-foreground mt-6">
-                {mode === "signup" ? (
-                  <>
-                    Already have an account?{" "}
-                    <button
-                      onClick={() => setMode("signin")}
-                      className="text-primary hover:underline transition-colors"
-                    >
-                      Sign in
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    Don't have an account?{" "}
-                    <button
-                      onClick={() => setMode("signup")}
-                      className="text-primary hover:underline transition-colors"
-                    >
-                      Sign up
-                    </button>
-                  </>
-                )}
-              </p>
+                  {/* Toggle mode */}
+                  <p className="text-center text-sm text-muted-foreground mt-6">
+                    {mode === "signup" ? (
+                      <>Already have an account?{" "}<button onClick={() => setMode("signin")} className="text-primary hover:underline transition-colors">Sign in</button></>
+                    ) : (
+                      <>Don't have an account?{" "}<button onClick={() => setMode("signup")} className="text-primary hover:underline transition-colors">Sign up</button></>
+                    )}
+                  </p>
+                </>
+              )}
             </div>
           </motion.div>
         </>

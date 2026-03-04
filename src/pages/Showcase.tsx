@@ -365,16 +365,14 @@ export default function Showcase() {
                 Start exploring federal spending data and discover opportunities in your market.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 max-w-md mx-auto">
-                <Input
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="Enter your email"
-                  type="email"
-                  className="h-12 bg-background"
-                />
                 <Link to="/onboarding">
                   <Button size="lg" className="text-base px-8 h-12 gap-2 rounded-xl whitespace-nowrap">
-                    Start Free <ArrowRight className="w-4 h-4" />
+                    Start Free Trial <ArrowRight className="w-4 h-4" />
+                  </Button>
+                </Link>
+                <Link to="/explore">
+                  <Button size="lg" variant="outline" className="text-base px-8 h-12 gap-2 rounded-xl whitespace-nowrap">
+                    Explore Data
                   </Button>
                 </Link>
               </div>

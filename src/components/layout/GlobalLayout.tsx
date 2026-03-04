@@ -7,7 +7,7 @@ import {
   Bell, User, LogOut, Bookmark, GitCompare,
   ChevronRight, Database, FileText, Compass, Brain, Beaker, DollarSign,
   GraduationCap, Heart, Shield, Wrench, Activity, Gauge,
-  Download as InstallIcon, Key, Settings
+  Download as InstallIcon, Key, Settings, Sun, Moon, Crown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +24,7 @@ import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
 import { DataFreshnessIndicator } from '@/components/layout/DataFreshnessIndicator';
 import { useIsAdmin } from '@/components/layout/AdminRoute';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from 'next-themes';
 
 const PRIMARY_NAV = [
   { path: '/explore', label: 'Explore', icon: Compass },
@@ -56,8 +57,9 @@ export function GlobalLayout({ children }: { children: React.ReactNode }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
-  const { user } = useAuth();
+  const { user, tier, subscription } = useAuth();
   const { data: isAdmin } = useIsAdmin();
+  const { theme, setTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const searchTimeout = useRef<ReturnType<typeof setTimeout>>();
@@ -166,6 +168,18 @@ export function GlobalLayout({ children }: { children: React.ReactNode }) {
 
           {/* Right — User menu */}
           <div className="flex items-center gap-1">
+            {/* Pro badge */}
+            {tier === 'pro' && subscription.subscribed && (
+              <Badge variant="outline" className="hidden sm:flex gap-1 text-xs border-primary/30 text-primary">
+                <Crown className="h-3 w-3" /> Pro
+              </Badge>
+            )}
+
+            {/* Theme toggle */}
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} aria-label="Toggle theme">
+              {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </Button>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" aria-label="User menu"><User className="h-4 w-4" /></Button>

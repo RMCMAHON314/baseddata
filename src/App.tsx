@@ -43,6 +43,7 @@ const Education = lazy(() => import("./pages/Education"));
 const LaborRatesExplorer = lazy(() => import("./pages/LaborRatesExplorer"));
 const Install = lazy(() => import("./pages/Install"));
 const LaunchChecklist = lazy(() => import("./pages/LaunchChecklist"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -128,6 +129,7 @@ const App = () => {
                   <Route path="/agency/:agencyName" element={<AgencyDeepDive />} />
                   <Route path="/health" element={<Health />} />
                   <Route path="/compare" element={<EntityCompare />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
 
                   {/* Protected routes (require login) */}
                   <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
