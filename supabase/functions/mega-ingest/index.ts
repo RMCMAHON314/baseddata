@@ -30,18 +30,18 @@ serve(async (req) => {
   )
 
   try {
-    // Get next batch of jobs (process up to 5 at once)
+    // Get next batch of jobs from the refactored ingestion_queue
     const { data: jobs, error: jobsError } = await supabase
       .from('ingestion_queue')
-      .select('*, source:ingestion_sources(*)')
+      .select('*')
       .eq('status', 'pending')
-      .lte('scheduled_for', new Date().toISOString())
+      .lte('next_run_at', new Date().toISOString())
       .order('priority', { ascending: false })
       .limit(5)
 
     if (jobsError) {
       console.error('Error fetching jobs:', jobsError)
-      throw jobsError
+      throw new Error(`Mega ingest error: ${JSON.stringify(jobsError)}`)
     }
 
     if (!jobs || jobs.length === 0) {
@@ -58,16 +58,17 @@ serve(async (req) => {
       // Mark as running
       await supabase
         .from('ingestion_queue')
-        .update({ status: 'running', last_attempt_at: new Date().toISOString(), attempts: (job.attempts || 0) + 1 })
+        .update({ status: 'running', started_at: new Date().toISOString(), attempt_count: (job.attempt_count || 0) + 1 })
         .eq('id', job.id)
 
       const startTime = Date.now()
-      let result: IngestResult = { source: job.source_slug, records: 0, entities: 0, contracts: 0, grants: 0, error: null }
+      const slug = job.task_type || job.source_label || ''
+      let result: IngestResult = { source: slug, records: 0, entities: 0, contracts: 0, grants: 0, error: null }
+
+      // Look up source config if needed
+      const { data: source } = await supabase.from('ingestion_sources').select('*').eq('slug', slug).maybeSingle()
 
       try {
-        // Route to appropriate handler based on source category
-        const source = job.source
-        const slug = source?.slug || job.source_slug
 
         // FEDERAL SPENDING HANDLERS
         if (slug.startsWith('usaspending')) {
@@ -133,7 +134,7 @@ serve(async (req) => {
 
       } catch (e: unknown) {
         result.error = e instanceof Error ? e.message : 'Unknown error'
-        console.error(`❌ ${job.source_slug} error:`, result.error)
+        console.error(`❌ ${slug} error:`, result.error)
       }
 
       const duration = Date.now() - startTime
@@ -144,32 +145,24 @@ serve(async (req) => {
         .update({
           status: result.error ? 'failed' : 'completed',
           completed_at: result.error ? null : new Date().toISOString(),
-          last_error: result.error,
-          records_fetched: result.records
+          error_message: result.error,
+          records_ingested: result.records
         })
         .eq('id', job.id)
 
-      // Update source stats
-      if (job.source) {
+      // Update source stats if source exists
+      if (source) {
         await supabase
           .from('ingestion_sources')
           .update({
-            last_fetch_at: new Date().toISOString(),
-            calls_today: (job.source.calls_today || 0) + 1,
-            total_records_fetched: (job.source.total_records_fetched || 0) + result.records,
-            total_entities_created: (job.source.total_entities_created || 0) + result.entities,
-            consecutive_failures: result.error ? (job.source.consecutive_failures || 0) + 1 : 0,
-            health_status: result.error 
-              ? ((job.source.consecutive_failures || 0) >= 2 ? 'failing' : 'degraded')
-              : 'healthy',
-            last_error: result.error,
-            avg_response_time_ms: Math.round(((job.source.avg_response_time_ms || duration) + duration) / 2)
+            last_fetched_at: new Date().toISOString(),
+            is_active: !result.error,
           })
-          .eq('slug', job.source_slug)
+          .eq('id', source.id)
       }
 
       results.push({ ...result, duration_ms: duration })
-      console.log(`${result.error ? '❌' : '✅'} ${job.source_slug}: ${result.records} records in ${duration}ms`)
+      console.log(`${result.error ? '❌' : '✅'} ${slug}: ${result.records} records in ${duration}ms`)
     }
 
     // Log batch result
