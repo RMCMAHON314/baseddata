@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useLastRefresh, formatRefreshTime } from '@/hooks/useLastRefresh';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
