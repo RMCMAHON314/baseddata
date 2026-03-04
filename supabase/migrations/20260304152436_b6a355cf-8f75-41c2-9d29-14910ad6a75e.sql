@@ -1,0 +1,21 @@
+-- Force RLS on profiles and user_profiles to close remaining gaps
+ALTER TABLE public.profiles FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.user_profiles FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.api_keys FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_conversations FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.credit_transactions FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.datasets FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.queries FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.saved_searches FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.search_history FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.webhooks FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.shared_links FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.referrals FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.data_exports FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.embed_widgets FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.portfolios FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.opportunity_pipeline FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.entity_watchlist FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.scheduled_pipelines FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.generated_reports FORCE ROW LEVEL SECURITY;
+ALTER TABLE public.user_feedback FORCE ROW LEVEL SECURITY;
