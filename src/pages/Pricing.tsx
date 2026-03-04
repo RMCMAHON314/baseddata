@@ -3,10 +3,19 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, X, Zap, Building2, Crown, ArrowRight, ChevronDown } from 'lucide-react';
+import { Check, X, Zap, Building2, Crown, ArrowRight, ChevronDown, Loader2 } from 'lucide-react';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
 import { PageSEO } from '@/components/layout/PageSEO';
 import { motion } from 'framer-motion';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+
+// TODO: Replace these with real Stripe price IDs once created in your Stripe dashboard
+const STRIPE_PRICES = {
+  pro_monthly: 'price_REPLACE_WITH_REAL_PRO_PRICE_ID',
+  // pro_annual: 'price_REPLACE_WITH_REAL_ANNUAL_PRICE_ID',
+};
 
 const plans = [
   {
@@ -29,6 +38,7 @@ const plans = [
     cta: 'Start Free',
     popular: false,
     href: '/onboarding',
+    priceId: null,
   },
   {
     id: 'pro',
@@ -51,6 +61,7 @@ const plans = [
     cta: 'Start Free Trial',
     popular: true,
     href: '/onboarding',
+    priceId: STRIPE_PRICES.pro_monthly,
   },
   {
     id: 'enterprise',
@@ -72,6 +83,7 @@ const plans = [
     cta: 'Contact Sales',
     popular: false,
     href: 'mailto:sales@baseddata.io',
+    priceId: null,
   },
 ];
 
