@@ -1,6 +1,6 @@
 // BASED DATA - Omniscient AI Assistant — BOMB-07 Production Upgrade
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { X, Send, Loader2, Building2, Target, BarChart3, Brain, DollarSign, Search, Sparkles } from 'lucide-react';
 import aiChatIcon from '@/assets/ai-chat-icon.png';
 import { Button } from '@/components/ui/button';
@@ -133,24 +133,25 @@ export function AiAssistant() {
       )}
 
       {/* Chat Panel */}
-      <AnimatePresence>
-        {isOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/20 z-50 backdrop-blur-sm"
-              onClick={() => setIsOpen(false)}
-            />
+      {isOpen && (
+        <>
+          <motion.div
+            key="ai-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/20 z-50 backdrop-blur-sm"
+            onClick={() => setIsOpen(false)}
+          />
 
-            <motion.div
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="fixed right-0 top-0 bottom-0 w-full max-w-[400px] bg-card border-l border-border shadow-2xl z-50 flex flex-col"
-            >
+          <motion.div
+            key="ai-panel"
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="fixed right-0 top-0 bottom-0 w-full max-w-[400px] bg-card border-l border-border shadow-2xl z-50 flex flex-col"
+          >
               {/* Header */}
               <div className="p-4 border-b border-border flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-3">
@@ -259,10 +260,9 @@ export function AiAssistant() {
                   </Button>
                 </form>
               </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+          </motion.div>
+        </>
+      )}
     </>
   );
 }

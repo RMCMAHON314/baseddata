@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
+import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { initializeBasedData } from "@/init/startup";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -43,6 +44,7 @@ const Education = lazy(() => import("./pages/Education"));
 const LaborRatesExplorer = lazy(() => import("./pages/LaborRatesExplorer"));
 const Install = lazy(() => import("./pages/Install"));
 const LaunchChecklist = lazy(() => import("./pages/LaunchChecklist"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -98,6 +100,7 @@ const App = () => {
 
   return (
     <HelmetProvider>
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <TooltipProvider>
@@ -128,6 +131,7 @@ const App = () => {
                   <Route path="/agency/:agencyName" element={<AgencyDeepDive />} />
                   <Route path="/health" element={<Health />} />
                   <Route path="/compare" element={<EntityCompare />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
 
                   {/* Protected routes (require login) */}
                   <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
@@ -149,6 +153,7 @@ const App = () => {
           </TooltipProvider>
         </AuthProvider>
       </QueryClientProvider>
+      </ThemeProvider>
     </HelmetProvider>
   );
 };

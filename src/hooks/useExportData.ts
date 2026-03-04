@@ -1,6 +1,7 @@
 // BOMB-10 — Multi-format export system (CSV, JSON, XLSX, PDF)
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import { useSubscriptionGate } from '@/hooks/useSubscriptionGate';
 
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -16,7 +17,10 @@ function dateSuffix() {
 }
 
 export function useExportCSV() {
+  const { requirePro } = useSubscriptionGate();
+
   const exportToCSV = (data: Record<string, unknown>[], filename: string) => {
+    if (!requirePro('Data export')) return;
     if (!data || data.length === 0) return;
     const headers = Object.keys(data[0]);
     const csvContent = [
@@ -40,7 +44,9 @@ export function useExportCSV() {
 }
 
 export function useExportJSON() {
+  const { requirePro } = useSubscriptionGate();
   const exportToJSON = (data: unknown, filename: string) => {
+    if (!requirePro('Data export')) return;
     const json = JSON.stringify(data, null, 2);
     downloadBlob(new Blob([json], { type: 'application/json' }), `${filename}_${dateSuffix()}.json`);
     toast.success('Exported as JSON');
@@ -49,7 +55,9 @@ export function useExportJSON() {
 }
 
 export function useExportXLSX() {
+  const { requirePro } = useSubscriptionGate();
   const exportToXLSX = (data: Record<string, unknown>[], filename: string, sheetName = 'Data') => {
+    if (!requirePro('Data export')) return;
     if (!data || data.length === 0) return;
     const wb = XLSX.utils.book_new();
 
@@ -83,7 +91,9 @@ export function useExportXLSX() {
 }
 
 export function useExportPDF() {
+  const { requirePro } = useSubscriptionGate();
   const exportToPDF = (title: string, sections: { heading: string; content: string }[]) => {
+    if (!requirePro('PDF export')) return;
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${title}</title>
 <style>
 body{font-family:'Helvetica Neue',Arial,sans-serif;margin:40px;color:#0F172A}

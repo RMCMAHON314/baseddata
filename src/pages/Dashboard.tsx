@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DataFloodPanel } from '@/components/admin/DataFloodPanel';
 import { supabase } from '@/integrations/supabase/client';
 import { useLastRefresh, formatRefreshTime } from '@/hooks/useLastRefresh';
@@ -11,6 +11,7 @@ import {
   Search, Bell, Star, Target, TrendingUp, FileText,
   Plus, Eye, Clock, DollarSign, Users, Zap, Settings, Home
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface DashboardData {
   profile: {
@@ -30,6 +31,7 @@ interface DashboardData {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [user, setUser] = useState<any>(null);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [watchlist, setWatchlist] = useState<any[]>([]);
@@ -41,6 +43,11 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadDashboard();
+    // Handle checkout success redirect
+    if (searchParams.get('checkout') === 'success') {
+      toast.success('🎉 Welcome to Pro! Your subscription is now active.');
+      setSearchParams({}, { replace: true });
+    }
   }, []);
 
   async function loadDashboard() {
