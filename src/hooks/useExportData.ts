@@ -1,6 +1,7 @@
 // BOMB-10 — Multi-format export system (CSV, JSON, XLSX, PDF)
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import { useSubscriptionGate } from '@/hooks/useSubscriptionGate';
 
 function downloadBlob(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
@@ -16,7 +17,10 @@ function dateSuffix() {
 }
 
 export function useExportCSV() {
+  const { requirePro } = useSubscriptionGate();
+
   const exportToCSV = (data: Record<string, unknown>[], filename: string) => {
+    if (!requirePro('Data export')) return;
     if (!data || data.length === 0) return;
     const headers = Object.keys(data[0]);
     const csvContent = [
