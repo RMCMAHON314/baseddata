@@ -4589,52 +4589,106 @@ export type Database = {
           },
         ]
       }
-      ingestion_queue: {
+      ingestion_log: {
         Row: {
-          completed_at: string | null
-          created_at: string
-          error: string | null
+          duration_ms: number | null
+          error_message: string | null
+          executed_at: string
           id: string
-          priority: number
-          records_fetched: number | null
-          scheduled_for: string
-          source_slug: string
-          started_at: string | null
+          queue_id: string | null
+          records_ingested: number | null
+          response_summary: Json | null
           status: string
+          task_type: string
         }
         Insert: {
-          completed_at?: string | null
-          created_at?: string
-          error?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          executed_at?: string
           id?: string
-          priority?: number
-          records_fetched?: number | null
-          scheduled_for?: string
-          source_slug: string
-          started_at?: string | null
-          status?: string
+          queue_id?: string | null
+          records_ingested?: number | null
+          response_summary?: Json | null
+          status: string
+          task_type: string
         }
         Update: {
-          completed_at?: string | null
-          created_at?: string
-          error?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          executed_at?: string
           id?: string
-          priority?: number
-          records_fetched?: number | null
-          scheduled_for?: string
-          source_slug?: string
-          started_at?: string | null
+          queue_id?: string | null
+          records_ingested?: number | null
+          response_summary?: Json | null
           status?: string
+          task_type?: string
         }
         Relationships: [
           {
-            foreignKeyName: "ingestion_queue_source_slug_fkey"
-            columns: ["source_slug"]
+            foreignKeyName: "ingestion_log_queue_id_fkey"
+            columns: ["queue_id"]
             isOneToOne: false
-            referencedRelation: "ingestion_sources"
-            referencedColumns: ["slug"]
+            referencedRelation: "ingestion_queue"
+            referencedColumns: ["id"]
           },
         ]
+      }
+      ingestion_queue: {
+        Row: {
+          attempt_count: number
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          locked_at: string | null
+          max_attempts: number
+          next_run_at: string
+          priority: number
+          records_ingested: number | null
+          recurrence_interval: string | null
+          source_label: string | null
+          started_at: string | null
+          status: string
+          task_config: Json
+          task_type: string
+        }
+        Insert: {
+          attempt_count?: number
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          locked_at?: string | null
+          max_attempts?: number
+          next_run_at?: string
+          priority?: number
+          records_ingested?: number | null
+          recurrence_interval?: string | null
+          source_label?: string | null
+          started_at?: string | null
+          status?: string
+          task_config?: Json
+          task_type: string
+        }
+        Update: {
+          attempt_count?: number
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          locked_at?: string | null
+          max_attempts?: number
+          next_run_at?: string
+          priority?: number
+          records_ingested?: number | null
+          recurrence_interval?: string | null
+          source_label?: string | null
+          started_at?: string | null
+          status?: string
+          task_config?: Json
+          task_type?: string
+        }
+        Relationships: []
       }
       ingestion_sources: {
         Row: {
@@ -8788,6 +8842,42 @@ export type Database = {
           retry_after: string
           state: string
         }[]
+      }
+      claim_next_ingestion_task: {
+        Args: never
+        Returns: {
+          attempt_count: number
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          locked_at: string | null
+          max_attempts: number
+          next_run_at: string
+          priority: number
+          records_ingested: number | null
+          recurrence_interval: string | null
+          source_label: string | null
+          started_at: string | null
+          status: string
+          task_config: Json
+          task_type: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "ingestion_queue"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      complete_ingestion_task: {
+        Args: {
+          p_error?: string
+          p_records?: number
+          p_response?: Json
+          p_task_id: string
+        }
+        Returns: undefined
       }
       complete_query: {
         Args: {

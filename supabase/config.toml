@@ -176,3 +176,6 @@ verify_jwt = false
 
 [functions.load-patents]
 verify_jwt = false
+
+[functions.drip-ingest]
+verify_jwt = false
