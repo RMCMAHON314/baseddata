@@ -25,6 +25,7 @@ import { DataFreshnessIndicator } from '@/components/layout/DataFreshnessIndicat
 import { useIsAdmin } from '@/components/layout/AdminRoute';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTheme } from 'next-themes';
+import { useGlobalKeyboard } from '@/hooks/useGlobalKeyboard';
 
 const PRIMARY_NAV = [
   { path: '/explore', label: 'Explore', icon: Compass },
@@ -63,6 +64,12 @@ export function GlobalLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const searchTimeout = useRef<ReturnType<typeof setTimeout>>();
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useGlobalKeyboard({
+    onSearch: () => searchInputRef.current?.focus(),
+    onEscape: () => { setShowSearchResults(false); setMobileMenuOpen(false); },
+  });
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -134,9 +141,10 @@ export function GlobalLayout({ children }: { children: React.ReactNode }) {
           <div className="relative flex-1 max-w-sm hidden md:block">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
+              ref={searchInputRef}
               value={searchQuery}
               onChange={e => handleSearch(e.target.value)}
-              placeholder="Search entities..."
+              placeholder="Search entities... (⌘K)"
               className="pl-9 h-9 bg-secondary/50 border-0 focus:ring-2 ring-primary/30 text-sm"
               onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
               onFocus={() => searchResults.length > 0 && setShowSearchResults(true)}
@@ -191,6 +199,7 @@ export function GlobalLayout({ children }: { children: React.ReactNode }) {
                   <DropdownMenuItem onClick={() => navigate('/saved-searches')}><Bookmark className="mr-2 h-4 w-4" />Saved Searches</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate('/api-docs')}><Key className="mr-2 h-4 w-4" />API Keys</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate('/install')}><InstallIcon className="mr-2 h-4 w-4" />Install App</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/pricing')}><Settings className="mr-2 h-4 w-4" />Manage Plan</DropdownMenuItem>
                 </DropdownMenuGroup>
 
                 {isAdmin && (

@@ -15,7 +15,7 @@ import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { AdminRoute } from "@/components/layout/AdminRoute";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 
-const AiAssistant = lazy(() => import("@/components/ai/AiAssistant").then(m => ({ default: m.AiAssistant })));
+const AiAssistant = lazy(() => import("@/components/ai/AiAssistant"));
 
 // Lazy-loaded pages
 const Showcase = lazy(() => import("./pages/Showcase"));
@@ -45,6 +45,7 @@ const LaborRatesExplorer = lazy(() => import("./pages/LaborRatesExplorer"));
 const Install = lazy(() => import("./pages/Install"));
 const LaunchChecklist = lazy(() => import("./pages/LaunchChecklist"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const CheckoutSuccess = lazy(() => import("./pages/CheckoutSuccess"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -123,7 +124,7 @@ const App = () => {
                   <Route path="/search" element={<Search />} />
                   <Route path="/pricing" element={<Pricing />} />
                   <Route path="/api-docs" element={<ApiDocs />} />
-                  <Route path="/onboarding" element={<Onboarding />} />
+                  <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
                   <Route path="/install" element={<Install />} />
                   <Route path="/healthcare" element={<Healthcare />} />
                   <Route path="/education" element={<Education />} />
@@ -132,6 +133,7 @@ const App = () => {
                   <Route path="/health" element={<Health />} />
                   <Route path="/compare" element={<EntityCompare />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/checkout/success" element={<ProtectedRoute><CheckoutSuccess /></ProtectedRoute>} />
 
                   {/* Protected routes (require login) */}
                   <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
@@ -148,7 +150,7 @@ const App = () => {
                 </Routes>
               </Suspense>
               </ErrorBoundary>
-              <AiAssistant />
+              <Suspense fallback={null}><AiAssistant /></Suspense>
             </BrowserRouter>
           </TooltipProvider>
         </AuthProvider>
