@@ -599,3 +599,119 @@ async function firecrawlScrape(config: Record<string, unknown>, supabase: Return
 
   return { records: error ? 0 : 1, summary: { url, title: data.data?.metadata?.title } };
 }
+
+// ─── Lobbying Disclosures (House/Senate LDA filings) ────────────
+async function ingestLobbyingDisclosures(config: Record<string, unknown>, supabase: ReturnType<typeof createClient>) {
+  const year = (config.year as number) || new Date().getFullYear();
+  const page = (config.page as number) || 1;
+  // Use the Senate Lobbying Disclosure Act API
+  const url = `https://lda.senate.gov/api/v1/filings/?filing_year=${year}&page=${page}&page_size=25`;
+  const resp = await fetchWithTimeout(url, {
+    headers: { 'Accept': 'application/json' },
+  });
+  if (!resp.ok) throw new Error(`Lobbying API ${resp.status}`);
+  const data = await resp.json();
+  const results = data.results || [];
+  let upserted = 0;
+
+  for (const filing of results) {
+    const { error } = await supabase.from('lobbying_disclosures').upsert({
+      filing_id: filing.filing_uuid || filing.id,
+      registrant_name: filing.registrant?.name || 'Unknown',
+      client_name: filing.client?.name || null,
+      amount: filing.income != null ? parseFloat(filing.income) : null,
+      filing_year: year,
+      filing_type: filing.filing_type || null,
+      issues: filing.lobbying_activities?.map((a: any) => a.general_issue_code_display) || [],
+      raw_data: filing,
+      source: 'senate_lda',
+    }, { onConflict: 'filing_id', ignoreDuplicates: true });
+    if (!error) upserted++;
+  }
+
+  return { records: upserted, summary: { year, page, total: data.count } };
+}
+
+// ─── GSA Contracts (Advantage/CALC) ─────────────────────────────
+async function ingestGSAContracts(config: Record<string, unknown>, supabase: ReturnType<typeof createClient>) {
+  const page = (config.page as number) || 0;
+  const url = `https://api.sam.gov/opportunities/v2/search?limit=25&offset=${page * 25}&postedFrom=01/01/2024&api_key=${Deno.env.get('SAM_API_KEY') || ''}`;
+  // GSA Advantage API or fallback to SAM contract awards
+  const resp = await fetchWithTimeout(url);
+  if (!resp.ok) throw new Error(`GSA API ${resp.status}`);
+  const data = await resp.json();
+  const records = data.opportunitiesData || [];
+  let upserted = 0;
+
+  for (const rec of records) {
+    const { error } = await supabase.from('gsa_contracts').upsert({
+      contract_number: rec.solicitationNumber || rec.noticeId,
+      vendor_name: rec.organizationName || 'Unknown',
+      description: rec.title || rec.description,
+      contract_start_date: rec.postedDate,
+      contract_end_date: rec.responseDeadLine,
+      schedule_number: rec.naicsCode,
+      raw_data: rec,
+      source: 'sam_gsa',
+    }, { onConflict: 'contract_number', ignoreDuplicates: true });
+    if (!error) upserted++;
+  }
+
+  return { records: upserted, summary: { page, found: records.length } };
+}
+
+// ─── Analytics Daily (aggregate snapshot) ───────────────────────
+async function computeAnalyticsDaily(_config: Record<string, unknown>, supabase: ReturnType<typeof createClient>) {
+  const today = new Date().toISOString().split('T')[0];
+
+  // Run aggregate queries
+  const [entities, contracts, grants, contractValue, grantValue] = await Promise.all([
+    supabase.from('core_entities').select('id', { count: 'exact', head: true }),
+    supabase.from('contracts').select('id', { count: 'exact', head: true }),
+    supabase.from('grants').select('id', { count: 'exact', head: true }),
+    supabase.from('contracts').select('total_obligation').not('total_obligation', 'is', null).limit(1000),
+    supabase.from('grants').select('award_amount').not('award_amount', 'is', null).limit(1000),
+  ]);
+
+  const totalContractValue = (contractValue.data || []).reduce((s: number, r: any) => s + (r.total_obligation || 0), 0);
+  const totalGrantValue = (grantValue.data || []).reduce((s: number, r: any) => s + (r.award_amount || 0), 0);
+
+  // Get agency breakdown
+  const { data: agencyData } = await supabase
+    .from('contracts')
+    .select('awarding_agency')
+    .not('awarding_agency', 'is', null)
+    .limit(1000);
+
+  const agencyCounts: Record<string, number> = {};
+  (agencyData || []).forEach((r: any) => {
+    const a = r.awarding_agency || 'Unknown';
+    agencyCounts[a] = (agencyCounts[a] || 0) + 1;
+  });
+
+  // Get state breakdown
+  const { data: stateData } = await supabase
+    .from('core_entities')
+    .select('state')
+    .not('state', 'is', null)
+    .limit(1000);
+
+  const stateCounts: Record<string, number> = {};
+  (stateData || []).forEach((r: any) => {
+    const s = r.state || 'Unknown';
+    stateCounts[s] = (stateCounts[s] || 0) + 1;
+  });
+
+  const { error } = await supabase.from('analytics_daily').upsert({
+    date: today,
+    total_entities: entities.count || 0,
+    total_contracts: contracts.count || 0,
+    total_grants: grants.count || 0,
+    total_contract_value: totalContractValue,
+    total_grant_value: totalGrantValue,
+    contracts_by_agency: agencyCounts,
+    entities_by_state: stateCounts,
+  }, { onConflict: 'date' });
+
+  return { records: error ? 0 : 1, summary: { date: today, entities: entities.count, contracts: contracts.count } };
+}
