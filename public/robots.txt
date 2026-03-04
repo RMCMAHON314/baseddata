@@ -1,8 +1,10 @@
 User-agent: Googlebot
 Allow: /
+Crawl-delay: 1
 
 User-agent: Bingbot
 Allow: /
+Crawl-delay: 2
 
 User-agent: Twitterbot
 Allow: /
@@ -12,5 +14,14 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /ocean
+Disallow: /diagnostic
+Disallow: /gap-fixer
+Disallow: /dashboard
+Disallow: /saved-searches
+Disallow: /onboarding
+Disallow: /reset-password
+Disallow: /checkout/success
 
 Sitemap: https://baseddata.lovable.app/sitemap.xml
