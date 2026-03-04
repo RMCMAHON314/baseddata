@@ -287,32 +287,30 @@ async function pullSECCompanyFilings(params: any) {
 }
 
 async function pullUSPTOPatents(params: any) {
-  // USPTO PatentsView API
+  // PatentsView v2 API (search.patentsview.org)
   const query = params.query || 'government';
-  const page = params.page || 1;
-  const perPage = params.perPage || 100;
 
   try {
-    const data = await safeFetch('https://api.patentsview.org/patents/query', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        q: { _text_any: { patent_abstract: query } },
-        f: ['patent_number', 'patent_title', 'patent_abstract', 'patent_date', 'patent_type',
-          'assignee_organization', 'assignee_state', 'assignee_country',
-          'inventor_first_name', 'inventor_last_name',
-          'cpc_group_id', 'patent_num_cited_by_us_patents'],
-        o: { page, per_page: perPage },
-        s: [{ patent_date: 'desc' }],
-      }),
-    });
+    const q = JSON.stringify({ _text_any: { patent_abstract: query } });
+    const f = JSON.stringify([
+      'patent_id', 'patent_title', 'patent_abstract', 'patent_date', 'patent_type',
+      'assignees.assignee_organization', 'assignees.assignee_state',
+      'assignees.assignee_country', 'inventors.inventor_name_first',
+      'inventors.inventor_name_last', 'cpcs.cpc_group_id',
+      'patent_num_us_patent_citations'
+    ]);
+    const o = JSON.stringify({ size: 100 });
+    const s = JSON.stringify([{ patent_date: 'desc' }]);
+    const url = `https://search.patentsview.org/api/v1/patent/?q=${encodeURIComponent(q)}&f=${encodeURIComponent(f)}&o=${encodeURIComponent(o)}&s=${encodeURIComponent(s)}`;
+    
+    const data = await safeFetch(url);
 
     const patents = data.patents || [];
     let total = 0;
 
     if (patents.length > 0) {
       const rows = patents.map((p: any) => ({
-        patent_number: p.patent_number,
+        patent_number: p.patent_id,
         title: p.patent_title || 'Untitled',
         abstract: p.patent_abstract?.substring(0, 5000),
         patent_type: p.patent_type,
@@ -320,10 +318,10 @@ async function pullUSPTOPatents(params: any) {
         assignee_name: p.assignees?.[0]?.assignee_organization,
         assignee_state: p.assignees?.[0]?.assignee_state,
         assignee_country: p.assignees?.[0]?.assignee_country,
-        inventors: (p.inventors || []).map((i: any) => `${i.inventor_first_name} ${i.inventor_last_name}`).slice(0, 10),
+        inventors: (p.inventors || []).map((i: any) => `${i.inventor_name_first || ''} ${i.inventor_name_last || ''}`).slice(0, 10),
         cpc_codes: (p.cpcs || []).map((c: any) => c.cpc_group_id).slice(0, 10),
-        citation_count: p.patent_num_cited_by_us_patents || 0,
-        source: 'patentsview',
+        citation_count: p.patent_num_us_patent_citations || 0,
+        source: 'patentsview_v2',
       }));
 
       const { error } = await supabase.from('uspto_patents').upsert(rows, { onConflict: 'patent_number', ignoreDuplicates: true });
@@ -338,15 +336,22 @@ async function pullUSPTOPatents(params: any) {
 }
 
 async function pullFederalAudits(params: any) {
-  // FAC API (api.fac.gov)
+  // FAC API (api.fac.gov) — requires accept-profile header
   const year = params.year || 2023;
   const offset = params.offset || 0;
   const limit = params.limit || 100;
+  const apiKey = Deno.env.get('DATA_GOV_KEY');
 
   try {
+    const headers: Record<string, string> = {
+      'Accept': 'application/json',
+      'accept-profile': 'api_v1_1_0',
+    };
+    if (apiKey) headers['X-Api-Key'] = apiKey;
+
     const data = await safeFetch(
       `https://api.fac.gov/general?audit_year=eq.${year}&limit=${limit}&offset=${offset}`,
-      { headers: { 'Accept': 'application/json' } }
+      { headers }
     );
 
     const audits = Array.isArray(data) ? data : [];
