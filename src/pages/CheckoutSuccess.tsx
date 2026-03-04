@@ -26,8 +26,8 @@ export default function CheckoutSuccess() {
     <GlobalLayout>
       <div className="container max-w-2xl mx-auto py-20 px-4 text-center">
         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', duration: 0.6 }}>
-          <div className="mx-auto w-20 h-20 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6">
-            <CheckCircle2 className="h-10 w-10 text-emerald-500" />
+          <div className="mx-auto w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+            <CheckCircle2 className="h-10 w-10 text-primary" />
           </div>
         </motion.div>
 
