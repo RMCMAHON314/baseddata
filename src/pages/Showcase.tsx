@@ -159,7 +159,6 @@ export default function Showcase() {
   const navigate = useNavigate();
   const { data: ps } = usePlatformStats();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
 
   const totalValue = Number(ps?.contract_value || 0) + Number(ps?.idv_value || 0) + Number(ps?.grant_value || 0);
   const totalEntities = Number(ps?.entity_count) || 0;
