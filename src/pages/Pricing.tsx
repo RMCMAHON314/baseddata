@@ -11,10 +11,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
-// TODO: Replace these with real Stripe price IDs once created in your Stripe dashboard
+// Stripe price IDs — create via Stripe Dashboard and update here
+// The restricted API key lacks rak_plan_write, so prices must be created manually in Stripe Dashboard
+// Once created, replace this placeholder with the real price_xxx ID
 const STRIPE_PRICES = {
   pro_monthly: 'price_REPLACE_WITH_REAL_PRO_PRICE_ID',
-  // pro_annual: 'price_REPLACE_WITH_REAL_ANNUAL_PRICE_ID',
 };
 
 const plans = [
@@ -110,9 +111,11 @@ const FAQS = [
 
 export default function Pricing() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, subscription, tier } = useAuth();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
+
+  const currentPlanId = tier === 'pro' ? 'pro' : 'free';
 
   const handleCheckout = async (planId: string, priceId: string | null) => {
     if (!priceId) {
@@ -182,8 +185,13 @@ export default function Pricing() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
               >
-                <Card className={`relative h-full flex flex-col ${plan.popular ? 'border-primary ring-2 ring-primary/20 shadow-lg' : ''}`}>
-                  {plan.popular && (
+                <Card className={`relative h-full flex flex-col ${plan.popular ? 'border-primary ring-2 ring-primary/20 shadow-lg' : ''} ${currentPlanId === plan.id ? 'ring-2 ring-emerald-500/30 border-emerald-500/50' : ''}`}>
+                  {currentPlanId === plan.id && subscription.subscribed && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                      <Badge className="shadow" style={{ backgroundColor: 'hsl(var(--success))', color: 'white' }}>Your Plan</Badge>
+                    </div>
+                  )}
+                  {plan.popular && currentPlanId !== plan.id && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                       <Badge className="bg-primary text-primary-foreground shadow">Most Popular</Badge>
                     </div>
@@ -215,18 +223,41 @@ export default function Pricing() {
                         </li>
                       ))}
                     </ul>
-                    <Button
-                      className={`w-full ${plan.popular ? '' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
-                      variant={plan.popular ? 'default' : 'secondary'}
-                      disabled={loading === plan.id}
-                      onClick={() => handleCheckout(plan.id, plan.priceId)}
-                    >
-                      {loading === plan.id ? (
-                        <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Processing...</>
-                      ) : (
-                        <>{plan.cta} {plan.id !== 'enterprise' && <ArrowRight className="w-4 h-4 ml-1" />}</>
-                      )}
-                    </Button>
+                    {currentPlanId === plan.id && subscription.subscribed ? (
+                      <Button
+                        className="w-full"
+                        variant="outline"
+                        onClick={async () => {
+                          setLoading(plan.id);
+                          try {
+                            const { data, error } = await supabase.functions.invoke('customer-portal');
+                            if (error) throw error;
+                            if (data?.url) window.open(data.url, '_blank');
+                          } catch (err) {
+                            console.error('Portal error:', err);
+                            toast.error('Failed to open subscription management.');
+                          } finally { setLoading(null); }
+                        }}
+                        disabled={loading === plan.id}
+                      >
+                        {loading === plan.id ? (
+                          <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Loading...</>
+                        ) : 'Manage Subscription'}
+                      </Button>
+                    ) : (
+                      <Button
+                        className={`w-full ${plan.popular ? '' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
+                        variant={plan.popular ? 'default' : 'secondary'}
+                        disabled={loading === plan.id}
+                        onClick={() => handleCheckout(plan.id, plan.priceId)}
+                      >
+                        {loading === plan.id ? (
+                          <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Processing...</>
+                        ) : (
+                          <>{plan.cta} {plan.id !== 'enterprise' && <ArrowRight className="w-4 h-4 ml-1" />}</>
+                        )}
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>

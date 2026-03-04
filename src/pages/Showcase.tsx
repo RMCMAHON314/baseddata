@@ -71,6 +71,7 @@ const NAV_LINKS = [
   { to: '/explore', label: 'Explore' },
   { to: '/entities', label: 'Entities' },
   { to: '/opportunities', label: 'Opportunities' },
+  { to: '/analytics', label: 'Analytics' },
   { to: '/pricing', label: 'Pricing' },
 ];
 
@@ -78,20 +79,20 @@ const FEATURES = [
   {
     icon: Shield,
     title: 'Contract Intelligence',
-    desc: 'Track every federal contract with real-time alerts on expirations, renewals, and new awards.',
+    desc: 'Track every federal contract with real-time alerts on expirations, renewals, and new awards across all 50 states.',
     link: '/explore',
   },
   {
     icon: Target,
     title: 'Opportunity Radar',
-    desc: 'Never miss a bid. Active opportunities with deadline tracking and match scoring.',
+    desc: 'Never miss a bid. Live opportunities from SAM.gov with deadline tracking and AI-powered match scoring.',
     link: '/opportunities',
   },
   {
     icon: BarChart3,
     title: 'Competitive Analysis',
-    desc: "Know who's winning, who's teaming, and where the money flows.",
-    link: '/entities',
+    desc: "Know who's winning, who's teaming, and where the money flows. Bloomberg-grade analytics for GovCon.",
+    link: '/analytics',
   },
 ];
 
