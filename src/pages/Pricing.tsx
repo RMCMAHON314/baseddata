@@ -3,10 +3,19 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, X, Zap, Building2, Crown, ArrowRight, ChevronDown } from 'lucide-react';
+import { Check, X, Zap, Building2, Crown, ArrowRight, ChevronDown, Loader2 } from 'lucide-react';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
 import { PageSEO } from '@/components/layout/PageSEO';
 import { motion } from 'framer-motion';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+
+// TODO: Replace these with real Stripe price IDs once created in your Stripe dashboard
+const STRIPE_PRICES = {
+  pro_monthly: 'price_REPLACE_WITH_REAL_PRO_PRICE_ID',
+  // pro_annual: 'price_REPLACE_WITH_REAL_ANNUAL_PRICE_ID',
+};
 
 const plans = [
   {
@@ -29,6 +38,7 @@ const plans = [
     cta: 'Start Free',
     popular: false,
     href: '/onboarding',
+    priceId: null,
   },
   {
     id: 'pro',
@@ -51,6 +61,7 @@ const plans = [
     cta: 'Start Free Trial',
     popular: true,
     href: '/onboarding',
+    priceId: STRIPE_PRICES.pro_monthly,
   },
   {
     id: 'enterprise',
@@ -72,6 +83,7 @@ const plans = [
     cta: 'Contact Sales',
     popular: false,
     href: 'mailto:sales@baseddata.io',
+    priceId: null,
   },
 ];
 
@@ -98,7 +110,42 @@ const FAQS = [
 
 export default function Pricing() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [loading, setLoading] = useState<string | null>(null);
+
+  const handleCheckout = async (planId: string, priceId: string | null) => {
+    if (!priceId) {
+      if (planId === 'enterprise') {
+        window.location.href = 'mailto:sales@baseddata.io';
+      } else {
+        navigate('/onboarding');
+      }
+      return;
+    }
+
+    if (!user) {
+      toast.info('Please sign in first to subscribe');
+      navigate('/onboarding');
+      return;
+    }
+
+    setLoading(planId);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { priceId },
+      });
+      if (error) throw error;
+      if (data?.url) {
+        window.open(data.url, '_blank');
+      }
+    } catch (err) {
+      console.error('Checkout error:', err);
+      toast.error('Failed to start checkout. Please try again.');
+    } finally {
+      setLoading(null);
+    }
+  };
 
   return (
     <GlobalLayout>
@@ -171,15 +218,14 @@ export default function Pricing() {
                     <Button
                       className={`w-full ${plan.popular ? '' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
                       variant={plan.popular ? 'default' : 'secondary'}
-                      onClick={() => {
-                        if (plan.id === 'enterprise') {
-                          window.location.href = 'mailto:sales@baseddata.io';
-                        } else {
-                          navigate('/onboarding');
-                        }
-                      }}
+                      disabled={loading === plan.id}
+                      onClick={() => handleCheckout(plan.id, plan.priceId)}
                     >
-                      {plan.cta} {plan.id !== 'enterprise' && <ArrowRight className="w-4 h-4 ml-1" />}
+                      {loading === plan.id ? (
+                        <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Processing...</>
+                      ) : (
+                        <>{plan.cta} {plan.id !== 'enterprise' && <ArrowRight className="w-4 h-4 ml-1" />}</>
+                      )}
                     </Button>
                   </CardContent>
                 </Card>
