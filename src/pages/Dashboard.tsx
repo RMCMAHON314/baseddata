@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
+import { PageSEO } from '@/components/layout/PageSEO';
 import { useLastRefresh, formatRefreshTime } from '@/hooks/useLastRefresh';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -125,6 +126,7 @@ export default function Dashboard() {
   return (
     <GlobalLayout>
     <div className="min-h-screen bg-background text-foreground">
+      <PageSEO title="Dashboard" description="Your BasedData command center. Track saved searches, watchlists, and opportunity pipeline." path="/dashboard" noindex />
       {/* Header */}
       <header className="border-b border-border px-6 py-4">
         <div className="flex items-center justify-between">

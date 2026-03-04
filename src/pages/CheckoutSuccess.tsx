@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { GlobalLayout } from '@/components/layout/GlobalLayout';
 import { useAuth } from '@/contexts/AuthContext';
+import { PageSEO } from '@/components/layout/PageSEO';
 
 const PERKS = [
   { icon: Zap, title: 'Unlimited Exports', desc: 'CSV, XLSX, PDF, and JSON — no restrictions' },
@@ -24,6 +25,7 @@ export default function CheckoutSuccess() {
 
   return (
     <GlobalLayout>
+      <PageSEO title="Welcome to Pro" description="Your BasedData Pro subscription is active." path="/checkout/success" noindex />
       <div className="container max-w-2xl mx-auto py-20 px-4 text-center">
         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', duration: 0.6 }}>
           <div className="mx-auto w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">

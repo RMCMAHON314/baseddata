@@ -16,6 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/Logo';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePlatformStats } from '@/hooks/useNewSources';
+import { PageSEO } from '@/components/layout/PageSEO';
 import { useQuery } from '@tanstack/react-query';
 
 const STEPS = [
@@ -130,6 +131,7 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
+      <PageSEO title="Get Started with BasedData" description="Set up your BasedData account in 60 seconds. Customize your government contract intelligence dashboard." path="/onboarding" noindex />
       {/* Progress header */}
       <header className="border-b border-border bg-card">
         <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">

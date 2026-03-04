@@ -10,6 +10,7 @@ import {
   Clock, Activity, Cpu, ArrowLeft
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { PageSEO } from '@/components/layout/PageSEO';
 
 interface TestResult {
   name: string;
@@ -592,6 +593,7 @@ export default function Diagnostic() {
 
   return (
     <div className="min-h-screen bg-background text-foreground p-6">
+      <PageSEO title="System Diagnostic" description="Full system diagnostic suite." path="/diagnostic" noindex />
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">

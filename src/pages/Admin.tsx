@@ -12,6 +12,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { Link, useNavigate } from 'react-router-dom';
 import { Logo } from '@/components/Logo';
+import { PageSEO } from '@/components/layout/PageSEO';
 
 interface AdminStats {
   totalUsers: number;
@@ -148,6 +149,7 @@ export default function Admin() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      <PageSEO title="Admin Panel" description="BasedData administration dashboard." path="/admin" noindex />
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">

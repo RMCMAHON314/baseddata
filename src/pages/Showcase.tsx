@@ -169,17 +169,33 @@ export default function Showcase() {
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       <PageSEO
         title="BasedData — Government Spending Intelligence Platform"
-        description="Track federal contracts, grants, and opportunities. The most comprehensive government spending intelligence platform."
+        description="Track federal contracts, grants, and opportunities across 9 data sources. AI-powered competitive intelligence for GovCon professionals."
         path="/"
-        jsonLd={{
-          "@context": "https://schema.org",
-          "@type": "SoftwareApplication",
-          "name": "BasedData",
-          "applicationCategory": "BusinessApplication",
-          "operatingSystem": "Web",
-          "description": "Government spending intelligence platform",
-          "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
-        }}
+        keywords="government contracts, federal spending, SAM.gov, USASpending, GovCon, competitive intelligence, contract tracking, federal grants, SBIR, government opportunities"
+        jsonLd={[
+          {
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            "name": "BasedData",
+            "applicationCategory": "BusinessApplication",
+            "operatingSystem": "Web",
+            "description": "AI-powered government contract intelligence platform tracking 9 federal data sources.",
+            "url": "https://baseddata.lovable.app",
+            "offers": [
+              { "@type": "Offer", "price": "0", "priceCurrency": "USD", "name": "Free" },
+              { "@type": "Offer", "price": "99", "priceCurrency": "USD", "name": "Pro" }
+            ]
+          },
+          {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": [
+              { "@type": "Question", "name": "What data sources does BasedData track?", "acceptedAnswer": { "@type": "Answer", "text": "BasedData tracks 9 federal sources: USASpending.gov, SAM.gov, FPDS, SBIR/STTR, NSF, SEC EDGAR, GSA CALC+, ClinicalTrials.gov, and USPTO." } },
+              { "@type": "Question", "name": "How often is BasedData updated?", "acceptedAnswer": { "@type": "Answer", "text": "Data is refreshed every 4 hours via an autonomous ingestion pipeline." } },
+              { "@type": "Question", "name": "Is BasedData free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes — free tier includes entity search, contract data, and basic analytics. Pro starts at $99/month." } }
+            ]
+          }
+        ]}
       />
       {/* ── NAV ── */}
       <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50">
