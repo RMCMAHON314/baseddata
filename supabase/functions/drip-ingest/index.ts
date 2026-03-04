@@ -86,6 +86,10 @@ async function executeTask(
     case 'lobbying_disclosures': return ingestLobbyingDisclosures(config, supabase);
     case 'gsa_contracts': return ingestGSAContracts(config, supabase);
     case 'analytics_daily': return computeAnalyticsDaily(config, supabase);
+    case 'web_enrich_batch': return webEnrichBatch(config, supabase);
+    case 'ai_search_opportunities': return aiSearchIntel('opportunities', config, supabase);
+    case 'ai_search_grants': return aiSearchIntel('grants', config, supabase);
+    case 'ai_search_news': return aiSearchNews(config, supabase);
     default: throw new Error(`Unknown task type: ${type}`);
   }
 }
