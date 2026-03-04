@@ -42,7 +42,7 @@ function getPageContext(pathname: string): string {
   return 'general';
 }
 
-export function AiAssistant() {
+function AiAssistant() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -266,3 +266,5 @@ export function AiAssistant() {
     </>
   );
 }
+
+export default AiAssistant;
