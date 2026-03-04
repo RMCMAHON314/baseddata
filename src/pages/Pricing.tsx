@@ -223,18 +223,41 @@ export default function Pricing() {
                         </li>
                       ))}
                     </ul>
-                    <Button
-                      className={`w-full ${plan.popular ? '' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
-                      variant={plan.popular ? 'default' : 'secondary'}
-                      disabled={loading === plan.id}
-                      onClick={() => handleCheckout(plan.id, plan.priceId)}
-                    >
-                      {loading === plan.id ? (
-                        <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Processing...</>
-                      ) : (
-                        <>{plan.cta} {plan.id !== 'enterprise' && <ArrowRight className="w-4 h-4 ml-1" />}</>
-                      )}
-                    </Button>
+                    {currentPlanId === plan.id && subscription.subscribed ? (
+                      <Button
+                        className="w-full"
+                        variant="outline"
+                        onClick={async () => {
+                          setLoading(plan.id);
+                          try {
+                            const { data, error } = await supabase.functions.invoke('customer-portal');
+                            if (error) throw error;
+                            if (data?.url) window.open(data.url, '_blank');
+                          } catch (err) {
+                            console.error('Portal error:', err);
+                            toast.error('Failed to open subscription management.');
+                          } finally { setLoading(null); }
+                        }}
+                        disabled={loading === plan.id}
+                      >
+                        {loading === plan.id ? (
+                          <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Loading...</>
+                        ) : 'Manage Subscription'}
+                      </Button>
+                    ) : (
+                      <Button
+                        className={`w-full ${plan.popular ? '' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}
+                        variant={plan.popular ? 'default' : 'secondary'}
+                        disabled={loading === plan.id}
+                        onClick={() => handleCheckout(plan.id, plan.priceId)}
+                      >
+                        {loading === plan.id ? (
+                          <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Processing...</>
+                        ) : (
+                          <>{plan.cta} {plan.id !== 'enterprise' && <ArrowRight className="w-4 h-4 ml-1" />}</>
+                        )}
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>
