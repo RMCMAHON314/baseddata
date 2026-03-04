@@ -1,5 +1,5 @@
 // BASED DATA - Omniscient AI Assistant — BOMB-07 Production Upgrade
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, forwardRef } from 'react';
 import { motion } from 'framer-motion';
 import { X, Send, Loader2, Building2, Target, BarChart3, Brain, DollarSign, Search, Sparkles } from 'lucide-react';
 import aiChatIcon from '@/assets/ai-chat-icon.png';
@@ -42,7 +42,7 @@ function getPageContext(pathname: string): string {
   return 'general';
 }
 
-function AiAssistant() {
+const AiAssistant = forwardRef<HTMLDivElement>(function AiAssistant(_props, _ref) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -265,6 +265,6 @@ function AiAssistant() {
       )}
     </>
   );
-}
+});
 
 export default AiAssistant;
