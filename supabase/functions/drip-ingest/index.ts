@@ -90,6 +90,7 @@ async function executeTask(
     case 'ai_search_opportunities': return aiSearchIntel('opportunities', config, supabase);
     case 'ai_search_grants': return aiSearchIntel('grants', config, supabase);
     case 'ai_search_news': return aiSearchNews(config, supabase);
+    case 'ai_dossier_batch': return aiDossierBatch(config, supabase);
     default: throw new Error(`Unknown task type: ${type}`);
   }
 }
