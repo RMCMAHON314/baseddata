@@ -11,6 +11,7 @@ import { initializeBasedData } from "@/init/startup";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute";
 import { AdminRoute } from "@/components/layout/AdminRoute";
+import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 
 const AiAssistant = lazy(() => import("@/components/ai/AiAssistant").then(m => ({ default: m.AiAssistant })));
 
@@ -102,6 +103,7 @@ const App = () => {
             <Toaster />
             <Sonner />
             <BrowserRouter>
+              <ErrorBoundary>
               <Suspense fallback={<PageLoader />}>
                 <Routes>
                   {/* Public routes */}
@@ -140,6 +142,7 @@ const App = () => {
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>
+              </ErrorBoundary>
               <AiAssistant />
             </BrowserRouter>
           </TooltipProvider>
