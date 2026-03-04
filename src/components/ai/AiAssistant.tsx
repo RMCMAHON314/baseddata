@@ -1,6 +1,6 @@
 // BASED DATA - Omniscient AI Assistant — BOMB-07 Production Upgrade
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { X, Send, Loader2, Building2, Target, BarChart3, Brain, DollarSign, Search, Sparkles } from 'lucide-react';
 import aiChatIcon from '@/assets/ai-chat-icon.png';
 import { Button } from '@/components/ui/button';
