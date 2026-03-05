@@ -391,7 +391,7 @@ async function ingestFEMA(supabase: any, results: OceanResults) {
     results.ingestion.records += disasters.length;
 
     for (const d of disasters) {
-      await supabase.from('core_facts').insert({
+      const { error } = await supabase.from('core_facts').insert({
         fact_type: 'fema_disaster',
         fact_value: {
           disaster_number: d.disasterNumber,
@@ -402,7 +402,8 @@ async function ingestFEMA(supabase: any, results: OceanResults) {
         },
         source_name: 'fema',
         confidence: 1.0
-      }).catch(() => { });
+      });
+      if (error) console.warn('FEMA insert skipped:', error.message);
     }
   } catch (e: any) {
     results.errors.push(`fema: ${e.message}`);

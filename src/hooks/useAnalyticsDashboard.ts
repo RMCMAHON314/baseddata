@@ -6,15 +6,14 @@ export function useAnalyticsDashboard() {
   const kpis = useQuery({
     queryKey: ['analytics-kpis'],
     queryFn: async () => {
-      const [contracts, entities, opportunities, grants, insights] = await Promise.all([
-        supabase.from('contracts').select('award_amount.sum()').single(),
+      const [entities, opportunities, grants, insights, statsRes] = await Promise.all([
         supabase.from('core_entities').select('id', { count: 'exact', head: true }),
         supabase.from('opportunities').select('id', { count: 'exact', head: true }).eq('is_active', true),
         supabase.from('grants').select('id', { count: 'exact', head: true }),
         supabase.from('core_derived_insights').select('id', { count: 'exact', head: true }),
+        supabase.rpc('get_platform_stats'),
       ]);
-      // Fallback: get total from raw query
-      const { data: totalData } = await supabase.rpc('get_platform_stats');
+      const { data: totalData } = statsRes;
       const stats = totalData as any;
       return {
         totalContractValue: stats?.total_contract_value || 0,
