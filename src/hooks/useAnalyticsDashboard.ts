@@ -16,7 +16,7 @@ export function useAnalyticsDashboard() {
       const { data: totalData } = statsRes;
       const stats = totalData as any;
       return {
-        totalContractValue: stats?.total_contract_value || 0,
+        totalContractValue: stats?.contract_value || 0,
         entityCount: entities.count || 0,
         opportunityCount: opportunities.count || 0,
         grantCount: grants.count || 0,
