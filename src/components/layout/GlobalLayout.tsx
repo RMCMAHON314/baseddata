@@ -41,6 +41,8 @@ const SECONDARY_NAV = [
   { path: '/healthcare', label: 'Healthcare', icon: Heart },
   { path: '/education', label: 'Education', icon: GraduationCap },
   { path: '/labor-rates', label: 'Labor Rates', icon: DollarSign },
+  { path: '/subcontractors', label: 'Supply Chain', icon: GitCompare },
+  { path: '/recompetes', label: 'Recompetes', icon: Activity },
   { path: '/compare', label: 'Compare', icon: GitCompare },
   { path: '/saved-searches', label: 'Saved Searches', icon: Bookmark },
 ];
