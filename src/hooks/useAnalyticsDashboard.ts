@@ -26,225 +26,73 @@ export function useAnalyticsDashboard() {
     staleTime: 60000,
   });
 
-  // Spending by agency (top 20)
-  const agencySpending = useQuery({
-    queryKey: ['analytics-agency-spending'],
+  // All aggregations in a single RPC call (was 8 separate queries fetching 9K+ rows each)
+  const aggregations = useQuery({
+    queryKey: ['analytics-aggregations'],
     queryFn: async () => {
-      const { data } = await supabase
-        .from('contracts')
-        .select('awarding_agency, award_amount')
-        .not('awarding_agency', 'is', null)
-        .not('award_amount', 'is', null);
-      const map = new Map<string, number>();
-      (data || []).forEach(c => {
-        const key = c.awarding_agency!;
-        map.set(key, (map.get(key) || 0) + Number(c.award_amount));
-      });
-      return Array.from(map.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 20)
-        .map(([name, value]) => ({ name: name.length > 28 ? name.slice(0, 28) + '…' : name, fullName: name, value }));
+      const { data, error } = await supabase.rpc('get_analytics_aggregations');
+      if (error) throw error;
+      const d = data as any;
+      return {
+        agencySpending: (d?.agency_spending || []).map((a: any) => ({
+          name: a.name?.length > 28 ? a.name.slice(0, 28) + '…' : a.name,
+          fullName: a.name,
+          value: Number(a.value) || 0,
+        })),
+        topContractors: (d?.top_contractors || []).map((e: any) => ({
+          id: e.id,
+          name: e.name?.length > 25 ? e.name.slice(0, 25) + '…' : e.name,
+          fullName: e.name,
+          value: Number(e.value) || 0,
+        })),
+        geoDistribution: (d?.geo_distribution || []).map((g: any) => ({
+          state: g.state,
+          value: Number(g.value) || 0,
+          count: Number(g.count) || 0,
+        })),
+        naicsSectors: (d?.naics_sectors || []).map((n: any) => ({
+          code: n.code,
+          value: Number(n.value) || 0,
+        })),
+        setAsideAnalysis: (d?.set_aside || []).map((s: any) => ({
+          type: s.type?.length > 20 ? s.type.slice(0, 20) + '…' : s.type,
+          value: Number(s.value) || 0,
+        })),
+        contractTypeMix: (d?.contract_types || []).map((c: any) => ({
+          type: c.type,
+          value: Number(c.value) || 0,
+        })),
+        grantsByAgency: (d?.grants_by_agency || []).map((g: any) => ({
+          name: g.name?.length > 25 ? g.name.slice(0, 25) + '…' : g.name,
+          value: Number(g.value) || 0,
+        })),
+        laborRates: (d?.labor_rates || []).map((l: any) => ({
+          category: l.category?.length > 22 ? l.category.slice(0, 22) + '…' : l.category,
+          avg: Number(l.avg) || 0,
+          min: Number(l.min) || 0,
+          max: Number(l.max) || 0,
+        })),
+        spendingTimeline: (d?.spending_timeline || []).map((s: any) => ({
+          quarter: s.quarter,
+          contracts: Number(s.contracts) || 0,
+          grants: Number(s.grants) || 0,
+        })),
+      };
     },
     staleTime: 300000,
   });
 
-  // Timeline (contracts by quarter + grants overlay)
-  const spendingTimeline = useQuery({
-    queryKey: ['analytics-spending-timeline'],
-    queryFn: async () => {
-      const [contractRes, grantRes] = await Promise.all([
-        supabase.from('contracts').select('award_amount, award_date').not('award_date', 'is', null),
-        supabase.from('grants').select('award_amount, start_date').not('start_date', 'is', null),
-      ]);
-      const map = new Map<string, { contracts: number; grants: number }>();
-      (contractRes.data || []).forEach(c => {
-        const d = new Date(c.award_date!);
-        const key = `${d.getFullYear()} Q${Math.ceil((d.getMonth() + 1) / 3)}`;
-        const e = map.get(key) || { contracts: 0, grants: 0 };
-        e.contracts += Number(c.award_amount) || 0;
-        map.set(key, e);
-      });
-      (grantRes.data || []).forEach(g => {
-        const d = new Date(g.start_date!);
-        const key = `${d.getFullYear()} Q${Math.ceil((d.getMonth() + 1) / 3)}`;
-        const e = map.get(key) || { contracts: 0, grants: 0 };
-        e.grants += Number(g.award_amount) || 0;
-        map.set(key, e);
-      });
-      return Array.from(map.entries())
-        .sort((a, b) => a[0].localeCompare(b[0]))
-        .map(([quarter, { contracts, grants }]) => ({ quarter, contracts, grants }));
-    },
-    staleTime: 300000,
-  });
-
-  // Top contractors
-  const topContractors = useQuery({
-    queryKey: ['analytics-top-contractors'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('core_entities')
-        .select('id, canonical_name, total_contract_value')
-        .not('total_contract_value', 'is', null)
-        .order('total_contract_value', { ascending: false })
-        .limit(20);
-      return (data || []).map(e => ({
-        id: e.id,
-        name: e.canonical_name.length > 25 ? e.canonical_name.slice(0, 25) + '…' : e.canonical_name,
-        fullName: e.canonical_name,
-        value: Number(e.total_contract_value) || 0,
-      }));
-    },
-    staleTime: 300000,
-  });
-
-  // Geographic distribution
-  const geoDistribution = useQuery({
-    queryKey: ['analytics-geo-distribution'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('contracts')
-        .select('pop_state, award_amount')
-        .not('pop_state', 'is', null);
-      const map = new Map<string, { value: number; count: number }>();
-      (data || []).forEach(c => {
-        const e = map.get(c.pop_state!) || { value: 0, count: 0 };
-        e.value += Number(c.award_amount) || 0;
-        e.count++;
-        map.set(c.pop_state!, e);
-      });
-      return Array.from(map.entries())
-        .sort((a, b) => b[1].value - a[1].value)
-        .slice(0, 20)
-        .map(([state, { value, count }]) => ({ state, value, count }));
-    },
-    staleTime: 300000,
-  });
-
-  // NAICS sectors (2-digit)
-  const naicsSectors = useQuery({
-    queryKey: ['analytics-naics-sectors'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('contracts')
-        .select('naics_code, award_amount')
-        .not('naics_code', 'is', null);
-      const map = new Map<string, number>();
-      (data || []).forEach(c => {
-        const sector = c.naics_code!.slice(0, 2);
-        map.set(sector, (map.get(sector) || 0) + (Number(c.award_amount) || 0));
-      });
-      return Array.from(map.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 12)
-        .map(([code, value]) => ({ code, value }));
-    },
-    staleTime: 300000,
-  });
-
-  // Set-aside analysis
-  const setAsideAnalysis = useQuery({
-    queryKey: ['analytics-set-aside'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('contracts')
-        .select('set_aside_type, award_amount')
-        .not('set_aside_type', 'is', null);
-      const map = new Map<string, number>();
-      (data || []).forEach(c => {
-        const key = c.set_aside_type!;
-        map.set(key, (map.get(key) || 0) + (Number(c.award_amount) || 0));
-      });
-      return Array.from(map.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 10)
-        .map(([type, value]) => ({ type: type.length > 20 ? type.slice(0, 20) + '…' : type, value }));
-    },
-    staleTime: 300000,
-  });
-
-  // Contract type mix
-  const contractTypeMix = useQuery({
-    queryKey: ['analytics-contract-type'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('contracts')
-        .select('contract_type, award_amount')
-        .not('contract_type', 'is', null);
-      const map = new Map<string, number>();
-      (data || []).forEach(c => {
-        map.set(c.contract_type!, (map.get(c.contract_type!) || 0) + (Number(c.award_amount) || 0));
-      });
-      return Array.from(map.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 8)
-        .map(([type, value]) => ({ type, value }));
-    },
-    staleTime: 300000,
-  });
-
-  // Grant funding by agency
-  const grantsByAgency = useQuery({
-    queryKey: ['analytics-grants-agency'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('grants')
-        .select('awarding_agency, award_amount')
-        .not('awarding_agency', 'is', null);
-      const map = new Map<string, number>();
-      (data || []).forEach(g => {
-        map.set(g.awarding_agency!, (map.get(g.awarding_agency!) || 0) + (Number(g.award_amount) || 0));
-      });
-      return Array.from(map.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 10)
-        .map(([name, value]) => ({ name: name.length > 25 ? name.slice(0, 25) + '…' : name, value }));
-    },
-    staleTime: 300000,
-  });
-
-  // Labor rates
-  const laborRates = useQuery({
-    queryKey: ['analytics-labor-rates'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('gsa_labor_rates')
-        .select('labor_category, current_price')
-        .not('current_price', 'is', null)
-        .order('current_price', { ascending: false })
-        .limit(100);
-      // Aggregate by category
-      const map = new Map<string, { total: number; count: number; min: number; max: number }>();
-      (data || []).forEach(r => {
-        const key = r.labor_category || 'Other';
-        const price = Number(r.current_price) || 0;
-        const e = map.get(key) || { total: 0, count: 0, min: Infinity, max: 0 };
-        e.total += price; e.count++; e.min = Math.min(e.min, price); e.max = Math.max(e.max, price);
-        map.set(key, e);
-      });
-      return Array.from(map.entries())
-        .map(([cat, v]) => ({
-          category: cat.length > 22 ? cat.slice(0, 22) + '…' : cat,
-          avg: Math.round(v.total / v.count),
-          min: v.min === Infinity ? 0 : Math.round(v.min),
-          max: Math.round(v.max),
-        }))
-        .sort((a, b) => b.avg - a.avg)
-        .slice(0, 15);
-    },
-    staleTime: 300000,
-  });
-
+  // Return individual query-compatible objects for backward compat
   return {
     kpis,
-    agencySpending,
-    spendingTimeline,
-    topContractors,
-    geoDistribution,
-    naicsSectors,
-    setAsideAnalysis,
-    contractTypeMix,
-    grantsByAgency,
-    laborRates,
+    agencySpending: { data: aggregations.data?.agencySpending, isLoading: aggregations.isLoading },
+    spendingTimeline: { data: aggregations.data?.spendingTimeline, isLoading: aggregations.isLoading },
+    topContractors: { data: aggregations.data?.topContractors, isLoading: aggregations.isLoading },
+    geoDistribution: { data: aggregations.data?.geoDistribution, isLoading: aggregations.isLoading },
+    naicsSectors: { data: aggregations.data?.naicsSectors, isLoading: aggregations.isLoading },
+    setAsideAnalysis: { data: aggregations.data?.setAsideAnalysis, isLoading: aggregations.isLoading },
+    contractTypeMix: { data: aggregations.data?.contractTypeMix, isLoading: aggregations.isLoading },
+    grantsByAgency: { data: aggregations.data?.grantsByAgency, isLoading: aggregations.isLoading },
+    laborRates: { data: aggregations.data?.laborRates, isLoading: aggregations.isLoading },
   };
 }

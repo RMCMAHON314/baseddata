@@ -9123,6 +9123,7 @@ export type Database = {
           total_value: number
         }[]
       }
+      get_analytics_aggregations: { Args: never; Returns: Json }
       get_competition_intelligence: {
         Args: { p_agency?: string; p_naics?: string; p_state?: string }
         Returns: {

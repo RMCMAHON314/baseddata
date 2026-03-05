@@ -114,12 +114,15 @@ const FOOTER_LINKS = {
     { to: '/entities', label: 'Entities' },
     { to: '/opportunities', label: 'Opportunities' },
     { to: '/analytics', label: 'Analytics' },
+    { to: '/subcontractors', label: 'Supply Chain' },
+    { to: '/recompetes', label: 'Recompete Calendar' },
   ],
   resources: [
     { to: '/pricing', label: 'Pricing' },
     { to: '/api-docs', label: 'API Docs' },
     { to: '/health', label: 'Health Status' },
     { to: '/sbir', label: 'SBIR Explorer' },
+    { to: '/labor-rates', label: 'Labor Rates' },
   ],
 };
 
