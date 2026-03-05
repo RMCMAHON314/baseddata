@@ -47,6 +47,8 @@ const Install = lazy(() => import("./pages/Install"));
 const LaunchChecklist = lazy(() => import("./pages/LaunchChecklist"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const CheckoutSuccess = lazy(() => import("./pages/CheckoutSuccess"));
+const SubcontractorNetwork = lazy(() => import("./pages/SubcontractorNetwork"));
+const RecompeteCalendar = lazy(() => import("./pages/RecompeteCalendar"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -134,6 +136,8 @@ const App = () => {
                   <Route path="/agency/:agencyName" element={<AgencyDeepDive />} />
                   <Route path="/health" element={<Health />} />
                   <Route path="/compare" element={<EntityCompare />} />
+                  <Route path="/subcontractors" element={<SubcontractorNetwork />} />
+                  <Route path="/recompetes" element={<RecompeteCalendar />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/checkout/success" element={<ProtectedRoute><CheckoutSuccess /></ProtectedRoute>} />
 
