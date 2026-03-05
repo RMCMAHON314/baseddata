@@ -46,17 +46,35 @@ export function useMarketFilterOptions() {
   return useQuery({
     queryKey: MARKET_QUERY_KEYS.marketFilterOptions,
     queryFn: async () => {
+      // Use RPC or paginated queries to get ALL distinct values (default limit is 1000 rows)
+      const fetchAllDistinct = async (column: string) => {
+        const values = new Set<string>();
+        let offset = 0;
+        const pageSize = 1000;
+        while (true) {
+          const { data } = await supabase
+            .from("contracts")
+            .select(column)
+            .not(column, "is", null)
+            .range(offset, offset + pageSize - 1);
+          if (!data || data.length === 0) break;
+          for (const row of data) {
+            const val = (row as any)[column];
+            if (val) values.add(val);
+          }
+          if (data.length < pageSize) break;
+          offset += pageSize;
+        }
+        return [...values].sort();
+      };
+
       const [states, agencies, setAsides] = await Promise.all([
-        supabase.from("contracts").select("pop_state").not("pop_state", "is", null),
-        supabase.from("contracts").select("awarding_agency").not("awarding_agency", "is", null),
-        supabase.from("contracts").select("set_aside_type").not("set_aside_type", "is", null),
+        fetchAllDistinct("pop_state"),
+        fetchAllDistinct("awarding_agency"),
+        fetchAllDistinct("set_aside_type"),
       ]);
 
-      return {
-        states: [...new Set((states.data || []).map(r => r.pop_state))].filter(Boolean).sort() as string[],
-        agencies: [...new Set((agencies.data || []).map(r => r.awarding_agency))].filter(Boolean).sort() as string[],
-        setAsides: [...new Set((setAsides.data || []).map(r => r.set_aside_type))].filter(Boolean).sort() as string[],
-      };
+      return { states, agencies, setAsides };
     },
     staleTime: STALE.static,
   });
