@@ -136,6 +136,8 @@ const App = () => {
                   <Route path="/agency/:agencyName" element={<AgencyDeepDive />} />
                   <Route path="/health" element={<Health />} />
                   <Route path="/compare" element={<EntityCompare />} />
+                  <Route path="/subcontractors" element={<SubcontractorNetwork />} />
+                  <Route path="/recompetes" element={<RecompeteCalendar />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/checkout/success" element={<ProtectedRoute><CheckoutSuccess /></ProtectedRoute>} />
 
