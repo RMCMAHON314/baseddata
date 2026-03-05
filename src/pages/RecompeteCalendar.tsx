@@ -220,7 +220,7 @@ export default function RecompeteCalendar() {
                           <p className="font-medium truncate">{c.description || c.piid || 'Contract'}</p>
                           <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
                             {c.recipient_entity_id ? (
-                              <EntityLink entityId={c.recipient_entity_id} name={c.recipient_name} />
+                              <EntityLink id={c.recipient_entity_id} name={c.recipient_name} />
                             ) : (
                               <span>{c.recipient_name}</span>
                             )}

@@ -47,6 +47,8 @@ const Install = lazy(() => import("./pages/Install"));
 const LaunchChecklist = lazy(() => import("./pages/LaunchChecklist"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const CheckoutSuccess = lazy(() => import("./pages/CheckoutSuccess"));
+const SubcontractorNetwork = lazy(() => import("./pages/SubcontractorNetwork"));
+const RecompeteCalendar = lazy(() => import("./pages/RecompeteCalendar"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
