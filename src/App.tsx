@@ -156,7 +156,7 @@ const App = () => {
                 </Routes>
               </Suspense>
               </ErrorBoundary>
-              <Suspense fallback={null}><AiAssistant /></Suspense>
+              {ENABLE_AI_ASSISTANT ? <Suspense fallback={null} /> : null}
             </BrowserRouter>
           </TooltipProvider>
         </AuthProvider>
