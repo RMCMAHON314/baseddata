@@ -16,7 +16,7 @@ import { AdminRoute } from "@/components/layout/AdminRoute";
 import { ErrorBoundary } from "@/components/ui/ErrorBoundary";
 import { AppInterceptors } from "@/components/layout/AppInterceptors";
 
-const AiAssistant = lazy(() => import("@/components/ai/AiAssistant"));
+const ENABLE_AI_ASSISTANT = false;
 
 // Lazy-loaded pages
 const Showcase = lazy(() => import("./pages/Showcase"));
